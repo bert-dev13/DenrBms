@@ -1,0 +1,271 @@
+/* Protected Area Sites Page Specific Styles */
+
+/* Modal Styles */
+.modal-overlay {
+    background-color: rgba(31, 41, 55, 0.9) !important;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 0.75rem;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    width: 100%;
+    max-width: 32rem;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+@media (min-width: 640px) {
+    .modal-content {
+        max-height: 85vh;
+    }
+}
+
+.modal-header {
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-radius: 0.75rem 0.75rem 0 0;
+}
+
+.modal-header-blue {
+    background: linear-gradient(to right, #2563eb, #1d4ed8);
+}
+
+.modal-header-green {
+    background: linear-gradient(to right, #16a34a, #15803d);
+}
+
+.modal-header-red {
+    background: linear-gradient(to right, #dc2626, #b91c1c);
+}
+
+.modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.modal-footer {
+    padding: 1.5rem;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    flex-shrink: 0;
+    background-color: #f9fafb;
+    border-radius: 0 0 0.75rem 0.75rem;
+}
+
+/* Responsive Table Styles */
+.responsive-table-container {
+    overflow-x: auto;
+}
+
+.responsive-table {
+    min-width: 100%;
+    border-collapse: collapse;
+}
+
+.responsive-table th {
+    text-align: left;
+    padding: 12px 16px;
+    font-weight: 600;
+    color: #374151;
+    border-bottom: 1px solid #e5e7eb;
+    background-color: #f9fafb;
+}
+
+.responsive-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.responsive-table tbody tr:hover {
+    background-color: #f9fafb;
+}
+
+/* Action Buttons Styles */
+.action-buttons-container {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.protected-area-sites-action-buttons-container {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.protected-area-sites-action-btn {
+    padding: 0.375rem;
+    border-radius: 0.375rem;
+    transition: all 0.1s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: none;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.protected-area-sites-action-btn:hover {
+    transform: scale(1.05);
+}
+
+.protected-area-sites-action-btn.view {
+    color: #3b82f6 !important;
+    background: none !important;
+    border: none !important;
+    cursor: pointer !important;
+}
+
+.protected-area-sites-action-btn.view:hover {
+    background-color: #eff6ff !important;
+    color: #1d4ed8 !important;
+}
+
+.protected-area-sites-action-btn.edit {
+    color: #10b981 !important;
+    background: none !important;
+    border: none !important;
+    cursor: pointer !important;
+}
+
+.protected-area-sites-action-btn.edit:hover {
+    background-color: #ecfdf5 !important;
+    color: #059669 !important;
+}
+
+.protected-area-sites-action-btn.delete {
+    color: #ef4444 !important;
+    background: none !important;
+    border: none !important;
+    cursor: pointer !important;
+}
+
+.protected-area-sites-action-btn.delete:hover {
+    background-color: #fef2f2 !important;
+    color: #dc2626 !important;
+}
+
+@media (min-width: 640px) {
+    .action-buttons-container {
+        gap: 0.5rem;
+    }
+}
+
+/* Search Clear Button */
+.site-search-clear {
+    position: absolute;
+    right: 2px;
+    top: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    background: transparent;
+    border: none;
+    color: #9ca3af;
+    cursor: pointer;
+}
+
+.site-search-clear:hover {
+    color: #4b5563;
+}
+
+.site-search-clear.hidden {
+    display: none;
+}
+
+/* Status Badge Styles */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 9999px;
+}
+
+.status-badge-active {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.status-badge-unassigned {
+    background-color: #f3f4f6;
+    color: #374151;
+}
+
+/* Station Code Badge */
+.station-code-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.625rem;
+    font-size: 0.75rem;
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+    border-radius: 0.375rem;
+    background-color: #f3f4f6;
+    color: #1f2937;
+}
+
+/* Mobile Responsive Adjustments */
+@media (max-width: 640px) {
+    .responsive-table-container {
+        font-size: 0.875rem;
+    }
+    
+    .responsive-table th,
+    .responsive-table td {
+        padding: 0.75rem 0.5rem;
+    }
+    
+    .modal-content {
+        margin: 0.5rem;
+        max-height: calc(100vh - 1rem);
+    }
+    
+    .modal-header,
+    .modal-body,
+    .modal-footer {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+}
+
+/* Animation Transitions */
+.modal-transition {
+    transition: all 0.3s ease;
+}
+
+.button-transition {
+    transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+}
+
+/* Form Input Focus Styles */
+.form-input-focus {
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-input-focus:focus {
+    outline: none;
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+/* Stats Card Hover Effects */
+.stats-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stats-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}

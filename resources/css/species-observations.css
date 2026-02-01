@@ -1,0 +1,80 @@
+/* Species Observations Page Styles */
+
+/* Species Observations Specific Styles */
+.observation-row {
+    transition: background-color 0.15s ease;
+}
+
+.observation-row:hover {
+    background-color: #f9fafb;
+}
+
+.observation-filters {
+    background-color: white;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+.observation-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background-color: white;
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    border-left: 4px solid #10b981;
+}
+
+.stat-card h3 {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #6b7280;
+    margin: 0 0 0.5rem 0;
+}
+
+.stat-card .stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #111827;
+}
+
+.stat-card .stat-label {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    margin-top: 0.25rem;
+}
+
+/* Notification Styles */
+.notification {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    padding: 1rem 1.5rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    z-index: 10000;
+    transform: translateX(0);
+    transition: transform 0.2s ease;
+}
+
+.notification.success {
+    background-color: #10b981;
+    color: white;
+}
+
+.notification.error {
+    background-color: #ef4444;
+    color: white;
+}
+
+.notification.info {
+    background-color: #3b82f6;
+    color: white;
+}

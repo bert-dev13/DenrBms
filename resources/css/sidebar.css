@@ -1,0 +1,444 @@
+/* Enhanced DENR BMS Sidebar Styles */
+
+/* Base Sidebar Styles */
+#sidebar {
+    backdrop-filter: blur(20px);
+    box-shadow: 4px 0 30px rgba(0, 0, 0, 0.3);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* Ensure sidebar fills height on desktop */
+@media (min-width: 1024px) {
+    #sidebar {
+        min-height: 100vh;
+        height: 100vh;
+    }
+}
+
+/* Custom Scrollbar */
+#sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+#sidebar::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 3px;
+}
+
+#sidebar::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+    transition: background 0.2s;
+}
+
+#sidebar::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.3);
+}
+
+/* Header Logo Animation */
+#sidebar .bg-gradient-to-br {
+    transition: all 0.3s ease;
+}
+
+#sidebar .bg-gradient-to-br:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+}
+
+/* User Profile Section */
+#sidebar .border-gray-200 {
+    transition: all 0.2s ease;
+}
+
+#sidebar .border-gray-200:hover {
+    background: rgba(0, 0, 0, 0.02);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Online Status Indicator */
+#sidebar .bg-green-400 {
+    animation: pulse-green 2s infinite;
+}
+
+@keyframes pulse-green {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.7;
+        transform: scale(1.1);
+    }
+}
+
+/* Navigation Items */
+#sidebar nav {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+}
+
+.nav-item {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Navigation Section Styles */
+.nav-section {
+    margin-bottom: 1rem;
+}
+
+.nav-section-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+    padding: 0 1rem;
+}
+
+.nav-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(34, 197, 94, 0.1), transparent);
+    transition: left 0.6s ease;
+}
+
+.nav-item:hover::before {
+    left: 100%;
+}
+
+.nav-item:hover {
+    transform: translateX(4px);
+    box-shadow: 0 4px 15px rgba(34, 197, 94, 0.2);
+}
+
+/* Active State Styles */
+.nav-item.bg-green-600 {
+    background: linear-gradient(135deg, #16a34a, #15803d) !important;
+    box-shadow: 0 4px 20px rgba(34, 197, 94, 0.4);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.nav-item.bg-green-600::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 4px;
+    height: 70%;
+    background: linear-gradient(to bottom, #4ade80, #22c55e);
+    border-radius: 2px;
+    box-shadow: 0 0 10px rgba(74, 222, 128, 0.6);
+}
+
+/* Icon Animations */
+.nav-item svg {
+    transition: all 0.2s ease;
+    width: 1.25rem !important;
+    height: 1.25rem !important;
+    flex-shrink: 0;
+}
+
+.nav-item:hover svg {
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+/* Override conflicting styles from app.css */
+#sidebar .nav-item svg {
+    width: 1.25rem !important;
+    height: 1.25rem !important;
+}
+
+/* Specific fix for Protected Area Sites icon */
+.nav-item[href*="protected-area-sites"] svg {
+    width: 1.25rem !important;
+    height: 1.25rem !important;
+    flex-shrink: 0;
+}
+
+/* Ensure all navigation states maintain consistent icon sizing */
+.nav-item.bg-green-600 svg,
+.nav-item:hover svg,
+.nav-item:focus svg {
+    width: 1.25rem !important;
+    height: 1.25rem !important;
+}
+
+/* Badge Styles */
+.nav-item .bg-red-500 {
+    animation: slideInBadge 0.3s ease-out;
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+}
+
+@keyframes slideInBadge {
+    from {
+        transform: translateX(10px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Logout Button Hover Effect */
+#sidebar .border-t.border-gray-200:last-child {
+    margin-top: auto;
+    flex-shrink: 0;
+}
+
+.logout-form button:hover {
+    background: linear-gradient(135deg, #dc2626, #b91c1c) !important;
+    box-shadow: 0 4px 20px rgba(220, 38, 38, 0.4);
+}
+
+/* Mobile Menu Toggle Button */
+.mobile-menu-toggle {
+    position: fixed;
+    top: 1rem;
+    left: 1rem;
+    z-index: 40;
+    background: linear-gradient(135deg, #1e40af, #1e3a8a);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.2s ease;
+}
+
+.mobile-menu-toggle:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 20px rgba(30, 64, 175, 0.4);
+}
+
+/* Overlay Animation */
+.sidebar-overlay {
+    animation: fadeIn 0.3s ease-in-out;
+    backdrop-filter: blur(4px);
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* Mobile Responsive Styles */
+@media (max-width: 1024px) {
+    #sidebar {
+        transform: translateX(-100%);
+    }
+    
+    #sidebar.open {
+        transform: translateX(0);
+        box-shadow: 4px 0 30px rgba(0, 0, 0, 0.5);
+    }
+    
+    /* Ensure consistent icon sizing on mobile */
+    #sidebar .nav-item svg {
+        width: 1.25rem !important;
+        height: 1.25rem !important;
+    }
+}
+
+/* Responsive icon sizing for different screen sizes */
+@media (max-width: 640px) {
+    #sidebar .nav-item svg {
+        width: 1.25rem !important;
+        height: 1.25rem !important;
+    }
+}
+
+@media (min-width: 1025px) {
+    #sidebar .nav-item svg {
+        width: 1.25rem !important;
+        height: 1.25rem !important;
+    }
+}
+
+/* Collapsed State Styles */
+#sidebar.w-20 {
+    overflow: hidden;
+}
+
+#sidebar.w-20 .whitespace-nowrap {
+    opacity: 0;
+    transform: translateX(-10px);
+    transition: all 0.3s ease;
+}
+
+/* Ensure consistent icon sizing in collapsed state */
+#sidebar.w-20 .nav-item svg {
+    width: 1.25rem !important;
+    height: 1.25rem !important;
+    margin: 0 auto;
+}
+
+/* Tooltip Styles */
+.sidebar-tooltip {
+    position: absolute;
+    left: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    margin-left: 0.5rem;
+    background: linear-gradient(135deg, #1f2937, #111827);
+    color: white;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.2s ease;
+    z-index: 50;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+#sidebar.w-20:hover .sidebar-tooltip {
+    opacity: 1;
+    transform: translateY(-50%) translateX(4px);
+}
+
+/* Focus Styles for Accessibility */
+.nav-item:focus,
+.nav-item:focus-visible {
+    outline: 2px solid #22c55e;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.1);
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+    #sidebar {
+        border: 2px solid #000;
+    }
+    
+    .nav-item {
+        border: 1px solid rgba(0, 0, 0, 0.3);
+    }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+    #sidebar,
+    #sidebar *,
+    #sidebar ::before,
+    #sidebar ::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    #sidebar {
+        background: #ffffff;
+    }
+}
+
+/* Print Styles */
+@media print {
+    #sidebar {
+        display: none !important;
+    }
+}
+
+/* Loading State */
+.sidebar-loading {
+    opacity: 0.6;
+    pointer-events: none;
+    filter: blur(2px);
+}
+
+/* Notification Dot Animation */
+.notification-dot {
+    width: 8px;
+    height: 8px;
+    background: #ef4444;
+    border-radius: 50%;
+    position: absolute;
+    top: 0;
+    right: 0;
+    animation: blink 2s infinite;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.6);
+}
+
+@keyframes blink {
+    0%, 50%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    25%, 75% {
+        opacity: 0.5;
+        transform: scale(0.8);
+    }
+}
+
+/* Analytics Dropdown Styles */
+.analytics-dropdown {
+    position: relative;
+}
+
+.analytics-dropdown .nav-item {
+    justify-content: space-between;
+}
+
+#analytics-submenu {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-in-out;
+}
+
+#analytics-submenu:not(.hidden) {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+#analytics-chevron {
+    transition: transform 0.3s ease;
+}
+
+#analytics-chevron.rotate-180 {
+    transform: rotate(180deg);
+}
+
+/* Analytics Submenu Items */
+#analytics-submenu .nav-item {
+    padding-left: 1rem;
+    padding-right: 1rem;
+    font-size: 0.875rem;
+}
+
+#analytics-submenu .nav-item svg {
+    width: 1.25rem !important;
+    height: 1.25rem !important;
+    flex-shrink: 0;
+}
+
+/* Enhanced Hover Effects */
+.nav-item.group:hover {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.9), rgba(22, 163, 74, 0.9)) !important;
+}
+
+/* Smooth Transitions */
+* {
+    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 200ms;
+}

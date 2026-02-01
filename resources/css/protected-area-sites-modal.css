@@ -1,0 +1,565 @@
+/* Protected Area Sites Modal System - Scoped Styles for Protected Area Sites Only */
+
+/* Modal Overlay - Base styles for Protected Area Sites modals */
+.protected-area-sites-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.protected-area-sites-modal-overlay.active,
+.protected-area-sites-modal-overlay.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Modal Content - Base styles for Protected Area Sites */
+.protected-area-sites-modal-content {
+    background: white;
+    border-radius: 0.75rem;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    max-width: 90vw;
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transform: scale(0.95);
+    transition: transform 0.2s ease;
+}
+
+.protected-area-sites-modal-overlay.active .protected-area-sites-modal-content,
+.protected-area-sites-modal-overlay.show .protected-area-sites-modal-content {
+    transform: scale(1);
+}
+
+/* Fixed modal sizes for different types */
+.protected-area-sites-modal-content.small {
+    width: 400px;
+    max-width: 90vw;
+}
+
+.protected-area-sites-modal-content.medium {
+    width: 600px;
+    max-width: 90vw;
+}
+
+.protected-area-sites-modal-content.large {
+    width: 800px;
+    max-width: 90vw;
+}
+
+.protected-area-sites-modal-content.xlarge {
+    width: 1000px;
+    max-width: 95vw;
+}
+
+/* Default modal size for Protected Area Sites */
+.protected-area-sites-modal-content {
+    max-width: 500px;
+    width: 90vw;
+}
+
+/* Modal Header - Protected Area Sites specific */
+.protected-area-sites-modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    background-color: #f9fafb;
+}
+
+.protected-area-sites-modal-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #111827;
+    margin: 0;
+}
+
+.protected-area-sites-modal-close {
+    background: none;
+    border: none;
+    padding: 0.5rem;
+    border-radius: 0.375rem;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.protected-area-sites-modal-close:hover {
+    background-color: #f3f4f6;
+    color: #374151;
+}
+
+/* Modal Body - Protected Area Sites specific */
+.protected-area-sites-modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.protected-area-sites-modal-body::-webkit-scrollbar {
+    width: 6px;
+}
+
+.protected-area-sites-modal-body::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+
+.protected-area-sites-modal-body::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+
+.protected-area-sites-modal-body::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Modal Footer - Protected Area Sites specific */
+.protected-area-sites-modal-footer {
+    padding: 1.5rem;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    flex-shrink: 0;
+    background-color: #f9fafb;
+}
+
+/* Form Styles - Protected Area Sites specific */
+.protected-area-sites-modal-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    height: 100%;
+}
+
+.protected-area-sites-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    transition: all 0.3s ease;
+}
+
+.protected-area-sites-form-row.single {
+    grid-template-columns: 1fr;
+}
+
+.protected-area-sites-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+    margin-bottom: 1.5rem;
+}
+
+.protected-area-sites-form-label,
+.protected-area-sites-form-group label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #374151;
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.protected-area-sites-form-label.required::after {
+    content: ' *';
+    color: #ef4444;
+}
+
+.protected-area-sites-form-input,
+.protected-area-sites-form-select,
+.protected-area-sites-form-textarea,
+.protected-area-sites-form-group input,
+.protected-area-sites-form-group select {
+    padding: 0.625rem 0.875rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    background-color: white;
+    width: 100%;
+}
+
+.protected-area-sites-form-textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.protected-area-sites-form-input:focus,
+.protected-area-sites-form-select:focus,
+.protected-area-sites-form-textarea:focus,
+.protected-area-sites-form-group input:focus,
+.protected-area-sites-form-group select:focus {
+    outline: none;
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+.protected-area-sites-form-input.error,
+.protected-area-sites-form-select.error,
+.protected-area-sites-form-textarea.error,
+.protected-area-sites-form-group input.error,
+.protected-area-sites-form-group select.error {
+    border-color: #ef4444;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.protected-area-sites-form-error,
+.protected-area-sites-error-message {
+    font-size: 0.75rem;
+    color: #ef4444;
+    margin-top: 0.25rem;
+    font-weight: 500;
+}
+
+.protected-area-sites-form-group small {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+/* Button Styles - Protected Area Sites specific */
+.protected-area-sites-btn {
+    padding: 0.625rem 1.25rem;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    border: 1px solid transparent;
+    justify-content: center;
+}
+
+.protected-area-sites-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.protected-area-sites-btn-primary {
+    background-color: #10b981;
+    color: white;
+    border-color: #10b981;
+}
+
+.protected-area-sites-btn-primary:hover:not(:disabled) {
+    background-color: #059669;
+    border-color: #059669;
+}
+
+.protected-area-sites-btn-secondary {
+    background-color: white;
+    color: #374151;
+    border: 1px solid #d1d5db;
+}
+
+.protected-area-sites-btn-secondary:hover:not(:disabled) {
+    background-color: #f9fafb;
+}
+
+.protected-area-sites-btn-danger {
+    background-color: #ef4444;
+    color: white;
+}
+
+.protected-area-sites-btn-danger:hover:not(:disabled) {
+    background-color: #dc2626;
+}
+
+/* Loading State - Protected Area Sites specific */
+.protected-area-sites-loading {
+    position: relative;
+    pointer-events: none;
+}
+
+.protected-area-sites-loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 1rem;
+    height: 1rem;
+    margin: -0.5rem 0 0 -0.5rem;
+    border: 2px solid #e5e7eb;
+    border-top: 2px solid #10b981;
+    border-radius: 50%;
+    animation: protected-area-sites-spin 1s linear infinite;
+}
+
+@keyframes protected-area-sites-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Notification Styles - Protected Area Sites specific */
+.protected-area-sites-notification {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 10000;
+    padding: 1rem 1.5rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    font-weight: 500;
+    max-width: 400px;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+}
+
+.protected-area-sites-notification.show {
+    transform: translateX(0);
+}
+
+.protected-area-sites-notification-success {
+    background-color: #10b981;
+    color: white;
+}
+
+.protected-area-sites-notification-error {
+    background-color: #ef4444;
+    color: white;
+}
+
+.protected-area-sites-notification-info {
+    background-color: #3b82f6;
+    color: white;
+}
+
+/* View Mode Styles - Protected Area Sites specific */
+.protected-area-sites-view-grid,
+.protected-area-sites-view-details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.protected-area-sites-view-item,
+.protected-area-sites-detail-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.protected-area-sites-view-label,
+.protected-area-sites-detail-row label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.protected-area-sites-view-value,
+.protected-area-sites-detail-row span {
+    font-size: 0.875rem;
+    color: #111827;
+    padding: 0.5rem 0.75rem;
+    background-color: #f9fafb;
+    border-radius: 0.375rem;
+    border: 1px solid #e5e7eb;
+    min-height: 2.5rem;
+    display: flex;
+    align-items: center;
+}
+
+.protected-area-sites-view-value.full-width {
+    grid-column: 1 / -1;
+}
+
+/* Badge Styles - Protected Area Sites specific */
+.protected-area-sites-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.protected-area-sites-badge.active {
+    background-color: #dcfce7;
+    color: #166534;
+}
+
+.protected-area-sites-badge.no-data {
+    background-color: #f3f4f6;
+    color: #6b7280;
+}
+
+/* Action Buttons Styles - Protected Area Sites specific */
+.protected-area-sites-action-buttons-container {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.protected-area-sites-action-btn {
+    padding: 0.375rem;
+    border-radius: 0.375rem;
+    transition: all 0.1s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: none;
+    cursor: pointer;
+}
+
+.protected-area-sites-action-btn:hover {
+    transform: scale(1.05);
+}
+
+.protected-area-sites-action-btn.view {
+    color: #3b82f6;
+}
+
+.protected-area-sites-action-btn.view:hover {
+    background-color: #eff6ff;
+    color: #1d4ed8;
+}
+
+.protected-area-sites-action-btn.edit {
+    color: #10b981;
+}
+
+.protected-area-sites-action-btn.edit:hover {
+    background-color: #ecfdf5;
+    color: #059669;
+}
+
+.protected-area-sites-action-btn.delete {
+    color: #ef4444;
+}
+
+.protected-area-sites-action-btn.delete:hover {
+    background-color: #fef2f2;
+    color: #dc2626;
+}
+
+/* Responsive Design - Protected Area Sites specific */
+@media (max-width: 768px) {
+    .protected-area-sites-modal-content {
+        margin: 1rem;
+        max-width: calc(100vw - 2rem);
+        max-height: calc(100vh - 2rem);
+    }
+    
+    .protected-area-sites-form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .protected-area-sites-view-grid,
+    .protected-area-sites-view-details {
+        grid-template-columns: 1fr;
+    }
+    
+    .protected-area-sites-modal-footer {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .protected-area-sites-btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .protected-area-sites-notification {
+        left: 1rem;
+        right: 1rem;
+        max-width: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .protected-area-sites-modal-header,
+    .protected-area-sites-modal-body,
+    .protected-area-sites-modal-footer {
+        padding: 1rem;
+    }
+    
+    .protected-area-sites-modal-content.small,
+    .protected-area-sites-modal-content.medium,
+    .protected-area-sites-modal-content.large,
+    .protected-area-sites-modal-content.xlarge,
+    .protected-area-sites-modal-content {
+        width: 100%;
+        max-width: calc(100vw - 1rem);
+    }
+}
+
+/* Accessibility - Protected Area Sites specific */
+.protected-area-sites-modal-overlay:focus-within {
+    outline: 2px solid #10b981;
+    outline-offset: 2px;
+}
+
+.protected-area-sites-btn:focus-visible {
+    outline: 2px solid #10b981;
+    outline-offset: 2px;
+}
+
+/* High Contrast Mode - Protected Area Sites specific */
+@media (prefers-contrast: high) {
+    .protected-area-sites-modal-content {
+        border: 2px solid #000;
+    }
+    
+    .protected-area-sites-btn {
+        border: 2px solid currentColor;
+    }
+}
+
+/* Reduced Motion - Protected Area Sites specific */
+@media (prefers-reduced-motion: reduce) {
+    .protected-area-sites-modal-overlay,
+    .protected-area-sites-modal-content,
+    .protected-area-sites-btn,
+    .protected-area-sites-form-input,
+    .protected-area-sites-form-select,
+    .protected-area-sites-form-textarea,
+    .protected-area-sites-form-group input,
+    .protected-area-sites-form-group select {
+        transition: none;
+    }
+    
+    .protected-area-sites-loading::after {
+        animation: none;
+    }
+}
+
+/* Delete Confirmation Modal Styles - Protected Area Sites specific */
+.protected-area-sites-delete-confirmation {
+    text-align: center;
+    padding: 2rem 0;
+}
+
+.protected-area-sites-delete-question {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #111827;
+    margin: 0 0 0.5rem 0;
+}
+
+.protected-area-sites-delete-warning {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin: 0;
+}

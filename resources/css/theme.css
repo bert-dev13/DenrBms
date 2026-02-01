@@ -1,0 +1,550 @@
+/* Dark/Light Theme Variables and Styles */
+
+/* FOUC Prevention - Apply theme immediately */
+html {
+    transition: none !important;
+}
+
+body {
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+body.no-theme-transition,
+body.no-theme-transition *,
+body.no-theme-transition *::before,
+body.no-theme-transition *::after {
+    transition: none !important;
+}
+
+body.theme-transitioning {
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+body.theme-transitioning *,
+body.theme-transitioning *::before,
+body.theme-transitioning *::after {
+    transition-duration: 300ms !important;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Theme toggle specific transitions */
+body.no-theme-transition .theme-toggle-btn svg,
+body.no-theme-transition .theme-toggle-btn svg *,
+body.no-theme-transition .theme-toggle-btn svg::before,
+body.no-theme-transition .theme-toggle-btn svg::after {
+    transition: none !important;
+}
+
+.theme-toggle-btn svg {
+    transition: opacity 0.3s ease, transform 0.3s ease !important;
+}
+
+/* Prevent theme toggle flickering during initialization */
+.theme-toggle-container {
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+/* CSS Custom Properties for Theme Colors */
+:root {
+    /* Light Mode Colors */
+    --bg-primary: #ffffff;
+    --bg-secondary: #f9fafb;
+    --bg-tertiary: #f3f4f6;
+    --text-primary: #111827;
+    --text-secondary: #374151;
+    --text-tertiary: #6b7280;
+    --text-inverse: #ffffff;
+    --border-primary: #e5e7eb;
+    --border-secondary: #d1d5db;
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    
+    /* Component Specific Colors */
+    --sidebar-bg: #ffffff;
+    --sidebar-header-bg: linear-gradient(135deg, #16a34a, #15803d);
+    --sidebar-text: #374151;
+    --sidebar-border: #e5e7eb;
+    --topbar-bg: #ffffff;
+    --card-bg: #ffffff;
+    --input-bg: #ffffff;
+    --hover-bg: #f3f4f6;
+    --active-bg: #dcfce7;
+    
+    /* State Colors */
+    --success-bg: #dcfce7;
+    --success-text: #166534;
+    --warning-bg: #fef3c7;
+    --warning-text: #92400e;
+    --error-bg: #fef2f2;
+    --error-text: #991b1b;
+    --info-bg: #dbeafe;
+    --info-text: #1e40af;
+}
+
+/* Dark Mode Colors */
+[data-theme="dark"] {
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --bg-tertiary: #334155;
+    --text-primary: #f1f5f9;
+    --text-secondary: #e2e8f0;
+    --text-tertiary: #94a3b8;
+    --text-inverse: #0f172a;
+    --border-primary: #334155;
+    --border-secondary: #475569;
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.4);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 10px 10px -5px rgba(0, 0, 0, 0.5);
+    
+    /* Component Specific Colors */
+    --sidebar-bg: #1e293b;
+    --sidebar-header-bg: linear-gradient(135deg, #15803d, #166534);
+    --sidebar-text: #e2e8f0;
+    --sidebar-border: #334155;
+    --topbar-bg: #1e293b;
+    --card-bg: #1e293b;
+    --input-bg: #0f172a;
+    --hover-bg: #334155;
+    --active-bg: #14532d;
+    
+    /* State Colors */
+    --success-bg: #14532d;
+    --success-text: #86efac;
+    --warning-bg: #713f12;
+    --warning-text: #fde68a;
+    --error-bg: #7f1d1d;
+    --error-text: #fca5a5;
+    --info-bg: #1e3a8a;
+    --info-text: #93c5fd;
+}
+
+/* Apply theme colors to common elements */
+body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Main layout elements */
+.bg-white {
+    background-color: var(--bg-primary) !important;
+}
+
+.bg-gray-50 {
+    background-color: var(--bg-secondary) !important;
+}
+
+.bg-gray-100 {
+    background-color: var(--bg-tertiary) !important;
+}
+
+.text-gray-900 {
+    color: var(--text-primary) !important;
+}
+
+.text-gray-800 {
+    color: var(--text-primary) !important;
+}
+
+.text-gray-700 {
+    color: var(--text-secondary) !important;
+}
+
+.text-gray-600 {
+    color: var(--text-tertiary) !important;
+}
+
+.text-gray-500 {
+    color: var(--text-tertiary) !important;
+}
+
+.text-gray-400 {
+    color: var(--text-tertiary) !important;
+}
+
+.border-gray-200 {
+    border-color: var(--border-primary) !important;
+}
+
+.border-gray-300 {
+    border-color: var(--border-secondary) !important;
+}
+
+/* Sidebar specific styles */
+#sidebar {
+    background-color: var(--sidebar-bg) !important;
+    border-right: 1px solid var(--border-primary);
+}
+
+#sidebar .bg-gradient-to-br {
+    background: var(--sidebar-header-bg) !important;
+}
+
+#sidebar .text-gray-900 {
+    color: var(--sidebar-text) !important;
+}
+
+#sidebar .text-gray-700 {
+    color: var(--sidebar-text) !important;
+}
+
+#sidebar .text-gray-500 {
+    color: var(--text-tertiary) !important;
+}
+
+#sidebar .border-gray-200 {
+    border-color: var(--sidebar-border) !important;
+}
+
+/* Top bar styles */
+header {
+    background-color: var(--topbar-bg) !important;
+    border-bottom: 1px solid var(--border-primary);
+}
+
+/* Card styles */
+.shadow-sm {
+    box-shadow: var(--shadow-sm) !important;
+}
+
+.shadow-md, .shadow {
+    box-shadow: var(--shadow-md) !important;
+}
+
+.shadow-lg {
+    box-shadow: var(--shadow-lg) !important;
+}
+
+.shadow-xl {
+    box-shadow: var(--shadow-xl) !important;
+}
+
+/* Hover states */
+.hover\:bg-gray-50:hover {
+    background-color: var(--hover-bg) !important;
+}
+
+.hover\:bg-gray-100:hover {
+    background-color: var(--bg-tertiary) !important;
+}
+
+/* Active states */
+.bg-green-50 {
+    background-color: var(--active-bg) !important;
+}
+
+/* Form elements */
+input, select, textarea {
+    background-color: var(--input-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-primary) !important;
+}
+
+/* Table styles */
+.table {
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+}
+
+.table th {
+    background-color: var(--bg-tertiary) !important;
+    color: var(--text-secondary) !important;
+    border-color: var(--border-primary) !important;
+}
+
+.table td {
+    border-color: var(--border-primary) !important;
+}
+
+/* Responsive Table Specific Styles */
+.responsive-table {
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+}
+
+.responsive-table th {
+    background-color: var(--bg-tertiary) !important;
+    color: var(--text-secondary) !important;
+    border-bottom-color: var(--border-primary) !important;
+}
+
+.responsive-table td {
+    border-bottom-color: var(--border-primary) !important;
+    color: var(--text-primary) !important;
+}
+
+.responsive-table-container {
+    background-color: var(--card-bg) !important;
+}
+
+/* Table row hover states */
+.responsive-table tbody tr:hover {
+    background-color: var(--hover-bg) !important;
+}
+
+.protected-area-row:hover {
+    background-color: var(--hover-bg) !important;
+}
+
+/* Action buttons in tables */
+.action-btn.view {
+    color: #3b82f6 !important;
+}
+
+.action-btn.view:hover {
+    background-color: rgba(59, 130, 246, 0.1) !important;
+}
+
+.action-btn.edit {
+    color: #10b981 !important;
+}
+
+.action-btn.edit:hover {
+    background-color: rgba(16, 185, 129, 0.1) !important;
+}
+
+.action-btn.delete {
+    color: #ef4444 !important;
+}
+
+.action-btn.delete:hover {
+    background-color: rgba(239, 68, 68, 0.1) !important;
+}
+
+/* Dark mode adjustments for action buttons */
+[data-theme="dark"] .action-btn.view {
+    color: #60a5fa !important;
+}
+
+[data-theme="dark"] .action-btn.view:hover {
+    background-color: rgba(96, 165, 250, 0.2) !important;
+}
+
+[data-theme="dark"] .action-btn.edit {
+    color: #34d399 !important;
+}
+
+[data-theme="dark"] .action-btn.edit:hover {
+    background-color: rgba(52, 211, 153, 0.2) !important;
+}
+
+[data-theme="dark"] .action-btn.delete {
+    color: #f87171 !important;
+}
+
+[data-theme="dark"] .action-btn.delete:hover {
+    background-color: rgba(248, 113, 113, 0.2) !important;
+}
+
+/* Button variations */
+.btn-secondary {
+    background-color: var(--bg-tertiary) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-primary) !important;
+}
+
+.btn-secondary:hover {
+    background-color: var(--hover-bg) !important;
+}
+
+/* Modal styles */
+.modal-content {
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+}
+
+.modal-header {
+    background-color: var(--bg-secondary) !important;
+    border-bottom-color: var(--border-primary) !important;
+}
+
+/* Dropdown styles */
+.dropdown-menu {
+    background-color: var(--card-bg) !important;
+    border-color: var(--border-primary) !important;
+    box-shadow: var(--shadow-lg) !important;
+}
+
+.dropdown-item {
+    color: var(--text-primary) !important;
+}
+
+.dropdown-item:hover {
+    background-color: var(--hover-bg) !important;
+    color: var(--text-primary) !important;
+}
+
+/* Export dropdown specific styling */
+#export-dropdown {
+    background-color: var(--card-bg) !important;
+    border-color: var(--border-primary) !important;
+    box-shadow: var(--shadow-lg) !important;
+}
+
+#export-dropdown button {
+    color: var(--text-primary) !important;
+}
+
+#export-dropdown button:hover {
+    background-color: var(--hover-bg) !important;
+    color: var(--text-primary) !important;
+}
+
+/* Alert styles */
+.alert {
+    border-color: var(--border-primary) !important;
+}
+
+.alert-success {
+    background-color: var(--success-bg) !important;
+    color: var(--success-text) !important;
+}
+
+.alert-warning {
+    background-color: var(--warning-bg) !important;
+    color: var(--warning-text) !important;
+}
+
+.alert-danger {
+    background-color: var(--error-bg) !important;
+    color: var(--error-text) !important;
+}
+
+.alert-info {
+    background-color: var(--info-bg) !important;
+    color: var(--info-text) !important;
+}
+
+/* Additional color fixes for consistency */
+.bg-green-100 {
+    background-color: var(--active-bg) !important;
+}
+
+.bg-red-100 {
+    background-color: var(--error-bg) !important;
+}
+
+.bg-blue-100 {
+    background-color: var(--info-bg) !important;
+}
+
+.bg-yellow-100 {
+    background-color: var(--warning-bg) !important;
+}
+
+.text-green-800 {
+    color: var(--success-text) !important;
+}
+
+.text-red-800 {
+    color: var(--error-text) !important;
+}
+
+.text-blue-800 {
+    color: var(--info-text) !important;
+}
+
+.text-yellow-800 {
+    color: var(--warning-text) !important;
+}
+
+.border-green-200 {
+    border-color: var(--success-bg) !important;
+}
+
+.border-red-200 {
+    border-color: var(--error-bg) !important;
+}
+
+.border-blue-200 {
+    border-color: var(--info-bg) !important;
+}
+
+.border-yellow-200 {
+    border-color: var(--warning-bg) !important;
+}
+
+/* Chart.js dark mode support */
+[data-theme="dark"] canvas {
+    filter: invert(1) hue-rotate(180deg);
+}
+
+[data-theme="dark"] canvas.chart-container {
+    background-color: var(--card-bg);
+    border-radius: 0.5rem;
+    padding: 1rem;
+}
+
+/* Scrollbar styles for dark mode */
+[data-theme="dark"] ::-webkit-scrollbar-track {
+    background: var(--bg-tertiary);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+    background: var(--border-secondary);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+    background: var(--text-tertiary);
+}
+
+/* Focus states with theme awareness */
+.focus\:ring-green-500:focus {
+    --tw-ring-color: rgb(34 197 94 / var(--tw-ring-opacity, 0.5)) !important;
+}
+
+[data-theme="dark"] .focus\:ring-green-500:focus {
+    --tw-ring-color: rgb(74 222 128 / var(--tw-ring-opacity, 0.5)) !important;
+}
+
+/* Print styles - always use light mode */
+@media print {
+    :root,
+    [data-theme="dark"] {
+        --bg-primary: #ffffff;
+        --bg-secondary: #f9fafb;
+        --bg-tertiary: #f3f4f6;
+        --text-primary: #111827;
+        --text-secondary: #374151;
+        --text-tertiary: #6b7280;
+        --border-primary: #e5e7eb;
+        --border-secondary: #d1d5db;
+        --sidebar-bg: #ffffff;
+        --topbar-bg: #ffffff;
+        --card-bg: #ffffff;
+        --input-bg: #ffffff;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    :root {
+        --border-primary: #000000;
+        --border-secondary: #000000;
+        --text-primary: #000000;
+        --text-secondary: #000000;
+    }
+    
+    [data-theme="dark"] {
+        --border-primary: #ffffff;
+        --border-secondary: #ffffff;
+        --text-primary: #ffffff;
+        --text-secondary: #ffffff;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
