@@ -1,101 +1,21 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    
-    <!-- FOUC Prevention Script - Apply theme immediately -->
-    <script>
-        (function() {
-            try {
-                // Get stored theme with fallback to system preference
-                var storedTheme = localStorage.getItem('denr-bms-theme');
-                var theme = storedTheme || 
-                          (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-                
-                // Apply theme immediately to prevent FOUC
-                if (theme === 'dark') {
-                    document.documentElement.setAttribute('data-theme', 'dark');
-                    document.documentElement.classList.add('dark-theme');
-                }
-                
-                // Store the initial theme for later use
-                window.__initialTheme = theme;
-            } catch (e) {
-                // Silently fail to prevent script errors
-            }
-        })();
-    </script>
-    
-    <title>Species Observations | DENR BMS</title>
+@extends('layouts.app')
 
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700&display=swap" rel="stylesheet" />
+@section('title', 'Species Observations')
+@section('header', 'Species Observations')
 
-    <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
+@section('head')
+@vite(['resources/css/species-observations.css', 'resources/css/species-observation-modal.css', 'resources/js/species-observation.js'])
+<script>
+    window.csrfToken = '{{ csrf_token() }}';
+    window.routes = {
+        speciesObservationsShow: '{{ route("species-observations.show", ":id") }}',
+        speciesObservationsUpdate: '{{ route("species-observations.update", ":id") }}',
+        speciesObservationsDestroy: '{{ route("species-observations.destroy", ":id") }}'
+    };
+</script>
+@endsection
 
-    <!-- Styles -->
-    @vite(['resources/css/app.css', 'resources/css/sidebar.css', 'resources/css/theme.css', 'resources/css/species-observation-modal.css'])
-    
-    <!-- Scripts -->
-    @vite(['resources/js/bootstrap.js', 'resources/js/sidebar.js', 'resources/js/theme.js'])
-    
-    <!-- Global JavaScript Variables -->
-    <script>
-        window.csrfToken = '{{ csrf_token() }}';
-        window.routes = {
-            speciesObservationsShow: '{{ route("species-observations.show", ":id") }}',
-            speciesObservationsUpdate: '{{ route("species-observations.update", ":id") }}',
-            speciesObservationsDestroy: '{{ route("species-observations.destroy", ":id") }}'
-        };
-        
-        // Debug: Log the routes
-        // console.log('Routes defined:', window.routes);
-        
-    </script>
-</head>
-<body class="antialiased bg-gray-50">
-    <!-- Mobile Menu Toggle -->
-    <button class="mobile-menu-toggle lg:hidden fixed top-4 left-4 z-40 bg-blue-600 text-white p-3 rounded-lg shadow-lg" onclick="toggleSidebar()">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-        </svg>
-    </button>
-
-    <!-- Sidebar Overlay for Mobile -->
-    <div class="sidebar-overlay fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden" onclick="toggleSidebar()"></div>
-
-    <!-- Sidebar -->
-    @include('layouts.sidebar')
-
-    <!-- Main Content -->
-    <div class="lg:pl-64">
-        <div class="w-full">
-        <!-- Top Bar -->
-        <header class="bg-white shadow-sm border-b border-gray-200">
-            <div class="px-4 sm:px-6 lg:px-8 py-4">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h1 class="text-2xl font-semibold text-gray-900">Species Observations</h1>
-                    </div>
-                    <div class="flex items-center space-x-4">
-                        <!-- Theme Toggle -->
-                        @include('components.theme-toggle')
-                        
-                        <span class="text-sm text-gray-500">
-                            <i class="far fa-clock mr-1"></i>
-                            {{ now()->format('M j, Y g:i A') }}
-                        </span>
-                    </div>
-                </div>
-            </div>
-        </header>
-
-        <!-- Species Observations Content -->
-        <main class="p-6">
+@section('content')
             <!-- Success Message -->
             @if (session('success'))
                 <div class="mb-6 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg">
@@ -127,191 +47,216 @@
                 </div>
             @endif
 
-            <!-- Filters Section -->
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-                <form method="GET" action="{{ route('species-observations.index') }}">
-                    <div class="flex items-center mb-4">
-                        <h2 class="text-lg font-semibold text-gray-900 flex-1">Filters</h2>
-                        <div class="flex gap-2">
-                            <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors whitespace-nowrap text-sm font-medium">
-                                Apply
-                            </button>
-                            <button type="button" onclick="clearFilters()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors whitespace-nowrap text-sm font-medium">
-                                Clear
-                            </button>
+            <!-- Summary Cards -->
+            <div class="species-obs-summary-cards mb-6">
+                <div class="kpi-grid">
+                    <div class="kpi-card kpi-card--blue">
+                        <div class="kpi-card-icon kpi-card-icon--blue">
+                            <i data-lucide="clipboard-list" class="lucide-icon"></i>
+                        </div>
+                        <div class="kpi-card-body">
+                            <p class="kpi-card-label">Total Observations</p>
+                            <p class="kpi-card-value" id="summary-total-observations">{{ number_format($summaryStats['total_observations'] ?? 0) }}</p>
+                            <span class="kpi-card-meta kpi-card-meta--neutral">records in view</span>
                         </div>
                     </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-                    <!-- Protected Area Filter -->
-                    <div class="flex-1 min-w-40">
-                        <label for="protected_area_id" class="block text-sm font-medium text-gray-700 mb-1">Protected Area</label>
-                        <select name="protected_area_id" id="protected_area_id" class="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm" onchange="toggleSiteNameFilter()">
-                            <option value="">All Areas</option>
-                            @foreach($filterOptions['protectedAreas'] as $area)
-                                <option value="{{ $area->id }}" {{ request('protected_area_id') == $area->id ? 'selected' : '' }} data-code="{{ $area->code }}">
-                                    {{ $area->name }}
-                                </option>
-                            @endforeach
-                        </select>
+                    <div class="kpi-card kpi-card--green">
+                        <div class="kpi-card-icon kpi-card-icon--green">
+                            <i data-lucide="bar-chart-3" class="lucide-icon"></i>
+                        </div>
+                        <div class="kpi-card-body">
+                            <p class="kpi-card-label">Total Recorded Count</p>
+                            <p class="kpi-card-value" id="summary-total-recorded">{{ number_format($summaryStats['total_recorded_count'] ?? 0) }}</p>
+                            <span class="kpi-card-meta kpi-card-meta--neutral">total count</span>
+                        </div>
                     </div>
+                    <div class="kpi-card kpi-card--purple">
+                        <div class="kpi-card-icon kpi-card-icon--purple">
+                            <i data-lucide="map-pin" class="lucide-icon"></i>
+                        </div>
+                        <div class="kpi-card-body">
+                            <p class="kpi-card-label">Total Protected Areas</p>
+                            <p class="kpi-card-value" id="summary-total-areas">{{ number_format($summaryStats['total_protected_areas'] ?? 0) }}</p>
+                            <span class="kpi-card-meta kpi-card-meta--neutral">unique areas</span>
+                        </div>
+                    </div>
+                    <div class="kpi-card kpi-card--orange">
+                        <div class="kpi-card-icon kpi-card-icon--orange">
+                            <i data-lucide="panda" class="lucide-icon"></i>
+                        </div>
+                        <div class="kpi-card-body">
+                            <p class="kpi-card-label">Total Species Recorded</p>
+                            <p class="kpi-card-value" id="summary-total-species">{{ number_format($summaryStats['total_species'] ?? 0) }}</p>
+                            <span class="kpi-card-meta kpi-card-meta--neutral">by scientific name</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-                    <!-- Bio Group Filter -->
-                    <div class="flex-1 min-w-24">
-                        <label for="bio_group" class="block text-sm font-medium text-gray-700 mb-1">Bio Group</label>
-                        <select name="bio_group" id="bio_group" class="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm">
-                            <option value="">All Groups</option>
-                            @foreach($filterOptions['bioGroups'] as $key => $group)
-                                <option value="{{ $key }}" {{ request('bio_group') == $key ? 'selected' : '' }}>
-                                    {{ $group }}
-                                </option>
-                            @endforeach
-                        </select>
+            <!-- Filters Section -->
+            <div class="filter-panel">
+                <form method="GET" action="{{ route('species-observations.index') }}">
+                    <div class="filter-panel__header">
+                        <h2 class="filter-panel__title">Filters</h2>
+                        <div class="filter-panel__actions">
+                            <button type="submit" class="btn-filter-apply">Apply</button>
+                            <button type="button" onclick="clearFilters()" class="btn-filter-clear">Clear</button>
+                        </div>
                     </div>
+                    <div class="filter-panel__grid filter-panel__grid--cols-5">
+                        <!-- Protected Area Filter -->
+                        <div class="filter-panel__field">
+                            <label for="protected_area_id" class="filter-panel__label">Protected Area</label>
+                            <select
+                                name="protected_area_id"
+                                id="protected_area_id"
+                                class="filter-panel__select"
+                                onchange="toggleSiteNameFilter()"
+                            >
+                                <option value="">All Areas</option>
+                                @foreach($filterOptions['protectedAreas'] as $area)
+                                    <option value="{{ $area->id }}" {{ request('protected_area_id') == $area->id ? 'selected' : '' }} data-code="{{ $area->code }}">
+                                        {{ $area->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
 
-                    <!-- Year Filter -->
-                    <div class="flex-1 min-w-20">
-                        <label for="patrol_year" class="block text-sm font-medium text-gray-700 mb-1">Patrol Year</label>
-                        <select name="patrol_year" id="patrol_year" class="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm">
-                            <option value="">All Years</option>
-                            @foreach($filterOptions['years'] as $year)
-                                <option value="{{ $year }}" {{ request('patrol_year') == $year ? 'selected' : '' }}>
-                                    {{ $year }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
+                        <!-- Bio Group Filter -->
+                        <div class="filter-panel__field">
+                            <label for="bio_group" class="filter-panel__label">Bio Group</label>
+                            <select
+                                name="bio_group"
+                                id="bio_group"
+                                class="filter-panel__select"
+                            >
+                                <option value="">All Groups</option>
+                                @foreach($filterOptions['bioGroups'] as $key => $group)
+                                    <option value="{{ $key }}" {{ request('bio_group') == $key ? 'selected' : '' }}>
+                                        {{ $group }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
 
-                    <!-- Semester Filter -->
-                    <div class="flex-1 min-w-20">
-                        <label for="patrol_semester" class="block text-sm font-medium text-gray-700 mb-1">Semester</label>
-                        <select name="patrol_semester" id="patrol_semester" class="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm">
-                            <option value="">All Semesters</option>
-                            @foreach($filterOptions['semesters'] as $value => $label)
-                                <option value="{{ $value }}" {{ request('patrol_semester') == $value ? 'selected' : '' }}>
-                                    {{ $label }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
+                        <!-- Year Filter -->
+                        <div class="filter-panel__field">
+                            <label for="patrol_year" class="filter-panel__label">Patrol Year</label>
+                            <select
+                                name="patrol_year"
+                                id="patrol_year"
+                                class="filter-panel__select"
+                            >
+                                <option value="">All Years</option>
+                                @foreach($filterOptions['years'] as $year)
+                                    <option value="{{ $year }}" {{ request('patrol_year') == $year ? 'selected' : '' }}>
+                                        {{ $year }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
 
-                    <!-- Site Name Filter -->
-                    <div class="flex-1 min-w-32">
-                        <label for="site_name" class="block text-sm font-medium text-gray-700 mb-1">Site Name</label>
-                        <select name="site_name" id="site_name" class="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm" disabled>
-                            <option value="">All Sites</option>
-                        </select>
-                    </div>
+                        <!-- Semester Filter -->
+                        <div class="filter-panel__field">
+                            <label for="patrol_semester" class="filter-panel__label">Semester</label>
+                            <select
+                                name="patrol_semester"
+                                id="patrol_semester"
+                                class="filter-panel__select"
+                            >
+                                <option value="">All Semesters</option>
+                                @foreach($filterOptions['semesters'] as $value => $label)
+                                    <option value="{{ $value }}" {{ request('patrol_semester') == $value ? 'selected' : '' }}>
+                                        {{ $label }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <!-- Site Name Filter -->
+                        <div class="filter-panel__field">
+                            <label for="site_name" class="filter-panel__label">Site Name</label>
+                            <select
+                                name="site_name"
+                                id="site_name"
+                                class="filter-panel__select"
+                                disabled
+                            >
+                                <option value="">All Sites</option>
+                            </select>
+                        </div>
                     </div>
                 </form>
             </div>
 
-            <!-- Observations Table Search -->
-<div class="bg-white rounded-lg shadow-sm border border-gray-200">
-    <div class="px-6 py-4 border-b border-gray-200 relative">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div class="flex-1 max-w-lg">
-                <div class="relative w-full">
-                    <div class="relative flex items-center h-10">
-
-                        <!-- 🔍 Search Icon (LEFT) -->
-                        <span class="absolute left-3 flex items-center pointer-events-none z-10">
-                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                            </svg>
-                        </span>
-
-                        <!-- INPUT -->
-                        <input
-                            type="text"
-                            id="table-search"
-                            class="w-full h-10 pl-10 pr-8 text-sm border border-gray-300 rounded-lg
-                                   focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                            placeholder="Search observations..."
-                            autocomplete="off"
-                        />
-
-                        <!-- ❌ Clear Button (FAR RIGHT) -->
-                        <button
-                            id="search-clear"
-                            type="button"
-                            class="absolute right-0 top-0 bottom-0 flex items-center justify-center w-8
-                                   text-gray-400 hover:text-gray-600 hidden bg-transparent"
-                            onclick="clearSearch()"
-                            style="right: 2px;"
-                        >
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                      d="M6 18L18 6M6 6l12 12"/>
-                            </svg>
-                        </button>
-
-                    </div>
-                </div>
-            </div>
-
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <!-- Left: Table Title -->
-                <div class="flex-shrink-0">
-                    <h2 class="text-lg font-semibold text-gray-900">
-                        Observations ({{ $observations->total() }} records)
-                    </h2>
-                </div>
-                
-                <!-- Right: Export and Add Buttons -->
-                <div class="flex flex-col sm:flex-row sm:items-center gap-2">
-                    <!-- Export Dropdown -->
-                    <div class="relative">
-                        <button type="button" id="export-dropdown-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg inline-flex items-center space-x-2 transition-colors w-full sm:w-auto justify-center">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                            </svg>
-                            <span>Export</span>
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                            </svg>
-                        </button>
-                        
-                        <!-- Dropdown Menu -->
-                        <div id="export-dropdown" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50 sm:right-0 right-auto left-0 sm:left-auto">
-                            <div class="py-1">
-                                <button type="button" onclick="exportTable('print')" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
-                                    </svg>
-                                    <span>Print</span>
-                                </button>
-                                <button type="button" onclick="exportTable('excel')" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v1a1 1 0 001 1h4a1 1 0 001-1v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                                    </svg>
-                                    <span>Excel</span>
-                                </button>
-                                <button type="button" onclick="exportTable('pdf')" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0112.586 3H7.586A1 1 0 016 3.414l5.414 5.414a1 1 0 001.414.707V19a2 2 0 002 2z"></path>
-                                    </svg>
-                                    <span>PDF</span>
+            <!-- Observations Table Card with Action Bar -->
+            <div class="action-bar-card">
+                <div class="action-bar-card__header">
+                    <h2 class="action-bar-card__title">Species Observations ({{ $observations->total() }} records)</h2>
+                    <div class="action-bar">
+                        <!-- Search -->
+                        <div class="action-bar__search-wrap">
+                            <div class="action-bar__search">
+                                <span class="action-bar__search-icon" aria-hidden="true">
+                                    <i data-lucide="search" class="lucide-icon"></i>
+                                </span>
+                                <input
+                                    type="text"
+                                    id="species-observations-search"
+                                    name="search"
+                                    class="action-bar__search-input"
+                                    placeholder="Search observations..."
+                                    autocomplete="off"
+                                    aria-label="Search observations"
+                                />
+                                <span class="action-bar__search-loading hidden" data-search-loading aria-hidden="true">
+                                    <i data-lucide="loader-2" class="lucide-icon spin"></i>
+                                </span>
+                                <button
+                                    type="button"
+                                    id="species-observations-search-clear"
+                                    class="action-bar__search-clear hidden"
+                                    aria-label="Clear search"
+                                    onclick="clearSearch()"
+                                >
+                                    <i data-lucide="x" class="lucide-icon"></i>
                                 </button>
                             </div>
                         </div>
+                        <!-- Export & Add -->
+                        <div class="action-bar__actions">
+                            <div class="action-bar__export-wrap">
+                                <button type="button" id="export-dropdown-btn" class="action-bar__export-btn">
+                                    <i data-lucide="download" class="lucide-icon"></i>
+                                    <span>Export</span>
+                                    <i data-lucide="chevron-down" class="lucide-icon"></i>
+                                </button>
+                                <div id="export-dropdown" class="action-bar__export-dropdown">
+                                    <button type="button" onclick="exportTable('pdf')">
+                                        <i data-lucide="file-text" class="lucide-icon"></i>
+                                        <span>Export as PDF</span>
+                                    </button>
+                                    <button type="button" onclick="exportTable('excel')">
+                                        <i data-lucide="file-spreadsheet" class="lucide-icon"></i>
+                                        <span>Export as Excel</span>
+                                    </button>
+                                    <button type="button" onclick="exportTable('print')">
+                                        <i data-lucide="printer" class="lucide-icon"></i>
+                                        <span>Print</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <button type="button" onclick="openAddModal()" class="action-bar__add-btn">
+                                <i data-lucide="plus" class="lucide-icon"></i>
+                                <span>Add Observation</span>
+                            </button>
+                        </div>
                     </div>
-                    
-                    <!-- Add New Observation Button -->
-                    <button type="button" onclick="openAddModal()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg inline-flex items-center space-x-2 transition-colors flex-shrink-0">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                        </svg>
-                        <span>Add New Observation</span>
-                    </button>
                 </div>
-                
-            </div>
-        </div>
-    </div>
-</div>
 
-                <div class="responsive-table-container">
+                <!-- Table -->
+                <div class="data-table-wrap">
+                    <div class="responsive-table-container data-table-container">
                     <table class="responsive-table">
                         <thead>
                             <tr>
@@ -342,11 +287,11 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse($observations as $observation)
-                                <tr class="hover:bg-gray-50 observation-row">
+                            @forelse($observations as $index => $observation)
+                                <tr class="data-table-row {{ $index % 2 === 0 ? 'data-table-row--even' : 'data-table-row--odd' }} observation-row">
                                     <td>
-                                        <span class="font-medium text-gray-900">{{ $observation->protectedArea->name ?? 'N/A' }}</span>
-                                        <span class="text-xs text-gray-500">{{ $observation->transaction_code }}</span>
+                                        <span class="data-table-cell-truncate font-medium" title="{{ $observation->protectedArea->name ?? 'N/A' }}">{{ $observation->protectedArea->name ?? 'N/A' }}</span>
+                                        <span class="text-xs text-gray-500 block mt-0.5">{{ $observation->transaction_code }}</span>
                                     </td>
                                     <td>
                                         {{ $observation->station_code }}
@@ -362,95 +307,106 @@
                                         </span>
                                     </td>
                                     <td>
-                                        {{ $observation->common_name }}
+                                        <span class="data-table-cell-truncate" title="{{ $observation->common_name }}">{{ $observation->common_name }}</span>
                                     </td>
                                     <td>
-                                        <em>{{ $observation->scientific_name }}</em>
+                                        <em class="data-table-cell-truncate" title="{{ $observation->scientific_name }}">{{ $observation->scientific_name }}</em>
                                     </td>
                                     <td>
                                         <span class="inline-flex items-center px-2 py-1 text-sm font-medium bg-gray-100 text-gray-800 rounded-full">
                                             {{ $observation->recorded_count }}
                                         </span>
                                     </td>
-                                    <td>
-                                        <div class="flex items-center gap-1 sm:gap-2 action-buttons-container">
+                                    <td class="data-table-col-actions">
+                                        <div class="species-observations-actions">
                                             <!-- View Button -->
-                                            <button type="button" 
-                                               class="action-btn view p-1.5 sm:p-1 rounded transition-colors flex-shrink-0"
+                                            <button
+                                               type="button"
+                                               class="species-observation-action-btn view"
                                                title="View Observation"
                                                data-observation-id="{{ $observation->id }}"
                                                data-table-name="{{ e($observation->table_name ?? $observation->getTable()) }}"
-                                               onclick="openViewModal(this.dataset.observationId, this.dataset.tableName)">
-                                                <svg class="w-4 h-4 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                                                </svg>
+                                               onclick="openViewModal(this.dataset.observationId, this.dataset.tableName)"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="species-observation-action-icon" aria-hidden="true"><path d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0"/><path d="M21 12s-3-7-9-7-9 7-9 7 3 7 9 7 9-7 9-7Z"/></svg>
                                             </button>
-                                            
-                                             <!-- Edit Button -->
-                                            <button type="button" 
-                                               class="action-btn edit p-1.5 sm:p-1 rounded transition-colors flex-shrink-0"
+
+                                            <!-- Edit Button -->
+                                            <button
+                                               type="button"
+                                               class="species-observation-action-btn edit"
                                                title="Edit Observation"
                                                data-observation-id="{{ $observation->id }}"
                                                data-table-name="{{ e($observation->table_name ?? $observation->getTable()) }}"
-                                               onclick="openEditModal(this.dataset.observationId, this.dataset.tableName)">
-                                                <svg class="w-4 h-4 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                                                </svg>
+                                               onclick="openEditModal(this.dataset.observationId, this.dataset.tableName)"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="species-observation-action-icon" aria-hidden="true"><path d="M11 4H7a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>
                                             </button>
-                                            
+
                                             <!-- Delete Button -->
-                                            <button type="button" 
-                                               class="action-btn delete p-1.5 sm:p-1 rounded transition-colors flex-shrink-0"
+                                            <button
+                                               type="button"
+                                               class="species-observation-action-btn delete"
                                                title="Delete Observation"
                                                data-observation-id="{{ $observation->id }}"
                                                data-table-name="{{ e($observation->table_name ?? $observation->getTable()) }}"
-                                               onclick="openDeleteModal(this.dataset.observationId, this.dataset.tableName)">
-                                                <svg class="w-4 h-4 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                                </svg>
+                                               onclick="openDeleteModal(this.dataset.observationId, this.dataset.tableName)"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="species-observation-action-icon" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
                                             </button>
                                         </div>
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="8" class="px-6 py-12 text-center">
-                                        <div class="flex flex-col items-center">
-                                            <svg class="w-12 h-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-                                            </svg>
-                                            <h3 class="text-lg font-medium text-gray-900 mb-1">No observations found</h3>
-                                            <p class="text-gray-500">No species observations match the current filters.</p>
+                                    <td colspan="8" class="data-table-empty-cell">
+                                        <div class="data-table-empty-state">
+                                            <i data-lucide="file-search" class="lucide-icon data-table-empty-icon"></i>
+                                            <h3 class="data-table-empty-title">No observations found</h3>
+                                            <p class="data-table-empty-text">
+                                                @if(request('search'))
+                                                    No species observations match "{{ request('search') }}". Try different keywords or clear the search.
+                                                @else
+                                                    Species observations will appear here once data has been added.
+                                                @endif
+                                            </p>
                                         </div>
                                     </td>
                                 </tr>
                             @endforelse
 
                             <tr id="species-observations-no-results" class="hidden">
-                                <td colspan="8" class="px-6 py-12 text-center text-gray-500">
+                                <td colspan="8" class="data-table-empty-cell text-gray-500">
                                 </td>
                             </tr>
                         </tbody>
                     </table>
+                    </div>
                 </div>
 
                 <!-- Pagination -->
-                @if($observations->hasPages())
-                    <div class="px-6 py-4 border-t border-gray-200">
-                        <div class="flex items-center justify-between">
-                            <div class="text-sm text-gray-700">
-                                Showing {{ $observations->firstItem() }} to {{ $observations->lastItem() }} of {{ $observations->total() }} results
-                            </div>
-                            <div id="pagination-container">
-                                {{ $observations->appends(request()->query())->links() }}
-                            </div>
-                        </div>
+                @if($observations->total() > 0)
+                <div class="data-table-pagination">
+                    <div class="data-table-pagination__info">
+                        Showing {{ $observations->firstItem() }} to {{ $observations->lastItem() }} of {{ number_format($observations->total()) }} results
                     </div>
+                    @if($observations->hasPages())
+                    <nav class="data-table-pagination__nav" aria-label="Pagination">
+                        @if($observations->onFirstPage())
+                            <button type="button" disabled class="cursor-not-allowed">&lsaquo; Previous</button>
+                        @else
+                            <a href="{{ $observations->previousPageUrl() }}" rel="prev">&lsaquo; Previous</a>
+                        @endif
+                        @if($observations->hasMorePages())
+                            <a href="{{ $observations->nextPageUrl() }}" rel="next">Next &rsaquo;</a>
+                        @else
+                            <button type="button" disabled class="cursor-not-allowed">Next &rsaquo;</button>
+                        @endif
+                    </nav>
+                    @endif
+                </div>
                 @endif
             </div>
-        </main>
-    </div>
 
     <!-- JavaScript -->
     <script>
@@ -795,8 +751,14 @@
             const urlParams = new URLSearchParams(window.location.search);
             const searchQuery = urlParams.get('search');
             if (searchQuery) {
-                document.getElementById('table-search').value = searchQuery;
-                document.getElementById('search-clear').classList.remove('hidden');
+                const searchInput = document.getElementById('species-observations-search');
+                const searchClear = document.getElementById('species-observations-search-clear');
+                if (searchInput) {
+                    searchInput.value = searchQuery;
+                }
+                if (searchClear) {
+                    searchClear.classList.remove('hidden');
+                }
             }
         });
 
@@ -816,8 +778,8 @@
         let searchTimeout;
         
         function initializeSearch() {
-            const searchInput = document.getElementById('table-search');
-            const searchClear = document.getElementById('search-clear');
+            const searchInput = document.getElementById('species-observations-search');
+            const searchClear = document.getElementById('species-observations-search-clear');
             
             searchInput.addEventListener('input', function() {
                 clearTimeout(searchTimeout);
@@ -871,8 +833,8 @@
         }
         
         function clearSearch() {
-            const searchInput = document.getElementById('table-search');
-            const searchClear = document.getElementById('search-clear');
+            const searchInput = document.getElementById('species-observations-search');
+            const searchClear = document.getElementById('species-observations-search-clear');
             
             searchInput.value = '';
             searchClear.classList.add('hidden');
@@ -910,18 +872,20 @@
             const exportDropdownBtn = document.getElementById('export-dropdown-btn');
             const exportDropdown = document.getElementById('export-dropdown');
             
-            // Toggle dropdown
-            exportDropdownBtn.addEventListener('click', function(e) {
-                e.stopPropagation();
-                exportDropdown.classList.toggle('hidden');
-            });
-            
-            // Close dropdown when clicking outside
-            document.addEventListener('click', function(e) {
-                if (!exportDropdown.contains(e.target) && e.target !== exportDropdownBtn) {
-                    exportDropdown.classList.add('hidden');
-                }
-            });
+            if (exportDropdownBtn && exportDropdown) {
+                // Toggle dropdown
+                exportDropdownBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    exportDropdown.classList.toggle('is-open');
+                });
+                
+                // Close dropdown when clicking outside
+                document.addEventListener('click', function(e) {
+                    if (!exportDropdown.contains(e.target) && e.target !== exportDropdownBtn) {
+                        exportDropdown.classList.remove('is-open');
+                    }
+                });
+            }
         });
 
         // Export functionality
@@ -935,8 +899,8 @@
             params.set('export', format);
             
             // Get current search query if exists
-            const searchInput = document.getElementById('table-search');
-            if (searchInput.value.trim()) {
+            const searchInput = document.getElementById('species-observations-search');
+            if (searchInput && searchInput.value.trim()) {
                 params.set('search', searchInput.value.trim());
             }
             
@@ -971,12 +935,13 @@
             }
             
             // Close dropdown
-            document.getElementById('export-dropdown').classList.add('hidden');
+            const exportDropdown = document.getElementById('export-dropdown');
+            if (exportDropdown) {
+                exportDropdown.classList.remove('is-open');
+            }
         }
 
     </script>
-    
-    @vite(['resources/js/species-observation-modal.js'])
     
     <!-- Debug: Test if onclick works -->
     <script>
@@ -1037,5 +1002,4 @@
             }
         };
     </script>
-</body>
-</html>
+@endsection

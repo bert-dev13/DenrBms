@@ -42,6 +42,15 @@ class ProtectedAreaController extends Controller
             return true;
         });
 
+        // Apply search filter if provided (trim, case-insensitive)
+        if ($request->filled('search')) {
+            $searchTerm = strtolower(trim((string) $request->search));
+            $filteredAreas = $filteredAreas->filter(function ($area) use ($searchTerm) {
+                return strpos(strtolower($area->name ?? ''), $searchTerm) !== false
+                    || strpos(strtolower($area->code ?? ''), $searchTerm) !== false;
+            })->values();
+        }
+
         // Manual pagination for the filtered collection
         $perPage = 50;
         $currentPage = LengthAwarePaginator::resolveCurrentPage();
@@ -71,18 +80,8 @@ class ProtectedAreaController extends Controller
             }
         }
 
-        // Calculate species diversity across all tables (true unique species)
-        $allScientificNames = collect();
-        foreach ($tables as $table) {
-            try {
-                $species = DB::table($table)->pluck('scientific_name')->filter();
-                $allScientificNames = $allScientificNames->merge($species);
-            } catch (\Exception $e) {
-                // Skip tables that don't exist
-                continue;
-            }
-        }
-        $speciesDiversity = $allScientificNames->unique()->count();
+        // Species Tracked: unique scientific_name across all tables (single source of truth)
+        $speciesDiversity = DynamicTableService::getUniqueSpeciesCount();
 
         // Calculate active areas using all protected areas, not just paginated ones
         $allProtectedAreas = ProtectedArea::all();
@@ -231,7 +230,6 @@ class ProtectedAreaController extends Controller
                 $table->unsignedBigInteger('protected_area_id');
                 
                 // Standard observation columns
-                $table->string('transaction_code', 50);
                 $table->string('station_code', 60);
                 $table->year('patrol_year');
                 $table->unsignedTinyInteger('patrol_semester'); // 1 or 2
@@ -294,14 +292,17 @@ class ProtectedAreaController extends Controller
         
         // Base query for all sites with their protected areas
         $query = SiteName::with('protectedArea');
+        $sortDirection = 'asc';
         
         // Apply sorting
         if ($sort === 'protected_area') {
-            $query->orderByHas('protectedArea', function ($q) {
-                $q->orderBy('name');
-            })->orderBy('name');
+            // Sort by related protected area name, then by site name
+            $query->leftJoin('protected_areas', 'site_names.protected_area_id', '=', 'protected_areas.id')
+                  ->select('site_names.*')
+                  ->orderBy('protected_areas.name', $sortDirection)
+                  ->orderBy('site_names.name', $sortDirection);
         } else {
-            $query->orderBy($sort);
+            $query->orderBy($sort, $sortDirection);
         }
         
         // Get all sites for filtering (we'll filter in collection so we can use the computed observation count)
@@ -394,6 +395,16 @@ class ProtectedAreaController extends Controller
             }
             return true;
         });
+
+        // Apply search filter if provided (trim, case-insensitive)
+        if ($request->filled('search')) {
+            $searchTerm = strtolower(trim((string) $request->search));
+            $filteredSites = $filteredSites->filter(function ($site) use ($searchTerm) {
+                $nameMatch = strpos(strtolower($site->name ?? ''), $searchTerm) !== false;
+                $areaMatch = $site->protectedArea && strpos(strtolower($site->protectedArea->name ?? ''), $searchTerm) !== false;
+                return $nameMatch || $areaMatch;
+            })->values();
+        }
         
         // Manual pagination for the filtered collection
         $perPage = 10;
@@ -422,18 +433,8 @@ class ProtectedAreaController extends Controller
             }
         }
 
-        // Calculate species diversity across all tables (true unique species)
-        $allScientificNames = collect();
-        foreach ($tables as $table) {
-            try {
-                $species = DB::table($table)->pluck('scientific_name')->filter();
-                $allScientificNames = $allScientificNames->merge($species);
-            } catch (\Exception $e) {
-                // Skip tables that don't exist
-                continue;
-            }
-        }
-        $speciesDiversity = $allScientificNames->unique()->count();
+        // Species Tracked: unique scientific_name across all tables (single source of truth)
+        $speciesDiversity = DynamicTableService::getUniqueSpeciesCount();
 
         $stats = [
             'total_areas' => ProtectedArea::count(),
@@ -788,7 +789,6 @@ class ProtectedAreaController extends Controller
                 // Check if required columns exist
                 $requiredColumns = [
                     'protected_area_id',
-                    'transaction_code', 
                     'station_code',
                     'patrol_year',
                     'patrol_semester',
@@ -825,7 +825,6 @@ class ProtectedAreaController extends Controller
                 $table->unsignedBigInteger('protected_area_id');
                 
                 // Standard observation columns
-                $table->string('transaction_code', 50);
                 $table->string('station_code', 60);
                 $table->year('patrol_year');
                 $table->unsignedTinyInteger('patrol_semester'); // 1 or 2
@@ -1065,16 +1064,18 @@ class ProtectedAreaController extends Controller
             return true;
         });
 
-        // Apply search filter if provided
+        // Apply search filter if provided (trim, case-insensitive)
         if ($request->filled('search')) {
-            $searchTerm = strtolower($request->search);
+            $searchTerm = strtolower(trim((string) $request->search));
             $filteredAreas = $filteredAreas->filter(function ($area) use ($searchTerm) {
-                return strpos(strtolower($area->name), $searchTerm) !== false || 
-                       strpos(strtolower($area->code), $searchTerm) !== false;
-            });
+                return strpos(strtolower($area->name ?? ''), $searchTerm) !== false
+                    || strpos(strtolower($area->code ?? ''), $searchTerm) !== false;
+            })->values();
+        } else {
+            $filteredAreas = $filteredAreas->values();
         }
 
-        $protectedAreas = $filteredAreas->values();
+        $protectedAreas = $filteredAreas;
 
         // Handle different export formats
         if ($request->has('print')) {
@@ -1221,14 +1222,17 @@ class ProtectedAreaController extends Controller
         
         // Base query for all sites with their protected areas
         $query = SiteName::with('protectedArea');
+        $sortDirection = 'asc';
         
         // Apply sorting
         if ($sort === 'protected_area') {
-            $query->orderByHas('protectedArea', function ($q) {
-                $q->orderBy('name');
-            })->orderBy('name');
+            // Sort by related protected area name, then by site name
+            $query->leftJoin('protected_areas', 'site_names.protected_area_id', '=', 'protected_areas.id')
+                  ->select('site_names.*')
+                  ->orderBy('protected_areas.name', $sortDirection)
+                  ->orderBy('site_names.name', $sortDirection);
         } else {
-            $query->orderBy($sort);
+            $query->orderBy($sort, $sortDirection);
         }
         
         // Get all sites for filtering
@@ -1278,16 +1282,19 @@ class ProtectedAreaController extends Controller
             return true;
         });
 
-        // Apply search filter if provided
+        // Apply search filter if provided (trim, case-insensitive)
         if ($request->filled('search')) {
-            $searchTerm = strtolower($request->search);
+            $searchTerm = strtolower(trim((string) $request->search));
             $filteredSites = $filteredSites->filter(function ($site) use ($searchTerm) {
-                return strpos(strtolower($site->name), $searchTerm) !== false || 
-                       ($site->protectedArea && strpos(strtolower($site->protectedArea->name), $searchTerm) !== false);
-            });
+                $nameMatch = strpos(strtolower($site->name ?? ''), $searchTerm) !== false;
+                $areaMatch = $site->protectedArea && strpos(strtolower($site->protectedArea->name ?? ''), $searchTerm) !== false;
+                return $nameMatch || $areaMatch;
+            })->values();
+        } else {
+            $filteredSites = $filteredSites->values();
         }
 
-        $siteNames = $filteredSites->values();
+        $siteNames = $filteredSites;
 
         // Handle different export formats
         if ($request->has('print')) {

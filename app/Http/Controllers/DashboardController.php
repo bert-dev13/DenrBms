@@ -66,18 +66,8 @@ class DashboardController extends Controller
             }
         }
 
-        // Calculate total species across all tables (true unique species)
-        $allScientificNames = collect();
-        foreach ($tables as $table) {
-            try {
-                $species = DB::table($table)->pluck('scientific_name')->filter();
-                $allScientificNames = $allScientificNames->merge($species);
-            } catch (\Exception $e) {
-                // Skip tables that don't exist
-                continue;
-            }
-        }
-        $totalSpecies = $allScientificNames->unique()->count();
+        // Calculate total species (unique scientific_name) - single source of truth
+        $totalSpecies = DynamicTableService::getUniqueSpeciesCount();
 
         return [
             'total_observations' => $totalObservations,

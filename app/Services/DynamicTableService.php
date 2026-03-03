@@ -34,6 +34,33 @@ class DynamicTableService
             return Schema::hasTable($table);
         });
     }
+
+    /**
+     * Get the count of unique species (by scientific_name) across all observation tables.
+     * This is the single source of truth for "Species Tracked" / "Species Diversity" stats.
+     * Uses scientific_name only so the count is consistent with Dashboard, Analytics, and summary cards.
+     */
+    public static function getUniqueSpeciesCount(): int
+    {
+        $tables = self::getAllObservationTables();
+        $allScientificNames = collect();
+        foreach ($tables as $table) {
+            try {
+                if (!Schema::hasColumn($table, 'scientific_name')) {
+                    continue;
+                }
+                $species = DB::table($table)->pluck('scientific_name')->filter(function ($name) {
+                    return $name !== null && trim((string) $name) !== '';
+                })->map(function ($name) {
+                    return trim((string) $name);
+                });
+                $allScientificNames = $allScientificNames->merge($species);
+            } catch (\Exception $e) {
+                continue;
+            }
+        }
+        return $allScientificNames->unique()->count();
+    }
     
     /**
      * Get dynamically created tables

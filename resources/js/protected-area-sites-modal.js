@@ -4,6 +4,8 @@
  * Scoped system to avoid conflicts with existing modals
  */
 
+import { initSearchBar } from './search-bar.js';
+
 class ProtectedAreaSitesModalSystem {
     constructor() {
         this.overlay = null;
@@ -29,7 +31,8 @@ class ProtectedAreaSitesModalSystem {
         }
         
         this.overlay = document.createElement('div');
-        this.overlay.className = 'protected-area-sites-modal-overlay';
+        // Use the standard system modal overlay class so styling is centralized
+        this.overlay.className = 'modal-overlay';
         this.overlay.id = 'protected-area-sites-modal-overlay';
         document.body.appendChild(this.overlay);
     }
@@ -215,25 +218,22 @@ class ProtectedAreaSitesModalSystem {
     }
 
     createModalContent(type, data) {
-        // Clear existing modal content
         this.overlay.innerHTML = '';
 
-        // Create modal container
         const modal = document.createElement('div');
-        modal.className = 'protected-area-sites-modal-content';
-        
-        // Add appropriate size class
+        modal.className = 'modal-content protected-area-sites-modal-content';
+
         switch (type) {
             case 'view':
-                modal.classList.add('large');
+                modal.classList.add('large', 'modal-add');
                 modal.innerHTML = this.createViewModalHTML(data);
                 break;
             case 'edit':
-                modal.classList.add('medium');
+                modal.classList.add('large', 'modal-add');
                 modal.innerHTML = this.createEditModalHTML(data);
                 break;
             case 'add':
-                modal.classList.add('medium');
+                modal.classList.add('large', 'modal-add');
                 modal.innerHTML = this.createAddModalHTML(data);
                 break;
             case 'delete':
@@ -248,97 +248,102 @@ class ProtectedAreaSitesModalSystem {
 
     createViewModalHTML(data) {
         const { site } = data;
-        
+        const siteName = (site.name || 'N/A').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        const protectedAreaName = (site.protected_area ? site.protected_area.name : 'Not assigned').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        const statusText = site.protected_area ? 'Active' : 'Unassigned';
+        const observationCount = site.species_observations_count ?? 0;
+
         return `
-            <div class="protected-area-sites-modal-header">
-                <h2 class="protected-area-sites-modal-title">Protected Area Site Details</h2>
-                <button class="protected-area-sites-modal-close" onclick="closeProtectedAreaSitesModal()">
+            <div class="modal-header modal-header-add">
+                <h2 class="modal-title">View Site</h2>
+                <button class="modal-close" onclick="closeProtectedAreaSitesModal()" aria-label="Close">
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
                 </button>
             </div>
-            <div class="protected-area-sites-modal-body">
-                <div class="protected-area-sites-view-details">
-                    <div class="protected-area-sites-detail-row">
-                        <label>Site Name:</label>
-                        <span>${site.name || 'N/A'}</span>
-                    </div>
-                    <div class="protected-area-sites-detail-row">
-                        <label>Station Code:</label>
-                        <span>${site.station_code || 'N/A'}</span>
-                    </div>
-                    <div class="protected-area-sites-detail-row">
-                        <label>Protected Area:</label>
-                        <span>${site.protected_area ? site.protected_area.name : 'Not assigned'}</span>
-                    </div>
-                    <div class="protected-area-sites-detail-row">
-                        <label>Observations:</label>
-                        <span>${site.species_observations_count || 0}</span>
-                    </div>
-                    <div class="protected-area-sites-detail-row">
-                        <label>Status:</label>
-                        <span>${site.protected_area ? 'Active' : 'Unassigned'}</span>
-                    </div>
-                    <div class="protected-area-sites-detail-row">
-                        <label>Created:</label>
-                        <span>${site.created_at ? new Date(site.created_at).toLocaleDateString() : 'N/A'}</span>
-                    </div>
-                    <div class="protected-area-sites-detail-row">
-                        <label>Last Updated:</label>
-                        <span>${site.updated_at ? new Date(site.updated_at).toLocaleDateString() : 'N/A'}</span>
-                    </div>
+            <div class="modal-form modal-form-add">
+                <div class="modal-body modal-body-add modal-view-protected-area-site">
+                    <section class="form-section">
+                        <h3 class="form-section-title">Site Information</h3>
+                        <div class="form-section-grid">
+                            <div class="form-group">
+                                <label class="form-label">Station Code</label>
+                                <input type="text" class="form-input" value="${site.station_code || 'N/A'}" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Status</label>
+                                <input type="text" class="form-input" value="${statusText}" readonly>
+                            </div>
+                            <div class="form-group form-group-span-full">
+                                <label class="form-label">Site Name</label>
+                                <input type="text" class="form-input" value="${siteName}" readonly>
+                            </div>
+                            <div class="form-group form-group-span-full">
+                                <label class="form-label">Protected Area</label>
+                                <input type="text" class="form-input" value="${protectedAreaName}" readonly>
+                            </div>
+                        </div>
+                    </section>
+                    <hr class="form-section-divider">
+                    <section class="form-section">
+                        <h3 class="form-section-title">Observation Summary</h3>
+                        <div class="form-section-grid">
+                            <div class="form-group form-group-span-full">
+                                <label class="form-label">Total Observations</label>
+                                <input type="text" class="form-input" value="${observationCount}" readonly>
+                            </div>
+                        </div>
+                    </section>
                 </div>
-            </div>
-            <div class="protected-area-sites-modal-footer">
-                <button type="button" class="protected-area-sites-btn protected-area-sites-btn-secondary" onclick="closeProtectedAreaSitesModal()">Close</button>
+                <div class="modal-footer modal-footer-add">
+                    <button type="button" class="btn btn-secondary-add" onclick="closeProtectedAreaSitesModal()">Close</button>
+                </div>
             </div>
         `;
     }
 
     createEditModalHTML(data) {
         const { site } = data;
-        
+        const siteNameVal = (site.name || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const stationCodeVal = (site.station_code || '').replace(/"/g, '&quot;');
+
         return `
-            <div class="protected-area-sites-modal-header">
-                <h2 class="protected-area-sites-modal-title">Edit Protected Area Site</h2>
-                <button class="protected-area-sites-modal-close" onclick="closeProtectedAreaSitesModal()">
+            <div class="modal-header modal-header-add">
+                <h2 class="modal-title">Edit Site</h2>
+                <button class="modal-close" onclick="closeProtectedAreaSitesModal()" aria-label="Close">
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
                 </button>
             </div>
-            <form class="protected-area-sites-modal-form" onsubmit="protectedAreaSitesModalSystem.submitEditForm(event, ${site.id})">
-                <div class="protected-area-sites-modal-body">
-                    <input type="hidden" name="_token" value="${document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''}">
-                    
-                    <div class="protected-area-sites-form-row single">
-                        <div class="protected-area-sites-form-group">
-                            <label class="protected-area-sites-form-label required">Site Name</label>
-                            <input type="text" class="protected-area-sites-form-input" name="name" value="${site.name || ''}" required maxlength="255" placeholder="e.g., Site A">
+            <form class="modal-form modal-form-add" onsubmit="protectedAreaSitesModalSystem.submitEditForm(event, ${site.id})">
+                <input type="hidden" name="_token" value="${document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''}">
+                <div class="modal-body modal-body-add">
+                    <section class="form-section">
+                        <h3 class="form-section-title">Site Information</h3>
+                        <div class="form-section-grid form-section-grid-full">
+                            <div class="form-group form-group-span-full">
+                                <label class="form-label form-label-required">Site Name</label>
+                                <input type="text" class="form-input" name="name" value="${siteNameVal}" required maxlength="255" placeholder="e.g., Site A">
+                            </div>
+                            <div class="form-group form-group-span-full">
+                                <label class="form-label">Station Code</label>
+                                <input type="text" class="form-input" name="station_code" value="${stationCodeVal}" maxlength="255" placeholder="e.g., ST001">
+                            </div>
+                            <div class="form-group form-group-span-full">
+                                <label class="form-label">Protected Area</label>
+                                <select class="form-input form-select" name="protected_area_id">
+                                    <option value="">Select Protected Area (Optional)</option>
+                                    ${this.generateProtectedAreaOptions(site.protected_area_id)}
+                                </select>
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div class="protected-area-sites-form-row single">
-                        <div class="protected-area-sites-form-group">
-                            <label class="protected-area-sites-form-label">Station Code</label>
-                            <input type="text" class="protected-area-sites-form-input" name="station_code" value="${site.station_code || ''}" maxlength="255" placeholder="e.g., ST001">
-                        </div>
-                    </div>
-                    
-                    <div class="protected-area-sites-form-row single">
-                        <div class="protected-area-sites-form-group">
-                            <label class="protected-area-sites-form-label">Protected Area</label>
-                            <select class="protected-area-sites-form-select" name="protected_area_id">
-                                <option value="">Select Protected Area (Optional)</option>
-                                ${this.generateProtectedAreaOptions(site.protected_area_id)}
-                            </select>
-                        </div>
-                    </div>
+                    </section>
                 </div>
-                <div class="protected-area-sites-modal-footer">
-                    <button type="button" class="protected-area-sites-btn protected-area-sites-btn-secondary" onclick="closeProtectedAreaSitesModal()">Cancel</button>
-                    <button type="submit" class="protected-area-sites-btn protected-area-sites-btn-primary">Save Changes</button>
+                <div class="modal-footer modal-footer-add">
+                    <button type="button" class="btn btn-secondary-add" onclick="closeProtectedAreaSitesModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary-add">Update</button>
                 </div>
             </form>
         `;
@@ -346,45 +351,41 @@ class ProtectedAreaSitesModalSystem {
 
     createAddModalHTML(data) {
         return `
-            <div class="protected-area-sites-modal-header">
-                <h2 class="protected-area-sites-modal-title">Add New Protected Area Site</h2>
-                <button class="protected-area-sites-modal-close" onclick="closeProtectedAreaSitesModal()">
+            <div class="modal-header modal-header-add">
+                <h2 class="modal-title">Add Site</h2>
+                <button class="modal-close" onclick="closeProtectedAreaSitesModal()" aria-label="Close">
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
                 </button>
             </div>
-            <form class="protected-area-sites-modal-form" onsubmit="protectedAreaSitesModalSystem.submitAddForm(event)">
-                <div class="protected-area-sites-modal-body">
-                    <input type="hidden" name="_token" value="${document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''}">
-                    
-                    <div class="protected-area-sites-form-row single">
-                        <div class="protected-area-sites-form-group">
-                            <label class="protected-area-sites-form-label required">Site Name</label>
-                            <input type="text" class="protected-area-sites-form-input" name="name" required maxlength="255" placeholder="e.g., Site A">
+            <form class="modal-form modal-form-add" onsubmit="protectedAreaSitesModalSystem.submitAddForm(event)">
+                <input type="hidden" name="_token" value="${document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''}">
+                <div class="modal-body modal-body-add">
+                    <section class="form-section">
+                        <h3 class="form-section-title">Site Information</h3>
+                        <div class="form-section-grid form-section-grid-full">
+                            <div class="form-group form-group-span-full">
+                                <label class="form-label form-label-required">Site Name</label>
+                                <input type="text" class="form-input" name="name" required maxlength="255" placeholder="e.g., Site A">
+                            </div>
+                            <div class="form-group form-group-span-full">
+                                <label class="form-label">Station Code</label>
+                                <input type="text" class="form-input" name="station_code" maxlength="255" placeholder="e.g., ST001">
+                            </div>
+                            <div class="form-group form-group-span-full">
+                                <label class="form-label">Protected Area</label>
+                                <select class="form-input form-select" name="protected_area_id">
+                                    <option value="">Select Protected Area (Optional)</option>
+                                    ${this.generateProtectedAreaOptions()}
+                                </select>
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div class="protected-area-sites-form-row single">
-                        <div class="protected-area-sites-form-group">
-                            <label class="protected-area-sites-form-label">Station Code</label>
-                            <input type="text" class="protected-area-sites-form-input" name="station_code" maxlength="255" placeholder="e.g., ST001">
-                        </div>
-                    </div>
-                    
-                    <div class="protected-area-sites-form-row single">
-                        <div class="protected-area-sites-form-group">
-                            <label class="protected-area-sites-form-label">Protected Area</label>
-                            <select class="protected-area-sites-form-select" name="protected_area_id">
-                                <option value="">Select Protected Area (Optional)</option>
-                                ${this.generateProtectedAreaOptions()}
-                            </select>
-                        </div>
-                    </div>
+                    </section>
                 </div>
-                <div class="protected-area-sites-modal-footer">
-                    <button type="button" class="protected-area-sites-btn protected-area-sites-btn-secondary" onclick="closeProtectedAreaSitesModal()">Cancel</button>
-                    <button type="submit" class="protected-area-sites-btn protected-area-sites-btn-primary">Add Site</button>
+                <div class="modal-footer modal-footer-add">
+                    <button type="button" class="btn btn-secondary-add" onclick="closeProtectedAreaSitesModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary-add">Save</button>
                 </div>
             </form>
         `;
@@ -392,25 +393,31 @@ class ProtectedAreaSitesModalSystem {
 
     createDeleteModalHTML(data) {
         const { site } = data;
-        
+        const name = (site.name || 'this site').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
         return `
-            <div class="protected-area-sites-modal-header">
-                <h2 class="protected-area-sites-modal-title">Delete Protected Area Site</h2>
-                <button class="protected-area-sites-modal-close" onclick="closeProtectedAreaSitesModal()">
+            <div class="modal-header">
+                <h2 class="modal-title">Delete Site</h2>
+                <button class="modal-close" onclick="closeProtectedAreaSitesModal()" aria-label="Close">
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
                 </button>
             </div>
-            <div class="protected-area-sites-modal-body">
-                <div class="protected-area-sites-delete-confirmation">
-                    <p class="protected-area-sites-delete-question">Delete ${site.name}?</p>
-                    <p class="protected-area-sites-delete-warning">Cannot be undone</p>
+            <div class="modal-body">
+                <div class="delete-modal-content">
+                    <div class="delete-modal-icon-wrap">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="delete-modal-icon">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                    </div>
+                    <h3 class="delete-modal-title">Delete ${name}?</h3>
+                    <p class="delete-modal-warning">Cannot be undone</p>
                 </div>
             </div>
-            <div class="protected-area-sites-modal-footer">
-                <button type="button" class="protected-area-sites-btn protected-area-sites-btn-secondary" onclick="closeProtectedAreaSitesModal()">Cancel</button>
-                <button type="button" class="protected-area-sites-btn protected-area-sites-btn-danger" onclick="confirmDeleteProtectedAreaSite(${site.id})">Delete</button>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeProtectedAreaSitesModal()">Cancel</button>
+                <button type="button" class="btn btn-danger" onclick="confirmDeleteProtectedAreaSite(${site.id})">Delete</button>
             </div>
         `;
     }
@@ -480,12 +487,10 @@ class ProtectedAreaSitesModalSystem {
         // Add method override for Laravel PUT support
         formData.append('_method', 'PUT');
         
-        // Add loading state to submit button
         const submitBtn = form.querySelector('button[type="submit"]');
-        const originalText = submitBtn.textContent;
         submitBtn.disabled = true;
-        submitBtn.classList.add('protected-area-sites-loading');
-        submitBtn.textContent = 'Saving...';
+        submitBtn.classList.add('loading');
+        submitBtn.textContent = '';
 
         try {
             const response = await fetch(`/protected-area-sites/${siteId}`, {
@@ -518,10 +523,9 @@ class ProtectedAreaSitesModalSystem {
             console.error('Error updating protected area site:', error);
             this.showNotification('Error updating protected area site', 'error');
         } finally {
-            // Remove loading state
             submitBtn.disabled = false;
-            submitBtn.classList.remove('protected-area-sites-loading');
-            submitBtn.textContent = originalText;
+            submitBtn.classList.remove('loading');
+            submitBtn.textContent = 'Update';
         }
     }
 
@@ -531,12 +535,10 @@ class ProtectedAreaSitesModalSystem {
         const form = event.target;
         const formData = new FormData(form);
         
-        // Add loading state to submit button
         const submitBtn = form.querySelector('button[type="submit"]');
-        const originalText = submitBtn.textContent;
         submitBtn.disabled = true;
-        submitBtn.classList.add('protected-area-sites-loading');
-        submitBtn.textContent = 'Saving...';
+        submitBtn.classList.add('loading');
+        submitBtn.textContent = '';
         
         // Clear any existing errors
         this.clearFormErrors(form);
@@ -572,10 +574,9 @@ class ProtectedAreaSitesModalSystem {
             console.error('Error adding protected area site:', error);
             this.showNotification('Network error: ' + error.message, 'error');
         } finally {
-            // Remove loading state
             submitBtn.disabled = false;
-            submitBtn.classList.remove('protected-area-sites-loading');
-            submitBtn.textContent = originalText;
+            submitBtn.classList.remove('loading');
+            submitBtn.textContent = 'Save';
         }
     }
 
@@ -814,11 +815,8 @@ class ProtectedAreaSitesModalSystem {
     }
 
     clearFormErrors(form) {
-        // Remove error classes
         form.querySelectorAll('.error').forEach(el => el.classList.remove('error'));
-        
-        // Remove error messages
-        form.querySelectorAll('.protected-area-sites-error-message').forEach(el => el.remove());
+        form.querySelectorAll('.error-message').forEach(el => el.remove());
     }
 
     showFormErrors(form, errors) {
@@ -830,7 +828,7 @@ class ProtectedAreaSitesModalSystem {
                 input.classList.add('error');
                 
                 const errorDiv = document.createElement('div');
-                errorDiv.className = 'protected-area-sites-error-message';
+                errorDiv.className = 'error-message';
                 
                 let errorMessage = Array.isArray(errors[field]) ? errors[field][0] : errors[field];
                 
@@ -908,3 +906,85 @@ window.openAddProtectedAreaSitesModal = openAddProtectedAreaSitesModal;
 window.openDeleteProtectedAreaSitesModal = openDeleteProtectedAreaSitesModal;
 window.closeProtectedAreaSitesModal = closeProtectedAreaSitesModal;
 window.confirmDeleteProtectedAreaSite = confirmDeleteProtectedAreaSite;
+
+// Export and dropdown init for Protected Area Sites page
+function exportProtectedAreaSitesTable(format) {
+    const form = document.getElementById('protected-area-sites-filter-form') || document.querySelector('form[method="GET"]');
+    if (!form) return;
+    const params = new URLSearchParams(new FormData(form));
+    params.set('export', format);
+    const searchInput = document.getElementById('protected-area-sites-search');
+    if (searchInput?.value.trim()) params.set('search', searchInput.value.trim());
+    const url = window.location.pathname + '?' + params.toString();
+    switch (format) {
+        case 'print':
+            const w = window.open(url + '&print=1', '_blank');
+            if (w) w.onload = () => w.print();
+            break;
+        case 'excel':
+            window.location.href = url + '&excel=1';
+            if (window.showNotification) showNotification('Excel export started.', 'success');
+            break;
+        case 'pdf':
+            window.location.href = url + '&pdf=1';
+            if (window.showNotification) showNotification('PDF export started.', 'success');
+            break;
+        default:
+            if (window.showNotification) showNotification('Invalid export format', 'error');
+    }
+    document.getElementById('export-dropdown')?.classList.remove('is-open');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Standardized server-side search (debounced, loading state, clear button)
+    initSearchBar({
+        inputId: 'protected-area-sites-search',
+        clearBtnId: 'protected-area-sites-search-clear',
+        formSelector: '#protected-area-sites-filter-form',
+        debounceMs: 400,
+    });
+
+    // Preserve search when user clicks Apply on the filter form
+    const filterForm = document.getElementById('protected-area-sites-filter-form');
+    if (filterForm) {
+        filterForm.addEventListener('submit', function() {
+            const searchInput = document.getElementById('protected-area-sites-search');
+            if (searchInput?.value.trim()) {
+                let input = filterForm.querySelector('input[name="search"]');
+                if (!input) {
+                    input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'search';
+                    filterForm.appendChild(input);
+                }
+                input.value = searchInput.value.trim();
+            }
+        });
+    }
+
+    const btn = document.getElementById('export-dropdown-btn');
+    const dropdown = document.getElementById('export-dropdown');
+    if (btn && dropdown) {
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            dropdown.classList.toggle('is-open');
+        });
+        document.addEventListener('click', e => {
+            if (!dropdown.contains(e.target) && e.target !== btn) dropdown.classList.remove('is-open');
+        });
+    }
+});
+
+window.exportTable = exportProtectedAreaSitesTable;
+
+function clearSiteFilters() {
+    const form = document.getElementById('protected-area-sites-filter-form');
+    const status = document.getElementById('status');
+    const sort = document.getElementById('sort');
+    const searchInput = document.getElementById('protected-area-sites-search');
+    if (status) status.value = '';
+    if (sort) sort.value = 'name';
+    if (searchInput) searchInput.value = '';
+    if (form) form.submit();
+}
+window.clearSiteFilters = clearSiteFilters;

@@ -271,8 +271,8 @@ class ModalSystem {
         const { observationId, tableName } = data;
         
         try {
-            // Fetch observation data
-            const response = await fetch(`/api/species-observations/data/${observationId}?table_name=${tableName}`, {
+            // Fetch observation data (edit-data includes site_name_id for dropdown pre-selection)
+            const response = await fetch(`/api/species-observations/edit-data/${observationId}?table_name=${encodeURIComponent(tableName || '')}`, {
                 headers: {
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
                     'X-Requested-With': 'XMLHttpRequest',
@@ -420,13 +420,21 @@ class ModalSystem {
     async handleAddProtectedAreaChange(selectElement) {
         const protectedAreaId = selectElement.value;
         const siteNameSelect = document.getElementById('add_modal_site_name');
-        
+        const placeholderDefault = siteNameSelect?.dataset.placeholderDefault || 'Select a protected area first';
+        const placeholderNoSites = siteNameSelect?.dataset.placeholderNoSites || 'No sites available';
+
         if (!protectedAreaId) {
-            siteNameSelect.innerHTML = '<option value="">No specific site</option>';
+            siteNameSelect.innerHTML = `<option value="">${placeholderDefault}</option>`;
             siteNameSelect.disabled = true;
-            this.updateSaveInfo(null);
+            siteNameSelect.value = '';
+            this.updateSaveInfo(selectElement);
             return;
         }
+
+        // Loading state
+        siteNameSelect.disabled = true;
+        siteNameSelect.innerHTML = '<option value="">Loading...</option>';
+        siteNameSelect.value = '';
 
         try {
             const response = await fetch(`/api/species-observations/site-names/${protectedAreaId}`, {
@@ -437,103 +445,54 @@ class ModalSystem {
                 }
             });
 
-            console.log('Response status:', response.status);
-            console.log('Response headers:', response.headers);
-
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
             const contentType = response.headers.get('content-type');
             if (!contentType || !contentType.includes('application/json')) {
-                // If we get HTML instead of JSON, there might be an authentication issue
                 const text = await response.text();
                 console.error('Received non-JSON response:', text.substring(0, 200));
                 throw new Error('Received HTML response instead of JSON. Please check if you are logged in.');
             }
 
             const result = await response.json();
-            console.log('API response:', result);
-            
-            // Handle different response formats
-            let siteNames = [];
-            if (result.success && result.site_names) {
-                siteNames = result.site_names;
-            } else if (Array.isArray(result)) {
-                // Direct array response (backward compatibility)
-                siteNames = result;
-            } else {
+            const siteNames = result.success && result.site_names
+                ? result.site_names
+                : (Array.isArray(result) ? result : result.sites || []);
+
+            if (result.success === false && !Array.isArray(result)) {
                 throw new Error(result.error || 'Failed to load site names');
             }
-            
-            // Get selected protected area code for validation
+
             const selectedOption = selectElement.options[selectElement.selectedIndex];
-            const protectedAreaCode = selectedOption.getAttribute('data-code');
-            
-            if (siteNames.length > 0) {
-                let optionsHTML = '<option value="">No specific site</option>';
-                
-                siteNames.forEach(siteName => {
-                    // Client-side validation: Filter sites based on protected area
-                    let isValidSite = true;
-                    let validationMessage = '';
-                    
-                    if (protectedAreaCode === 'PPLS') {
-                        // PPLS can have Toyota sites
-                        if (siteName.name.includes('MPL')) {
-                            isValidSite = false;
-                            validationMessage = 'MPL sites cannot be assigned to PPLS';
-                        }
-                    } else if (protectedAreaCode === 'MPL') {
-                        // MPL can only have MPL sites
-                        if (!siteName.name.includes('MPL')) {
-                            isValidSite = false;
-                            validationMessage = 'Only MPL sites can be assigned to MPL';
-                        }
-                    } else {
-                        // Other protected areas should not have PPLS or MPL specific sites
-                        if (siteName.name.includes('Toyota') || siteName.name.includes('MPL') || 
-                            siteName.name.includes('San Roque') || siteName.name.includes('Manga') || 
-                            siteName.name.includes('Quibal')) {
-                            isValidSite = false;
-                            validationMessage = 'This site can only be assigned to its designated protected area';
-                        }
-                    }
-                    
-                    if (isValidSite) {
-                        optionsHTML += `<option value="${siteName.id}">${siteName.name}</option>`;
-                    }
+            const protectedAreaCode = selectedOption?.getAttribute('data-code') || '';
+
+            const validSites = siteNames.filter(s => {
+                if (protectedAreaCode === 'PPLS') return !s.name.includes('MPL');
+                if (protectedAreaCode === 'MPL') return s.name.includes('MPL');
+                return !['Toyota', 'MPL', 'San Roque', 'Manga', 'Quibal'].some(k => s.name.includes(k));
+            });
+
+            if (validSites.length > 0) {
+                let optionsHTML = '<option value="">Select</option><option value="0">No specific site</option>';
+                validSites.forEach(site => {
+                    optionsHTML += `<option value="${site.id}">${site.name}</option>`;
                 });
-                
                 siteNameSelect.innerHTML = optionsHTML;
                 siteNameSelect.disabled = false;
-                
-                if (siteNames.filter(s => {
-                    let isValid = true;
-                    if (protectedAreaCode === 'PPLS' && s.name.includes('MPL')) isValid = false;
-                    if (protectedAreaCode === 'MPL' && !s.name.includes('MPL')) isValid = false;
-                    if (protectedAreaCode !== 'PPLS' && protectedAreaCode !== 'MPL' && 
-                        (s.name.includes('Toyota') || s.name.includes('MPL') || 
-                         s.name.includes('San Roque') || s.name.includes('Manga') || 
-                         s.name.includes('Quibal'))) isValid = false;
-                    return isValid;
-                }).length === 0) {
-                    // No valid sites for this protected area
-                    siteNameSelect.innerHTML = '<option value="">No valid sites available</option>';
-                    siteNameSelect.disabled = true;
-                }
             } else {
-                siteNameSelect.innerHTML = '<option value="">No sites available</option>';
+                siteNameSelect.innerHTML = `<option value="">${placeholderNoSites}</option>`;
                 siteNameSelect.disabled = true;
+                siteNameSelect.value = '';
             }
-            
-            this.updateSaveInfo(null);
-            
+
+            this.updateSaveInfo(selectElement);
         } catch (error) {
             console.error('Error loading site names:', error);
-            siteNameSelect.innerHTML = '<option value="">Error loading sites</option>';
+            siteNameSelect.innerHTML = `<option value="">${placeholderNoSites}</option>`;
             siteNameSelect.disabled = true;
-            this.updateSaveInfo(null);
+            siteNameSelect.value = '';
         }
     }
 
@@ -545,7 +504,7 @@ class ModalSystem {
         const stationCodeInput = document.querySelector('input[name="station_code"]');
         
         if (!protectedAreaSelect || !protectedAreaSelect.value) {
-            saveInfoBanner.style.display = 'none';
+            if (saveInfoBanner) saveInfoBanner.style.display = 'none';
             if (stationCodeInput) {
                 stationCodeInput.value = '';
                 stationCodeInput.placeholder = 'Auto-generated';
@@ -573,8 +532,8 @@ class ModalSystem {
             stationCode = `${protectedAreaCode}-MAIN`;
         }
         
-        saveLocationText.innerHTML = saveLocation;
-        saveInfoBanner.style.display = 'block';
+        if (saveLocationText) saveLocationText.innerHTML = saveLocation;
+        if (saveInfoBanner) saveInfoBanner.style.display = 'block';
         
         if (stationCodeInput) {
             stationCodeInput.value = stationCode;
@@ -612,12 +571,17 @@ class ModalSystem {
     async handleProtectedAreaChange(selectElement) {
         const protectedAreaId = selectElement.value;
         const siteNameSelect = document.getElementById('modal_site_name');
-        
+
         if (!protectedAreaId) {
-            siteNameSelect.innerHTML = '<option value="">No specific site</option>';
+            siteNameSelect.innerHTML = '<option value="">Select a protected area first</option>';
             siteNameSelect.disabled = true;
+            siteNameSelect.value = '';
             return;
         }
+
+        siteNameSelect.innerHTML = '<option value="">Loading...</option>';
+        siteNameSelect.disabled = true;
+        siteNameSelect.value = '';
 
         try {
             const response = await fetch(`/api/species-observations/site-names/${protectedAreaId}`, {
@@ -699,19 +663,20 @@ class ModalSystem {
         // Show loading state
         submitBtn.disabled = true;
         submitBtn.classList.add('loading');
-        submitBtn.textContent = 'Adding...';
+        submitBtn.textContent = 'Saving...';
 
         try {
-            // Convert FormData to object
+            // Convert FormData to object (disabled fields are excluded, so add site_name_id explicitly)
             const formDataObj = Object.fromEntries(formData);
             
             // Remove table_name as backend will determine it
             delete formDataObj.table_name;
             
-            // Ensure station_code is not empty before sending
-            if (!formDataObj.station_code || formDataObj.station_code.trim() === '') {
-                delete formDataObj.station_code; // Let backend generate it
-            }
+            // site_name_id: disabled selects aren't in FormData; normalize to '' when absent or "0"
+            const siteSelect = form.querySelector('select[name="site_name_id"]');
+            formDataObj.site_name_id = (siteSelect?.disabled || !formDataObj.site_name_id || formDataObj.site_name_id === '0')
+                ? ''
+                : formDataObj.site_name_id;
             
             // Log the data being sent for debugging
             console.log('Submitting observation data:', formDataObj);
@@ -782,7 +747,7 @@ class ModalSystem {
             // Restore button state
             submitBtn.disabled = false;
             submitBtn.classList.remove('loading');
-            submitBtn.textContent = 'Add Observation';
+            submitBtn.textContent = 'Save Observation';
         }
     }
 
@@ -821,22 +786,27 @@ class ModalSystem {
     async initializeEditSiteName(observation) {
         const protectedAreaSelect = document.querySelector('select[name="protected_area_id"]');
         const siteNameSelect = document.getElementById('modal_site_name');
-        
+
         if (!protectedAreaSelect || !siteNameSelect) return;
-        
+
         const selectedAreaId = protectedAreaSelect.value;
-        
-        if (selectedAreaId) {
-            // Load site names and then set the current value
-            await this.loadModalSiteNames(selectedAreaId);
-            
-            // Set the current site name if it exists
-            if (observation.site_name_id) {
-                siteNameSelect.value = observation.site_name_id;
-            }
-        } else {
-            // Disable site name dropdown for other areas
+
+        if (!selectedAreaId) {
+            siteNameSelect.innerHTML = '<option value="">Select a protected area first</option>';
             siteNameSelect.disabled = true;
+            siteNameSelect.value = '';
+            return;
+        }
+
+        await this.loadModalSiteNames(selectedAreaId);
+
+        if (observation.site_name_id) {
+            const optionExists = Array.from(siteNameSelect.options).some(opt => opt.value == observation.site_name_id);
+            if (optionExists && !siteNameSelect.disabled) {
+                siteNameSelect.value = String(observation.site_name_id);
+            } else {
+                siteNameSelect.value = '';
+            }
         }
     }
 
@@ -900,15 +870,15 @@ class ModalSystem {
 
         switch (type) {
             case 'view':
-                modal.classList.add('large');
+                modal.classList.add('large', 'modal-add');
                 modal.innerHTML = this.createViewModalHTML(data);
                 break;
             case 'add':
-                modal.classList.add('large');
+                modal.classList.add('large', 'modal-add');
                 modal.innerHTML = this.createAddModalHTML(data);
                 break;
             case 'edit':
-                modal.classList.add('xlarge');
+                modal.classList.add('large', 'modal-add');
                 modal.innerHTML = this.createEditModalHTML(data);
                 break;
             case 'delete':
@@ -922,67 +892,84 @@ class ModalSystem {
 
     createViewModalHTML(data) {
         const { observation } = data;
-        
-        const bioGroupBadge = observation.bio_group === 'fauna' 
-            ? '<span class="badge fauna">Fauna</span>'
-            : '<span class="badge flora">Flora</span>';
+        const protectedAreaName = observation.protected_area?.name || 'N/A';
+        const siteName = observation.site_name?.name || 'No specific site';
+        const stationCode = (observation.station_code || 'N/A').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        const patrolYear = observation.patrol_year || 'N/A';
+        const patrolSemester = observation.patrol_semester ? (observation.patrol_semester === 1 ? '1st' : '2nd') : 'N/A';
+        const bioGroup = observation.bio_group === 'fauna' ? 'Fauna' : (observation.bio_group === 'flora' ? 'Flora' : 'N/A');
+        const recordedCount = observation.recorded_count ?? 'N/A';
+        const commonName = (observation.common_name || 'N/A').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        const scientificName = (observation.scientific_name || 'Not specified').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
         return `
-            <div class="modal-header">
+            <div class="modal-header modal-header-add">
                 <h2 class="modal-title">View Observation</h2>
-                <button class="modal-close" onclick="closeModal()">
+                <button class="modal-close" onclick="closeModal()" aria-label="Close">
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
                 </button>
             </div>
-            <div class="modal-body">
-                <div class="view-grid">
-                    <div class="view-item">
-                        <div class="view-label">Protected Area</div>
-                        <div class="view-value">${observation.protected_area?.name || 'N/A'}</div>
-                    </div>
-                    <div class="view-item">
-                        <div class="view-label">Site Name</div>
-                        <div class="view-value">${observation.site_name?.name || 'No specific site'}</div>
-                    </div>
-                    <div class="view-item">
-                        <div class="view-label">Transaction Code</div>
-                        <div class="view-value">${observation.transaction_code || 'N/A'}</div>
-                    </div>
-                    <div class="view-item">
-                        <div class="view-label">Station Code</div>
-                        <div class="view-value">${observation.station_code || 'N/A'}</div>
-                    </div>
-                    <div class="view-item">
-                        <div class="view-label">Patrol Year</div>
-                        <div class="view-value">${observation.patrol_year || 'N/A'}</div>
-                    </div>
-                    <div class="view-item">
-                        <div class="view-label">Patrol Semester</div>
-                        <div class="view-value">${observation.patrol_semester ? observation.patrol_semester + ' Semester' : 'N/A'}</div>
-                    </div>
-                    <div class="view-item">
-                        <div class="view-label">Bio Group</div>
-                        <div class="view-value">${bioGroupBadge}</div>
-                    </div>
-                    <div class="view-item">
-                        <div class="view-label">Common Name</div>
-                        <div class="view-value">${observation.common_name || 'N/A'}</div>
-                    </div>
-                    <div class="view-item full-width">
-                        <div class="view-label">Scientific Name</div>
-                        <div class="view-value"><em>${observation.scientific_name || 'Not specified'}</em></div>
-                    </div>
-                    <div class="view-item full-width">
-                        <div class="view-label">Recorded Count</div>
-                        <div class="view-value">${observation.recorded_count || 'N/A'}</div>
-                    </div>
+            <div class="modal-form modal-form-add">
+                <div class="modal-body modal-body-add">
+                    <section class="form-section">
+                        <h3 class="form-section-title">Location Details</h3>
+                        <div class="form-section-grid">
+                            <div class="form-group">
+                                <label class="form-label">Protected Area</label>
+                                <input type="text" class="form-input" value="${protectedAreaName.replace(/"/g, '&quot;')}" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Station Code</label>
+                                <input type="text" class="form-input" value="${stationCode}" readonly>
+                            </div>
+                            <div class="form-group form-group-span-full">
+                                <label class="form-label">Site Name</label>
+                                <input type="text" class="form-input" value="${siteName.replace(/"/g, '&quot;')}" readonly>
+                            </div>
+                        </div>
+                    </section>
+                    <hr class="form-section-divider">
+                    <section class="form-section">
+                        <h3 class="form-section-title">Record Information</h3>
+                        <div class="form-section-grid">
+                            <div class="form-group">
+                                <label class="form-label">Patrol Year</label>
+                                <input type="text" class="form-input" value="${patrolYear}" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Patrol Semester</label>
+                                <input type="text" class="form-input" value="${patrolSemester}" readonly>
+                            </div>
+                        </div>
+                    </section>
+                    <hr class="form-section-divider">
+                    <section class="form-section">
+                        <h3 class="form-section-title">Species Information</h3>
+                        <div class="form-section-grid">
+                            <div class="form-group">
+                                <label class="form-label">Bio Group</label>
+                                <input type="text" class="form-input" value="${bioGroup}" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Recorded Count</label>
+                                <input type="text" class="form-input" value="${recordedCount}" readonly>
+                            </div>
+                            <div class="form-group form-group-span-full">
+                                <label class="form-label">Common Name</label>
+                                <input type="text" class="form-input" value="${commonName}" readonly>
+                            </div>
+                            <div class="form-group form-group-span-full">
+                                <label class="form-label">Scientific Name</label>
+                                <input type="text" class="form-input" value="${scientificName}" readonly>
+                            </div>
+                        </div>
+                    </section>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal()">Close</button>
-                <button class="btn btn-primary" onclick="modalSystem.editFromView()">Edit</button>
+                <div class="modal-footer modal-footer-add">
+                    <button type="button" class="btn btn-secondary-add" onclick="closeModal()">Close</button>
+                </div>
             </div>
         `;
     }
@@ -1008,107 +995,92 @@ class ModalSystem {
         ).join('') : '';
 
         return `
-            <div class="modal-header">
+            <div class="modal-header modal-header-add">
                 <h2 class="modal-title">Add New Observation</h2>
-                <button class="modal-close" onclick="closeModal()">
+                <button class="modal-close" onclick="closeModal()" aria-label="Close">
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
                 </button>
             </div>
-            <form class="modal-form" onsubmit="modalSystem.submitAddForm(event)">
-                <div class="modal-body">
-                    <input type="hidden" name="_token" value="${document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''}">
-                    
-                    <!-- Save Information Display -->
-                    <div class="save-info-banner" id="save-info-banner" style="display: none;">
-                        <div class="save-info-content">
-                            <h6><i class="fas fa-info-circle"></i> Where this observation will be saved:</h6>
-                            <p id="save-location-text">Select a protected area to see where this observation will be saved.</p>
+            <form class="modal-form modal-form-add" onsubmit="modalSystem.submitAddForm(event)">
+                <input type="hidden" name="_token" value="${document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''}">
+                <div class="modal-body modal-body-add">
+                    <section class="form-section">
+                        <h3 class="form-section-title">Location Details</h3>
+                        <div class="form-section-grid">
+                            <div class="form-group">
+                                <label class="form-label form-label-required">Protected Area</label>
+                                <select class="form-input form-select" name="protected_area_id" required onchange="modalSystem.handleAddProtectedAreaChange(this)">
+                                    <option value="">Select</option>
+                                    ${protectedAreaOptions}
+                                </select>
+                            </div>
+                            <div class="form-group form-group-site-name">
+                                <label class="form-label">Site Name</label>
+                                <select class="form-input form-select" name="site_name_id" id="add_modal_site_name" disabled data-placeholder-default="Select a protected area first" data-placeholder-no-sites="No sites available" onchange="modalSystem.updateSaveInfo(this.form.querySelector('select[name=protected_area_id]'))">
+                                    <option value="">Select a protected area first</option>
+                                </select>
+                            </div>
+                            <div class="form-group form-group-span-full">
+                                <label class="form-label form-label-required">Station Code</label>
+                                <input type="text" class="form-input" name="station_code" required maxlength="60" placeholder="e.g. PPLS-MAIN">
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label required">Protected Area</label>
-                            <select class="form-select" name="protected_area_id" required onchange="modalSystem.handleAddProtectedAreaChange(this); modalSystem.updateSaveInfo(this)">
-                                <option value="">Select Protected Area</option>
-                                ${protectedAreaOptions}
-                            </select>
-                            <div class="form-help">The protected area where this observation was made.</div>
+                    </section>
+                    <hr class="form-section-divider">
+                    <section class="form-section">
+                        <h3 class="form-section-title">Record Information</h3>
+                        <div class="form-section-grid">
+                            <div class="form-group">
+                                <label class="form-label form-label-required">Transaction Code</label>
+                                <input type="text" class="form-input" name="transaction_code" required maxlength="50" placeholder="e.g. OBS-2024-001">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label form-label-required">Patrol Year</label>
+                                <select class="form-input form-select" name="patrol_year" required>
+                                    <option value="">Select</option>
+                                    ${yearOptions}
+                                </select>
+                            </div>
+                            <div class="form-group form-group-span-full">
+                                <label class="form-label form-label-required">Patrol Semester</label>
+                                <select class="form-input form-select" name="patrol_semester" required>
+                                    <option value="">Select</option>
+                                    ${semesterOptions}
+                                </select>
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label class="form-label">Site Name <small class="text-muted">(Optional)</small></label>
-                            <select class="form-select" name="site_name_id" id="add_modal_site_name" onchange="modalSystem.updateSaveInfo(this)">
-                                <option value="">No specific site</option>
-                            </select>
-                            <div class="form-help">Select a specific site or leave blank to save at protected area level.</div>
+                    </section>
+                    <hr class="form-section-divider">
+                    <section class="form-section">
+                        <h3 class="form-section-title">Species Information</h3>
+                        <div class="form-section-grid">
+                            <div class="form-group">
+                                <label class="form-label form-label-required">Bio Group</label>
+                                <select class="form-input form-select" name="bio_group" required>
+                                    <option value="">Select</option>
+                                    ${bioGroupOptions}
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label form-label-required">Common Name</label>
+                                <input type="text" class="form-input" name="common_name" required maxlength="150" placeholder="e.g. Philippine Eagle">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label form-label-required">Scientific Name</label>
+                                <input type="text" class="form-input" name="scientific_name" required maxlength="200" placeholder="e.g. Pithecophaga jefferyi">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label form-label-required">Recorded Count</label>
+                                <input type="number" class="form-input" name="recorded_count" required min="0" value="0" placeholder="0">
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label required">Transaction Code</label>
-                            <input type="text" class="form-input" name="transaction_code" required maxlength="50" placeholder="e.g., OBS-2024-001">
-                            <div class="form-help">Unique identifier for this observation record.</div>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label required">Station Code</label>
-                            <input type="text" class="form-input" name="station_code" required maxlength="60" placeholder="Auto-generated" readonly>
-                            <div class="form-help">Automatically assigned based on your selection.</div>
-                        </div>
-                    </div>
-                    
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label required">Patrol Year</label>
-                            <select class="form-select" name="patrol_year" required>
-                                <option value="">Select Year</option>
-                                ${yearOptions}
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label required">Patrol Semester</label>
-                            <select class="form-select" name="patrol_semester" required>
-                                <option value="">Select Semester</option>
-                                ${semesterOptions}
-                            </select>
-                        </div>
-                    </div>
-                    
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label required">Bio Group</label>
-                            <select class="form-select" name="bio_group" required>
-                                <option value="">Select Bio Group</option>
-                                ${bioGroupOptions}
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label required">Common Name</label>
-                            <input type="text" class="form-input" name="common_name" required maxlength="150" placeholder="Enter common name">
-                        </div>
-                    </div>
-                    
-                    <div class="form-row single">
-                        <div class="form-group">
-                            <label class="form-label">Scientific Name</label>
-                            <input type="text" class="form-input" name="scientific_name" maxlength="200" placeholder="Enter scientific name (optional)">
-                            <div class="form-help">Latin name of the species (if known).</div>
-                        </div>
-                    </div>
-                    
-                    <div class="form-row single">
-                        <div class="form-group">
-                            <label class="form-label required">Recorded Count</label>
-                            <input type="number" class="form-input" name="recorded_count" required min="0" placeholder="Enter count">
-                            <div class="form-help">Number of individuals observed.</div>
-                        </div>
-                    </div>
+                    </section>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Add Observation</button>
+                <div class="modal-footer modal-footer-add">
+                    <button type="button" class="btn btn-secondary-add" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary-add" id="addObservationSubmitBtn">Save Observation</button>
                 </div>
             </form>
         `;
@@ -1116,113 +1088,117 @@ class ModalSystem {
 
     createEditModalHTML(data) {
         const { observation, protectedAreas, bioGroups, years, semesters } = data;
-        
-        const protectedAreaOptions = protectedAreas.map(area => 
-            `<option value="${area.id}" data-code="${area.code}" ${observation.protected_area_id == area.id ? 'selected' : ''}>${area.name}</option>`
+        const safeTableName = (observation.table_name || '').replace(/'/g, "\\'");
+        const safeTransactionCode = (observation.transaction_code || '').replace(/"/g, '&quot;');
+        const safeStationCode = (observation.station_code || '').replace(/"/g, '&quot;');
+        const safeCommonName = (observation.common_name || '').replace(/"/g, '&quot;');
+        const safeScientificName = (observation.scientific_name || '').replace(/"/g, '&quot;');
+
+        const protectedAreaOptions = (protectedAreas || []).map(area =>
+            `<option value="${area.id}" data-code="${area.code || ''}" ${observation.protected_area_id == area.id ? 'selected' : ''}>${area.name || ''}</option>`
         ).join('');
 
-        const bioGroupOptions = Object.entries(bioGroups).map(([key, value]) => 
+        const bioGroupOptions = Object.entries(bioGroups || {}).map(([key, value]) =>
             `<option value="${key}" ${observation.bio_group === key ? 'selected' : ''}>${value}</option>`
         ).join('');
 
-        const yearOptions = years.map(year => 
+        const yearOptions = (years || []).map(year =>
             `<option value="${year}" ${observation.patrol_year == year ? 'selected' : ''}>${year}</option>`
         ).join('');
 
-        const semesterOptions = Object.entries(semesters).map(([key, value]) => 
+        const semesterOptions = Object.entries(semesters || {}).map(([key, value]) =>
             `<option value="${key}" ${observation.patrol_semester == key ? 'selected' : ''}>${value}</option>`
         ).join('');
 
         return `
-            <div class="modal-header">
+            <div class="modal-header modal-header-add">
                 <h2 class="modal-title">Edit Observation</h2>
-                <button class="modal-close" onclick="closeModal()">
+                <button class="modal-close" onclick="closeModal()" aria-label="Close">
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
                 </button>
             </div>
-            <form class="modal-form" onsubmit="modalSystem.submitEditForm(event, ${observation.id}, '${observation.table_name}')">
-                <div class="modal-body">
-                    <input type="hidden" name="observation_id" value="${observation.id}">
-                    <input type="hidden" name="table_name" value="${observation.table_name || ''}">
-                    <input type="hidden" name="_token" value="${document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''}">
-                    
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label required">Protected Area</label>
-                            <select class="form-select" name="protected_area_id" required onchange="modalSystem.handleProtectedAreaChange(this)">
-                                <option value="">Select Protected Area</option>
-                                ${protectedAreaOptions}
-                            </select>
+            <form class="modal-form modal-form-add" onsubmit="modalSystem.submitEditForm(event, ${observation.id}, '${safeTableName}')">
+                <input type="hidden" name="observation_id" value="${observation.id}">
+                <input type="hidden" name="table_name" value="${observation.table_name || ''}">
+                <input type="hidden" name="_token" value="${document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''}">
+                <div class="modal-body modal-body-add">
+                    <section class="form-section">
+                        <h3 class="form-section-title">Location Details</h3>
+                        <div class="form-section-grid">
+                            <div class="form-group">
+                                <label class="form-label form-label-required">Protected Area</label>
+                                <select class="form-input form-select" name="protected_area_id" required onchange="modalSystem.handleProtectedAreaChange(this)">
+                                    <option value="">Select</option>
+                                    ${protectedAreaOptions}
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label form-label-required">Station Code</label>
+                                <input type="text" class="form-input" name="station_code" value="${safeStationCode}" maxlength="60" readonly>
+                            </div>
+                            <div class="form-group form-group-span-full">
+                                <label class="form-label">Site Name</label>
+                                <select class="form-input form-select" name="site_name_id" id="modal_site_name" disabled data-placeholder-default="Select a protected area first" data-placeholder-no-sites="No sites available">
+                                    <option value="">Loading...</option>
+                                </select>
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label class="form-label">Site Name</label>
-                            <select class="form-select" name="site_name_id" id="modal_site_name">
-                                <option value="">No specific site</option>
-                            </select>
+                    </section>
+                    <hr class="form-section-divider">
+                    <section class="form-section">
+                        <h3 class="form-section-title">Record Information</h3>
+                        <div class="form-section-grid">
+                            <div class="form-group form-group-span-full">
+                                <label class="form-label form-label-required">Transaction Code</label>
+                                <input type="text" class="form-input" name="transaction_code" value="${safeTransactionCode}" required maxlength="50">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label form-label-required">Patrol Year</label>
+                                <select class="form-input form-select" name="patrol_year" required>
+                                    <option value="">Select</option>
+                                    ${yearOptions}
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label form-label-required">Patrol Semester</label>
+                                <select class="form-input form-select" name="patrol_semester" required>
+                                    <option value="">Select</option>
+                                    ${semesterOptions}
+                                </select>
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label required">Transaction Code</label>
-                            <input type="text" class="form-input" name="transaction_code" value="${observation.transaction_code || ''}" required maxlength="50">
+                    </section>
+                    <hr class="form-section-divider">
+                    <section class="form-section">
+                        <h3 class="form-section-title">Species Information</h3>
+                        <div class="form-section-grid">
+                            <div class="form-group">
+                                <label class="form-label form-label-required">Bio Group</label>
+                                <select class="form-input form-select" name="bio_group" required>
+                                    <option value="">Select</option>
+                                    ${bioGroupOptions}
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label form-label-required">Recorded Count</label>
+                                <input type="number" class="form-input" name="recorded_count" value="${observation.recorded_count ?? 0}" required min="0">
+                            </div>
+                            <div class="form-group form-group-span-full">
+                                <label class="form-label form-label-required">Common Name</label>
+                                <input type="text" class="form-input" name="common_name" value="${safeCommonName}" required maxlength="150">
+                            </div>
+                            <div class="form-group form-group-span-full">
+                                <label class="form-label">Scientific Name</label>
+                                <input type="text" class="form-input" name="scientific_name" value="${safeScientificName}" maxlength="200">
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label class="form-label required">Station Code</label>
-                            <input type="text" class="form-input" name="station_code" value="${observation.station_code || ''}" required maxlength="60">
-                        </div>
-                    </div>
-                    
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label required">Patrol Year</label>
-                            <select class="form-select" name="patrol_year" required>
-                                <option value="">Select Year</option>
-                                ${yearOptions}
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label required">Patrol Semester</label>
-                            <select class="form-select" name="patrol_semester" required>
-                                <option value="">Select Semester</option>
-                                ${semesterOptions}
-                            </select>
-                        </div>
-                    </div>
-                    
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label required">Bio Group</label>
-                            <select class="form-select" name="bio_group" required>
-                                <option value="">Select Bio Group</option>
-                                ${bioGroupOptions}
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label required">Common Name</label>
-                            <input type="text" class="form-input" name="common_name" value="${observation.common_name || ''}" required maxlength="150">
-                        </div>
-                    </div>
-                    
-                    <div class="form-row single">
-                        <div class="form-group">
-                            <label class="form-label">Scientific Name</label>
-                            <input type="text" class="form-input" name="scientific_name" value="${observation.scientific_name || ''}" maxlength="200">
-                        </div>
-                    </div>
-                    
-                    <div class="form-row single">
-                        <div class="form-group">
-                            <label class="form-label required">Recorded Count</label>
-                            <input type="number" class="form-input" name="recorded_count" value="${observation.recorded_count || ''}" required min="0">
-                        </div>
-                    </div>
+                    </section>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                <div class="modal-footer modal-footer-add">
+                    <button type="button" class="btn btn-secondary-add" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary-add" id="editObservationSubmitBtn">Update Observation</button>
                 </div>
             </form>
         `;
@@ -1232,17 +1208,14 @@ class ModalSystem {
 
     async loadModalSiteNames(protectedAreaId) {
         const siteNameSelect = document.getElementById('modal_site_name');
-        
-        if (!siteNameSelect) {
-            console.error('Site name select element not found!');
-            return;
-        }
-        
+        if (!siteNameSelect) return;
+
+        const protectedAreaSelect = document.querySelector('select[name="protected_area_id"]');
+        const selectedOption = protectedAreaSelect?.options[protectedAreaSelect?.selectedIndex];
+        const protectedAreaCode = selectedOption?.getAttribute('data-code') || '';
+
         try {
-            // Use the correct API route with /api prefix
-            const url = `/api/species-observations/site-names/${protectedAreaId}`;
-            
-            const response = await fetch(url, {
+            const response = await fetch(`/api/species-observations/site-names/${protectedAreaId}`, {
                 headers: {
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
                     'X-Requested-With': 'XMLHttpRequest',
@@ -1250,45 +1223,46 @@ class ModalSystem {
                 }
             });
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
-            const siteNames = await response.json();
-            
-            // Create a document fragment for efficient DOM manipulation
-            const fragment = document.createDocumentFragment();
-            
-            // Add default option
-            const noSpecificSiteOption = document.createElement('option');
-            noSpecificSiteOption.value = '';
-            noSpecificSiteOption.textContent = 'No specific site';
-            fragment.appendChild(noSpecificSiteOption);
-            
-            // Add site name options only if sites exist
-            if (siteNames && siteNames.length > 0) {
-                siteNames.forEach(siteName => {
-                    const option = document.createElement('option');
-                    option.value = siteName.id;
-                    option.textContent = siteName.name;
-                    fragment.appendChild(option);
+            const result = await response.json();
+            const rawSites = result.success && result.site_names ? result.site_names : (result.sites || result);
+            const siteNames = Array.isArray(rawSites) ? rawSites : [];
+
+            const validSites = siteNames.filter(s => {
+                if (protectedAreaCode === 'PPLS') return !s.name.includes('MPL');
+                if (protectedAreaCode === 'MPL') return s.name.includes('MPL');
+                return !['Toyota', 'MPL', 'San Roque', 'Manga', 'Quibal'].some(k => s.name.includes(k));
+            });
+
+            siteNameSelect.innerHTML = '';
+            const noSpecific = document.createElement('option');
+            noSpecific.value = '';
+            noSpecific.textContent = 'No specific site';
+            siteNameSelect.appendChild(noSpecific);
+
+            if (validSites.length > 0) {
+                validSites.forEach(site => {
+                    const opt = document.createElement('option');
+                    opt.value = site.id;
+                    opt.textContent = site.name;
+                    siteNameSelect.appendChild(opt);
                 });
-                
-                // Enable dropdown only if sites exist
                 siteNameSelect.disabled = false;
             } else {
-                // Keep dropdown disabled if no sites exist
+                const emptyOpt = document.createElement('option');
+                emptyOpt.value = '';
+                emptyOpt.textContent = 'No sites available';
+                siteNameSelect.innerHTML = '';
+                siteNameSelect.appendChild(emptyOpt);
                 siteNameSelect.disabled = true;
+                siteNameSelect.value = '';
             }
-            
-            // Clear existing options and add new ones
-            siteNameSelect.innerHTML = '';
-            siteNameSelect.appendChild(fragment);
-            
         } catch (error) {
             console.error('Error loading site names:', error);
-            // Keep dropdown disabled on error
+            siteNameSelect.innerHTML = '<option value="">Error loading sites</option>';
             siteNameSelect.disabled = true;
+            siteNameSelect.value = '';
         }
     }
 
@@ -1315,9 +1289,14 @@ class ModalSystem {
         submitBtn.textContent = 'Saving...';
 
         try {
-            // Add _method field to simulate PUT request for Laravel
             const formDataObj = Object.fromEntries(formData);
             formDataObj._method = 'PUT';
+
+            // Disabled site select is excluded from FormData; ensure site_name_id is sent
+            const siteSelect = form.querySelector('select[name="site_name_id"]');
+            formDataObj.site_name_id = (siteSelect?.disabled || !formDataObj.site_name_id || formDataObj.site_name_id === '0')
+                ? ''
+                : formDataObj.site_name_id;
             
             // Use the original table_name if available, otherwise determine from protected area
             if (this.currentData && this.currentData.originalTableName) {
@@ -1375,7 +1354,7 @@ class ModalSystem {
             // Restore button state
             submitBtn.disabled = false;
             submitBtn.classList.remove('loading');
-            submitBtn.textContent = 'Save Changes';
+            submitBtn.textContent = 'Update Observation';
         }
     }
 
@@ -1404,7 +1383,11 @@ class ModalSystem {
     }
 
     createDeleteModalHTML(data) {
-        const { observation } = data;
+        const { observation, observationId, tableName } = data;
+        // Use observationId from row (data) - more reliable than observation.id from API
+        const id = observationId ?? observation?.id;
+        const name = (observation?.common_name || 'this item').replace(/'/g, "\\'");
+        const safeTableName = (tableName || observation?.table_name || '').replace(/'/g, "\\'");
         
         return `
             <div class="modal-header">
@@ -1416,29 +1399,38 @@ class ModalSystem {
                 </button>
             </div>
             <div class="modal-body">
-                <div style="text-align: center; padding: 1rem 0;">
-                    <div style="width: 36px; height: 36px; margin: 0 auto 0.5rem; background: #fef2f2; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                        <svg width="18" height="18" fill="none" stroke="#ef4444" stroke-width="2" viewBox="0 0 24 24">
+                <div class="delete-modal-content">
+                    <div class="delete-modal-icon-wrap">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="delete-modal-icon">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                         </svg>
                     </div>
-                    <h3 style="margin: 0 0 0.5rem 0; font-size: 0.9rem; font-weight: 600; color: #111827;">Delete ${observation.common_name || 'this item'}?</h3>
-                    <p style="margin: 0; color: #ef4444; font-size: 0.7rem; font-weight: 500;">Cannot be undone</p>
+                    <h3 class="delete-modal-title">Delete ${name}?</h3>
+                    <p class="delete-modal-warning">Cannot be undone</p>
                 </div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="window.closeModal()">Cancel</button>
-                <button class="btn btn-danger" onclick="window.modalSystem.confirmDelete(${observation.id}, '${observation.table_name || ''}')">Delete</button>
+                <button class="btn btn-danger" data-observation-id="${id}" data-table-name="${safeTableName}" onclick="window.modalSystem.confirmDeleteFromButton(this)">Delete</button>
             </div>
         `;
     }
 
+    confirmDeleteFromButton(button) {
+        const observationId = button.getAttribute('data-observation-id');
+        const tableName = button.getAttribute('data-table-name') || '';
+        if (observationId) {
+            this.confirmDelete(observationId, tableName);
+        }
+    }
+
     async confirmDelete(observationId, tableName) {
         try {
-            const response = await fetch(window.routes.speciesObservationsDestroy.replace(':id', observationId), {
+            const url = window.routes.speciesObservationsDestroy.replace(':id', String(observationId));
+            const response = await fetch(url, {
                 method: 'DELETE',
                 headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || window.csrfToken || '',
                     'Accept': 'application/json',
                     'Content-Type': 'application/json'
                 },
@@ -1448,17 +1440,19 @@ class ModalSystem {
             });
 
             const result = await response.json();
+            console.log('Delete response:', result);
 
             if (result.success) {
                 this.showNotification('Observation deleted successfully!', 'success');
                 this.close();
                 
-                // Remove the row from the table instantly
-                this.removeObservationRow(observationId);
+                // Reload page to guarantee fresh data (removes stale row, updates pagination/counts)
+                window.location.reload();
             } else {
                 this.showNotification(result.message || result.error || 'Failed to delete observation', 'error');
             }
         } catch (error) {
+            console.error('Delete error:', error);
             this.showNotification('Error deleting observation', 'error');
         }
     }

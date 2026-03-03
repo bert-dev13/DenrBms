@@ -35,9 +35,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/species-observations/edit-data/{id}', [SpeciesObservationController::class, 'getObservationForEdit'])->name('species-observations.edit-data');
     Route::get('/api/species-observations/site-names/{protectedAreaId}', [SpeciesObservationController::class, 'getSiteNames'])->name('species-observations.site-names');
     
-    // Explicit routes including store for adding new observations
     Route::get('/species-observations', [SpeciesObservationController::class, 'index'])->name('species-observations.index');
-    Route::get('/species-observations/create', [SpeciesObservationController::class, 'create'])->name('species-observations.create');
     Route::post('/species-observations', [SpeciesObservationController::class, 'store'])->name('species-observations.store');
     Route::get('/species-observations/{speciesObservation}', [SpeciesObservationController::class, 'show'])->name('species-observations.show');
     Route::get('/species-observations/{speciesObservation}/edit', [SpeciesObservationController::class, 'edit'])->name('species-observations.edit');
@@ -51,6 +49,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/protected-areas', [ProtectedAreaController::class, 'store'])->name('protected-areas.store');
     Route::get('/protected-area-sites', [ProtectedAreaController::class, 'sites'])->name('protected-area-sites.index');
     Route::get('/protected-areas/{protectedAreaId}/site-names', [SpeciesObservationController::class, 'getSiteNames'])->name('protected-areas.site-names');
+    Route::get('/protected-areas/{protectedAreaId}/sites', [SpeciesObservationController::class, 'getSiteNames'])->name('protected-areas.sites');
     Route::get('/protected-areas/{protectedArea}', [ProtectedAreaController::class, 'show'])->name('protected-areas.show');
     Route::get('/protected-areas/{protectedArea}/edit', [ProtectedAreaController::class, 'edit'])->name('protected-areas.edit');
     Route::put('/protected-areas/{protectedArea}', [ProtectedAreaController::class, 'update'])->name('protected-areas.update');

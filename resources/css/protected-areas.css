@@ -1,12 +1,52 @@
 /* Protected Areas Page Styles */
 
+/* Protected Areas Table - column widths */
+.protected-areas-table .pa-col-code,
+.pa-col-code {
+    width: 12%;
+    min-width: 90px;
+}
+
+.pa-col-name {
+    width: 40%;
+    min-width: 180px;
+}
+
+.pa-col-obs {
+    width: 15%;
+    min-width: 100px;
+    text-align: center;
+}
+
+.pa-col-status {
+    width: 15%;
+    min-width: 90px;
+}
+
+.pa-col-actions {
+    width: 18%;
+    min-width: 120px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.protected-areas-table {
+    min-width: 600px;
+}
+
+/* Override app.css nth-child max-width for our table */
+.protected-areas-table td.pa-col-name,
+.protected-areas-table th.pa-col-name {
+    max-width: none;
+}
+
 /* Protected Areas Specific Styles */
 .protected-area-row {
     transition: background-color 0.15s ease;
 }
 
 .protected-area-row:hover {
-    background-color: #f9fafb;
+    background-color: var(--hover-bg, #f9fafb);
 }
 
 .protected-area-filters {

@@ -6,7 +6,7 @@
     
     <!-- Bootstrap CSS for print styling -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    
+    @vite(['resources/css/icons.css', 'resources/js/icons.js'])
     <style>
         @media print {
             body {
@@ -114,10 +114,10 @@
             <p class="text-muted">Total Records: {{ $siteNames->count() }}</p>
             <p class="text-muted">Generated on: {{ now()->format('F j, Y \a\t g:i A') }}</p>
             <button onclick="window.print()" class="btn btn-primary">
-                <i class="fas fa-print"></i> Print
+                <i data-lucide="printer" class="lucide-icon"></i> Print
             </button>
             <button onclick="window.close()" class="btn btn-secondary">
-                <i class="fas fa-times"></i> Close
+                <i data-lucide="x" class="lucide-icon"></i> Close
             </button>
         </div>
     </div>

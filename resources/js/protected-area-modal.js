@@ -218,22 +218,21 @@ class ProtectedAreaModalSystem {
         // Clear existing modal content
         this.overlay.innerHTML = '';
 
-        // Create modal container
+        // Create modal container - match Species Observation modal-add design
         const modal = document.createElement('div');
         modal.className = 'modal-content';
         
-        // Add appropriate size class
         switch (type) {
             case 'view':
-                modal.classList.add('large');
+                modal.classList.add('large', 'modal-add');
                 modal.innerHTML = this.createViewModalHTML(data);
                 break;
             case 'edit':
-                modal.classList.add('medium');
+                modal.classList.add('large', 'modal-add');
                 modal.innerHTML = this.createEditModalHTML(data);
                 break;
             case 'add':
-                modal.classList.add('medium');
+                modal.classList.add('large', 'modal-add');
                 modal.innerHTML = this.createAddModalHTML(data);
                 break;
             case 'delete':
@@ -248,46 +247,52 @@ class ProtectedAreaModalSystem {
 
     createViewModalHTML(data) {
         const { area } = data;
+        const areaName = (area.name || 'N/A').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        const statusText = area.species_observations_count > 0 ? 'Active' : 'No Data';
+        const observationCount = area.species_observations_count ?? 0;
         
         return `
-            <div class="modal-header">
-                <h2 class="modal-title">Protected Area Details</h2>
-                <button class="modal-close" onclick="closeProtectedAreaModal()">
+            <div class="modal-header modal-header-add">
+                <h2 class="modal-title">View Protected Area</h2>
+                <button class="modal-close" onclick="closeProtectedAreaModal()" aria-label="Close">
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
                 </button>
             </div>
-            <div class="modal-body">
-                <div class="view-details">
-                    <div class="detail-row">
-                        <label>Area Code:</label>
-                        <span>${area.code || 'N/A'}</span>
-                    </div>
-                    <div class="detail-row">
-                        <label>Name:</label>
-                        <span>${area.name || 'N/A'}</span>
-                    </div>
-                    <div class="detail-row">
-                        <label>Observations:</label>
-                        <span>${area.species_observations_count || 0}</span>
-                    </div>
-                    <div class="detail-row">
-                        <label>Status:</label>
-                        <span>${area.species_observations_count > 0 ? 'Active' : 'No Data'}</span>
-                    </div>
-                    <div class="detail-row">
-                        <label>Created:</label>
-                        <span>${area.created_at ? new Date(area.created_at).toLocaleDateString() : 'N/A'}</span>
-                    </div>
-                    <div class="detail-row">
-                        <label>Last Updated:</label>
-                        <span>${area.updated_at ? new Date(area.updated_at).toLocaleDateString() : 'N/A'}</span>
-                    </div>
+            <div class="modal-form modal-form-add">
+                <div class="modal-body modal-body-add modal-view-protected-area">
+                    <section class="form-section">
+                        <h3 class="form-section-title">Protected Area Information</h3>
+                        <div class="form-section-grid">
+                            <div class="form-group">
+                                <label class="form-label">Area Code</label>
+                                <input type="text" class="form-input" value="${area.code || 'N/A'}" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Status</label>
+                                <input type="text" class="form-input" value="${statusText}" readonly>
+                            </div>
+                            <div class="form-group form-group-span-full">
+                                <label class="form-label">Name</label>
+                                <input type="text" class="form-input" value="${areaName}" readonly>
+                            </div>
+                        </div>
+                    </section>
+                    <hr class="form-section-divider">
+                    <section class="form-section">
+                        <h3 class="form-section-title">Observation Summary</h3>
+                        <div class="form-section-grid">
+                            <div class="form-group form-group-span-full">
+                                <label class="form-label">Total Observations</label>
+                                <input type="text" class="form-input" value="${observationCount}" readonly>
+                            </div>
+                        </div>
+                    </section>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeProtectedAreaModal()">Close</button>
+                <div class="modal-footer modal-footer-add">
+                    <button type="button" class="btn btn-secondary-add" onclick="closeProtectedAreaModal()">Close</button>
+                </div>
             </div>
         `;
     }
@@ -296,77 +301,72 @@ class ProtectedAreaModalSystem {
         const { area } = data;
         
         return `
-            <div class="modal-header">
+            <div class="modal-header modal-header-add">
                 <h2 class="modal-title">Edit Protected Area</h2>
-                <button class="modal-close" onclick="closeProtectedAreaModal()">
+                <button class="modal-close" onclick="closeProtectedAreaModal()" aria-label="Close">
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
                 </button>
             </div>
-            <form class="modal-form" onsubmit="protectedAreaModalSystem.submitEditForm(event, ${area.id})">
-                <div class="modal-body">
-                    <input type="hidden" name="_token" value="${document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''}">
-                    
-                    <div class="form-row single">
-                        <div class="form-group">
-                            <label class="form-label required">Area Code</label>
-                            <input type="text" class="form-input" name="code" value="${area.code || ''}" required maxlength="255" placeholder="e.g., PPLS">
+            <form class="modal-form modal-form-add" onsubmit="protectedAreaModalSystem.submitEditForm(event, ${area.id})">
+                <input type="hidden" name="_token" value="${document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''}">
+                <div class="modal-body modal-body-add">
+                    <section class="form-section">
+                        <h3 class="form-section-title">Identification</h3>
+                        <div class="form-section-grid form-section-grid-full">
+                            <div class="form-group form-group-span-full">
+                                <label class="form-label form-label-required">Area Code</label>
+                                <input type="text" class="form-input" name="code" value="${(area.code || '').replace(/"/g, '&quot;')}" required maxlength="255" placeholder="e.g., PPLS">
+                            </div>
+                            <div class="form-group form-group-span-full">
+                                <label class="form-label form-label-required">Name</label>
+                                <input type="text" class="form-input" name="name" value="${(area.name || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}" required maxlength="255" placeholder="e.g., Puerto Princesa Subterranean River National Park">
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div class="form-row single">
-                        <div class="form-group">
-                            <label class="form-label required">Name</label>
-                            <input type="text" class="form-input" name="name" value="${area.name || ''}" required maxlength="255" placeholder="e.g., Puerto Princesa Subterranean River National Park">
-                        </div>
-                    </div>
+                    </section>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" onclick="closeProtectedAreaModal()">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                <div class="modal-footer modal-footer-add">
+                    <button type="button" class="btn btn-secondary-add" onclick="closeProtectedAreaModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary-add" id="editProtectedAreaSubmitBtn">Update</button>
                 </div>
             </form>
         `;
     }
 
     createAddModalHTML(data) {
-        // Generate a unique code based on timestamp
         const timestamp = Date.now();
         const uniqueCode = 'PA' + timestamp.toString().slice(-4);
         
         return `
-            <div class="modal-header">
-                <h2 class="modal-title">Add New Protected Area</h2>
-                <button class="modal-close" onclick="closeProtectedAreaModal()">
+            <div class="modal-header modal-header-add">
+                <h2 class="modal-title">Add Protected Area</h2>
+                <button class="modal-close" onclick="closeProtectedAreaModal()" aria-label="Close">
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
                 </button>
             </div>
-            <form class="modal-form" onsubmit="protectedAreaModalSystem.submitAddForm(event)">
-                <div class="modal-body">
-                    <input type="hidden" name="_token" value="${document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''}">
-                    
-                    <div class="form-row single">
-                        <div class="form-group">
-                            <label class="form-label required">Area Code</label>
-                            <input type="text" class="form-input" name="code" value="${uniqueCode}" required maxlength="255" placeholder="e.g., PA1234" pattern="[A-Z0-9]+" title="Only uppercase letters and numbers">
-                            <small>Unique code for the protected area (uppercase letters and numbers only)</small>
+            <form class="modal-form modal-form-add" onsubmit="protectedAreaModalSystem.submitAddForm(event)">
+                <input type="hidden" name="_token" value="${document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''}">
+                <div class="modal-body modal-body-add">
+                    <section class="form-section">
+                        <h3 class="form-section-title">Identification</h3>
+                        <div class="form-section-grid form-section-grid-full">
+                            <div class="form-group form-group-span-full">
+                                <label class="form-label form-label-required">Area Code</label>
+                                <input type="text" class="form-input" name="code" value="${uniqueCode}" required maxlength="255" placeholder="e.g., PA1234">
+                            </div>
+                            <div class="form-group form-group-span-full">
+                                <label class="form-label form-label-required">Name</label>
+                                <input type="text" class="form-input" name="name" required maxlength="255" placeholder="e.g., Puerto Princesa Subterranean River National Park">
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div class="form-row single">
-                        <div class="form-group">
-                            <label class="form-label required">Name</label>
-                            <input type="text" class="form-input" name="name" required maxlength="255" placeholder="e.g., Puerto Princesa Subterranean River National Park">
-                            <small>Full name of the protected area</small>
-                        </div>
-                    </div>
+                    </section>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" onclick="closeProtectedAreaModal()">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Add Protected Area</button>
+                <div class="modal-footer modal-footer-add">
+                    <button type="button" class="btn btn-secondary-add" onclick="closeProtectedAreaModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary-add" id="addProtectedAreaSubmitBtn">Save</button>
                 </div>
             </form>
         `;
@@ -374,20 +374,26 @@ class ProtectedAreaModalSystem {
 
     createDeleteModalHTML(data) {
         const { area } = data;
+        const name = (area.name || 'this area').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         
         return `
             <div class="modal-header">
-                <h2 class="modal-title">Delete Observation</h2>
-                <button class="modal-close" onclick="closeProtectedAreaModal()">
+                <h2 class="modal-title">Delete Protected Area</h2>
+                <button class="modal-close" onclick="closeProtectedAreaModal()" aria-label="Close">
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
                 </button>
             </div>
             <div class="modal-body">
-                <div class="delete-confirmation">
-                    <p class="delete-question">Delete ${area.name}?</p>
-                    <p class="delete-warning">Cannot be undone</p>
+                <div class="delete-modal-content">
+                    <div class="delete-modal-icon-wrap">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="delete-modal-icon">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                    </div>
+                    <h3 class="delete-modal-title">Delete ${name}?</h3>
+                    <p class="delete-modal-warning">Cannot be undone</p>
                 </div>
             </div>
             <div class="modal-footer">
@@ -451,12 +457,11 @@ class ProtectedAreaModalSystem {
         // Add method override for Laravel PUT support
         formData.append('_method', 'PUT');
         
-        // Add loading state to submit button
+        // Add loading state to submit button (matches Species Observation modal)
         const submitBtn = form.querySelector('button[type="submit"]');
-        const originalText = submitBtn.textContent;
         submitBtn.disabled = true;
         submitBtn.classList.add('loading');
-        submitBtn.textContent = 'Saving...';
+        submitBtn.textContent = '';
 
         try {
             // Log form data for debugging
@@ -500,10 +505,9 @@ class ProtectedAreaModalSystem {
             console.error('Error updating protected area:', error);
             this.showNotification('Error updating protected area', 'error');
         } finally {
-            // Remove loading state
             submitBtn.disabled = false;
             submitBtn.classList.remove('loading');
-            submitBtn.textContent = originalText;
+            submitBtn.textContent = 'Update';
         }
     }
 
@@ -513,12 +517,12 @@ class ProtectedAreaModalSystem {
         const form = event.target;
         const formData = new FormData(form);
         
-        // Add loading state to submit button
+        // Add loading state to submit button (matches Species Observation modal)
         const submitBtn = form.querySelector('button[type="submit"]');
         const originalText = submitBtn.textContent;
         submitBtn.disabled = true;
         submitBtn.classList.add('loading');
-        submitBtn.textContent = 'Saving...';
+        submitBtn.textContent = '';
         
         // Clear any existing errors
         this.clearFormErrors(form);
@@ -579,10 +583,9 @@ class ProtectedAreaModalSystem {
             });
             this.showNotification('Network error: ' + error.message, 'error');
         } finally {
-            // Remove loading state
             submitBtn.disabled = false;
             submitBtn.classList.remove('loading');
-            submitBtn.textContent = originalText;
+            submitBtn.textContent = 'Save';
         }
     }
 

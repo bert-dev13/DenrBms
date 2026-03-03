@@ -15,7 +15,10 @@
     <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
 
     <!-- Styles -->
-    @vite(['resources/css/app.css', 'resources/css/Login.css'])
+    @vite(['resources/css/app.css', 'resources/css/icons.css', 'resources/css/Login.css'])
+    
+    <!-- Scripts -->
+    @vite(['resources/js/bootstrap.js', 'resources/js/icons.js'])
 </head>
 <body class="antialiased">
     <!-- Login Container -->

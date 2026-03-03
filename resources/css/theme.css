@@ -6,7 +6,7 @@ html {
 }
 
 body {
-    transition: background-color 0.3s ease, color 0.3s ease;
+    /* No transition here so theme toggle updates instantly on all pages */
 }
 
 body.no-theme-transition,
@@ -16,15 +16,9 @@ body.no-theme-transition *::after {
     transition: none !important;
 }
 
+/* Reserved for optional body-only transition; not used for instant theme toggle */
 body.theme-transitioning {
-    transition: background-color 0.3s ease, color 0.3s ease;
-}
-
-body.theme-transitioning *,
-body.theme-transitioning *::before,
-body.theme-transitioning *::after {
-    transition-duration: 300ms !important;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1) !important;
+    transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 /* Theme toggle specific transitions */
@@ -73,6 +67,12 @@ body.no-theme-transition .theme-toggle-btn svg::after {
     --hover-bg: #f3f4f6;
     --active-bg: #dcfce7;
     
+    /* KPI Card (summary cards) */
+    --kpi-card-bg: #ffffff;
+    --kpi-card-border: #e5e7eb;
+    --kpi-value-color: #111827;
+    --kpi-label-color: #6b7280;
+
     /* State Colors */
     --success-bg: #dcfce7;
     --success-text: #166534;
@@ -111,6 +111,12 @@ body.no-theme-transition .theme-toggle-btn svg::after {
     --hover-bg: #334155;
     --active-bg: #14532d;
     
+    /* KPI Card (summary cards) */
+    --kpi-card-bg: #1e293b;
+    --kpi-card-border: #334155;
+    --kpi-value-color: #f1f5f9;
+    --kpi-label-color: #94a3b8;
+
     /* State Colors */
     --success-bg: #14532d;
     --success-text: #86efac;
@@ -126,7 +132,6 @@ body.no-theme-transition .theme-toggle-btn svg::after {
 body {
     background-color: var(--bg-primary);
     color: var(--text-primary);
-    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Main layout elements */
@@ -180,7 +185,8 @@ body {
     border-right: 1px solid var(--border-primary);
 }
 
-#sidebar .bg-gradient-to-br {
+#sidebar .bg-gradient-to-br,
+#sidebar .sidebar__header {
     background: var(--sidebar-header-bg) !important;
 }
 
@@ -198,6 +204,17 @@ body {
 
 #sidebar .border-gray-200 {
     border-color: var(--sidebar-border) !important;
+}
+
+/* Sidebar active item — ensure text visible in dark mode */
+[data-theme="dark"] #sidebar .sidebar__nav-item--active,
+[data-theme="dark"] #sidebar .sidebar__nav-item--active .sidebar__nav-label,
+[data-theme="dark"] #sidebar .sidebar__nav-item--active .lucide-icon {
+    color: #86efac !important;
+}
+
+[data-theme="dark"] #sidebar .sidebar__nav-item--active::before {
+    background: #4ade80 !important;
 }
 
 /* Top bar styles */
@@ -340,6 +357,41 @@ input, select, textarea {
     background-color: rgba(248, 113, 113, 0.2) !important;
 }
 
+/* Species Observations table - zebra striping & badges (dark) */
+[data-theme="dark"] .species-obs-row--odd {
+    background-color: rgba(30, 41, 59, 0.5);
+}
+
+[data-theme="dark"] .species-obs-pagination-item--active .species-obs-pagination-link {
+    background-color: #16a34a !important;
+    border-color: #16a34a !important;
+}
+
+/* Species Observations table action buttons (dark) */
+[data-theme="dark"] .species-observation-action-btn.view {
+    color: #60a5fa !important;
+}
+
+[data-theme="dark"] .species-observation-action-btn.view:hover {
+    background-color: rgba(96, 165, 250, 0.15) !important;
+}
+
+[data-theme="dark"] .species-observation-action-btn.edit {
+    color: #34d399 !important;
+}
+
+[data-theme="dark"] .species-observation-action-btn.edit:hover {
+    background-color: rgba(52, 211, 153, 0.15) !important;
+}
+
+[data-theme="dark"] .species-observation-action-btn.delete {
+    color: #f87171 !important;
+}
+
+[data-theme="dark"] .species-observation-action-btn.delete:hover {
+    background-color: rgba(248, 113, 113, 0.15) !important;
+}
+
 /* Button variations */
 .btn-secondary {
     background-color: var(--bg-tertiary) !important;
@@ -378,20 +430,41 @@ input, select, textarea {
     color: var(--text-primary) !important;
 }
 
-/* Export dropdown specific styling */
-#export-dropdown {
+/* Export dropdown / action bar dropdown - theme support */
+#export-dropdown,
+.action-bar__export-dropdown {
     background-color: var(--card-bg) !important;
     border-color: var(--border-primary) !important;
     box-shadow: var(--shadow-lg) !important;
 }
 
-#export-dropdown button {
+#export-dropdown button,
+.action-bar__export-dropdown button {
     color: var(--text-primary) !important;
 }
 
-#export-dropdown button:hover {
+#export-dropdown button:hover,
+.action-bar__export-dropdown button:hover {
     background-color: var(--hover-bg) !important;
     color: var(--text-primary) !important;
+}
+
+/* Action bar - ensure theme variables apply */
+.action-bar__search-input {
+    background-color: var(--input-bg) !important;
+    border-color: var(--border-primary) !important;
+    color: var(--text-primary) !important;
+}
+
+.action-bar__export-btn {
+    background-color: var(--card-bg) !important;
+    border-color: var(--border-primary) !important;
+    color: var(--text-secondary) !important;
+}
+
+.action-bar__export-btn:hover {
+    background-color: var(--hover-bg) !important;
+    border-color: var(--border-secondary) !important;
 }
 
 /* Alert styles */

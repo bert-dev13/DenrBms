@@ -1,0 +1,195 @@
+/**
+ * Top bar – minimalist, clean header navigation.
+ * Page title left, actions right. Compact height, theme-aware.
+ */
+
+:root {
+    --topbar-height: 3.5rem;
+    --sidebar-width: 16rem;
+    --topbar-px: 1rem;
+    --topbar-icon-size: 1.125rem;
+}
+
+@media (min-width: 640px) {
+    :root {
+        --topbar-px: 1.5rem;
+    }
+}
+
+@media (min-width: 1024px) {
+    :root {
+        --topbar-px: 2rem;
+    }
+}
+
+/* Fixed topbar: compact height, full width on mobile, offset by sidebar on desktop */
+.topbar-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 32;
+    height: var(--topbar-height);
+    min-height: var(--topbar-height);
+    display: flex;
+    align-items: center;
+    background-color: var(--topbar-bg, #ffffff);
+    border-bottom: 1px solid var(--border-primary, #e5e7eb);
+    box-sizing: border-box;
+}
+
+@media (min-width: 1024px) {
+    .topbar-header {
+        left: var(--sidebar-width);
+    }
+}
+
+/* Inner wrapper: consistent horizontal padding */
+.topbar-inner {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+    padding-left: var(--topbar-px);
+    padding-right: var(--topbar-px);
+}
+
+/* Flex layout: title left, actions right */
+.topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    min-height: 0;
+    width: 100%;
+}
+
+/* Page title – left-aligned, clean, slightly bold */
+.topbar__left {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.topbar__title {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary, #111827);
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+@media (min-width: 640px) {
+    .topbar__title {
+        font-size: 1.25rem;
+    }
+}
+
+/* Actions – right-aligned, consistent icon spacing */
+.topbar__right {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+/* Action buttons/links – minimalist outline icons, subtle hover */
+.topbar__action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    color: var(--text-secondary, #374151);
+    border: none;
+    background: transparent;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    text-decoration: none;
+    transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+.topbar__action:hover {
+    color: var(--text-primary, #111827);
+    background-color: var(--hover-bg, rgba(0, 0, 0, 0.04));
+}
+
+.topbar__action:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--border-primary, #e5e7eb);
+}
+
+/* Icons – consistent 18px size */
+.topbar .topbar-icon,
+.topbar [data-lucide].topbar-icon,
+.topbar [data-lucide] {
+    width: var(--topbar-icon-size);
+    height: var(--topbar-icon-size);
+    flex-shrink: 0;
+    stroke: currentColor;
+}
+
+.topbar .lucide-icon {
+    width: var(--topbar-icon-size);
+    height: var(--topbar-icon-size);
+}
+
+/* Theme toggle in topbar */
+.topbar .theme-toggle-container {
+    display: inline-flex;
+    align-items: center;
+}
+
+.topbar .theme-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    min-width: 2.25rem;
+    min-height: 2.25rem;
+    padding: 0;
+    margin: 0;
+    border-radius: 0.5rem;
+    color: var(--text-secondary, #374151);
+    background: transparent;
+}
+
+.topbar .theme-toggle-btn:hover {
+    color: var(--text-primary, #111827);
+    background-color: var(--hover-bg, rgba(0, 0, 0, 0.04));
+}
+
+.topbar .theme-toggle-btn svg,
+.topbar .theme-toggle-btn .lucide-icon {
+    width: var(--topbar-icon-size);
+    height: var(--topbar-icon-size);
+}
+
+/* Responsive – smaller on mobile */
+@media (max-width: 640px) {
+    .topbar {
+        gap: 0.5rem;
+    }
+
+    .topbar__right {
+        gap: 0.125rem;
+    }
+
+    .topbar__action {
+        width: 2rem;
+        height: 2rem;
+    }
+
+    .topbar .theme-toggle-btn {
+        width: 2rem;
+        height: 2rem;
+        min-width: 2rem;
+        min-height: 2rem;
+    }
+
+    :root {
+        --topbar-icon-size: 1rem;
+    }
+}

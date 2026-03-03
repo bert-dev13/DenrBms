@@ -45,9 +45,10 @@ class Login {
             }
         });
         
-        // Password toggle
+        // Password toggle (use closest for clicks on icon inside button)
         document.addEventListener('click', (e) => {
-            if (e.target.classList.contains('password-toggle')) {
+            const toggle = e.target.closest('.password-toggle');
+            if (toggle) {
                 e.preventDefault();
                 this.togglePasswordVisibility();
             }
@@ -56,18 +57,14 @@ class Login {
     
     handleChange(e) {
         const { name, value, type, checked } = e.target;
-        
-        // Debug: Log input changes
-        console.log('Input changed:', { name, value, type, checked });
-        
-        // Trim whitespace from text inputs
-        const finalValue = type === 'checkbox' ? checked : value.trim();
+        const finalValue = type === 'checkbox' ? checked : (value || '').trim();
         this.formData[name] = finalValue;
         
-        // Debug: Log updated form data
-        console.log('Updated form data:', this.formData);
+        // Update filled class for floating label
+        if (value !== undefined && type !== 'checkbox') {
+            e.target.classList.toggle('filled', !!finalValue);
+        }
         
-        // Clear error for this field when user starts typing
         if (this.errors[name]) {
             this.errors[name] = '';
             this.updateErrorDisplay(name, '');
@@ -75,23 +72,12 @@ class Login {
     }
     
     validateForm() {
-        const newErrors = {
-            email: '',
-            password: ''
-        };
-        
+        const newErrors = { email: '', password: '' };
         let isValid = true;
-        
-        // Debug: Log current form data
-        console.log('Current form data:', this.formData);
-        console.log('Email value:', this.formData.email);
-        console.log('Password value:', this.formData.password);
-        
-        // Email validation
         const emailValue = (this.formData.email || '').trim();
-        console.log('Trimmed email value:', emailValue);
+        const passwordValue = this.formData.password || '';
         
-        if (!emailValue || emailValue === '') {
+        if (!emailValue) {
             newErrors.email = 'Email address is required';
             isValid = false;
         } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue)) {
@@ -99,11 +85,7 @@ class Login {
             isValid = false;
         }
         
-        // Password validation
-        const passwordValue = this.formData.password || '';
-        console.log('Password value:', passwordValue);
-        
-        if (!passwordValue || passwordValue.trim() === '') {
+        if (!passwordValue) {
             newErrors.password = 'Password is required';
             isValid = false;
         } else if (passwordValue.length < 6) {
@@ -112,33 +94,19 @@ class Login {
         }
         
         this.errors = newErrors;
-        
-        // Debug: Log validation results
-        console.log('Validation errors:', newErrors);
-        console.log('Is valid:', isValid);
-        
-        // Update error displays
-        Object.keys(newErrors).forEach(key => {
-            this.updateErrorDisplay(key, newErrors[key]);
-        });
-        
+        Object.keys(newErrors).forEach(key => this.updateErrorDisplay(key, newErrors[key]));
         return isValid;
     }
     
     updateErrorDisplay(fieldName, error) {
         const input = document.querySelector(`[name="${fieldName}"]`);
-        const errorElement = input?.parentElement.querySelector('.error-message');
+        const formGroup = input?.closest('.form-group');
+        const errorElement = formGroup?.querySelector('.error-message');
         
-        if (errorElement) {
-            errorElement.textContent = error;
-        }
-        
+        if (errorElement) errorElement.textContent = error || '';
         if (input) {
-            if (error) {
-                input.classList.add('error');
-            } else {
-                input.classList.remove('error');
-            }
+            input.classList.toggle('error', !!error);
+            input.setAttribute('aria-invalid', !!error);
         }
     }
     
@@ -152,8 +120,6 @@ class Login {
         if (emailInput) this.formData.email = emailInput.value.trim();
         if (passwordInput) this.formData.password = passwordInput.value;
         if (rememberCheckbox) this.formData.remember = rememberCheckbox.checked;
-        
-        console.log('Form data before validation:', this.formData);
         
         if (!this.validateForm()) {
             return;
@@ -176,12 +142,6 @@ class Login {
             formData.set('password', this.formData.password);
             if (this.formData.remember) {
                 formData.set('remember', '1');
-            }
-            
-            // Double-check the form data
-            console.log('FormData entries:');
-            for (let [key, value] of formData.entries()) {
-                console.log(`${key}: ${value}`);
             }
             
             const response = await fetch(form.action, {
@@ -207,7 +167,6 @@ class Login {
                 this.handleServerErrors(result);
             }
         } catch (error) {
-            console.error('Login error:', error);
             this.showErrorMessage('Network error. Please try again.');
         } finally {
             this.setLoading(false);
@@ -271,31 +230,32 @@ class Login {
     togglePasswordVisibility() {
         this.showPassword = !this.showPassword;
         const passwordInput = document.querySelector('#password');
-        const toggleButton = document.querySelector('.password-toggle');
+        const toggleBtn = document.querySelector('.password-toggle');
         
         if (passwordInput) {
             passwordInput.type = this.showPassword ? 'text' : 'password';
         }
         
-        if (toggleButton) {
-            toggleButton.textContent = this.showPassword ? 'Hide' : 'Show';
+        if (toggleBtn) {
+            toggleBtn.classList.toggle('password-visible', this.showPassword);
+            toggleBtn.setAttribute('aria-pressed', this.showPassword);
+            if (typeof window.replaceLucideIcons === 'function') window.replaceLucideIcons();
         }
     }
     
     setLoading(isLoading) {
         this.isLoading = isLoading;
         const submitButton = document.querySelector('.login-button');
+        const buttonText = submitButton?.querySelector('.login-button-text');
         const inputs = document.querySelectorAll('.form-input, .password-toggle');
         
         if (submitButton) {
             submitButton.disabled = isLoading;
             submitButton.classList.toggle('loading', isLoading);
-            submitButton.textContent = isLoading ? 'Signing In...' : 'Sign In';
+            if (buttonText) buttonText.textContent = isLoading ? 'Signing In...' : 'Sign In';
         }
         
-        inputs.forEach(input => {
-            input.disabled = isLoading;
-        });
+        inputs.forEach(input => { input.disabled = isLoading; });
     }
     
     render() {
@@ -304,26 +264,16 @@ class Login {
     }
     
     updateFormFromData() {
-        // Update form inputs with current data
         const emailInput = document.querySelector('#email');
         const passwordInput = document.querySelector('#password');
         const rememberCheckbox = document.querySelector('#remember');
         
-        // Initialize form data from input values (not the other way around)
         if (emailInput) {
             this.formData.email = emailInput.value.trim();
-            console.log('Initialized email from input:', this.formData.email);
+            emailInput.classList.toggle('filled', !!this.formData.email);
         }
-        if (passwordInput) {
-            this.formData.password = passwordInput.value;
-            console.log('Initialized password from input:', this.formData.password);
-        }
-        if (rememberCheckbox) {
-            this.formData.remember = rememberCheckbox.checked;
-            console.log('Initialized remember from checkbox:', this.formData.remember);
-        }
-        
-        console.log('Final initialized form data:', this.formData);
+        if (passwordInput) this.formData.password = passwordInput.value;
+        if (rememberCheckbox) this.formData.remember = rememberCheckbox.checked;
     }
 }
 

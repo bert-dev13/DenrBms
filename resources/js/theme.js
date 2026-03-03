@@ -80,8 +80,6 @@ class ThemeManager {
         // Listen for page visibility changes
         this.watchPageVisibility();
         
-        // Debug: Log current theme state
-        console.log('Theme Manager initialized with theme:', this.currentTheme);
     }
 
     getStoredTheme() {
@@ -127,12 +125,7 @@ class ThemeManager {
             return;
         }
         
-        // Add transition class for smooth change
-        if (body) {
-            body.classList.add('theme-transitioning');
-        }
-        
-        // Apply new theme
+        // Apply new theme immediately (no full-page transition class to avoid lag on heavy pages)
         if (theme === 'dark') {
             html.setAttribute('data-theme', 'dark');
             if (body) body.setAttribute('data-theme', 'dark');
@@ -151,13 +144,6 @@ class ThemeManager {
         
         // Dispatch custom event
         this.dispatchThemeChange(theme);
-        
-        // Remove transition class after animation
-        setTimeout(() => {
-            if (body) {
-                body.classList.remove('theme-transitioning');
-            }
-        }, 300);
     }
 
     toggleTheme() {
@@ -185,8 +171,6 @@ class ThemeManager {
             console.warn('Theme toggle icons not found');
             return;
         }
-        
-        console.log('Updating theme toggle UI to:', theme);
         
         try {
             if (theme === 'dark') {

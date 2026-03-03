@@ -29,6 +29,7 @@ use App\Services\DynamicTableService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
@@ -161,6 +162,12 @@ class SpeciesObservationController extends Controller
             // No tables found, return empty pagination
             Log::warning('No table queries found, returning empty results');
             $observations = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 20);
+            $summaryStats = [
+                'total_observations' => 0,
+                'total_recorded_count' => 0,
+                'total_protected_areas' => 0,
+                'total_species' => 0,
+            ];
         } else {
             // Re-index array to avoid issues with union operations
             $allTableQueries = array_values($allTableQueries);
@@ -170,38 +177,62 @@ class SpeciesObservationController extends Controller
                 'query_types' => array_map(function($q) { return get_class($q); }, $allTableQueries)
             ]);
             
-            $observations = $allTableQueries[0];
+            $baseQuery = $allTableQueries[0];
             for ($i = 1; $i < count($allTableQueries); $i++) {
-                $observations = $observations->union($allTableQueries[$i]);
+                $baseQuery = $baseQuery->union($allTableQueries[$i]);
             }
             
-            // Get the SQL before pagination for debugging
-            $sql = $observations->toSql();
-            Log::info('Final combined SQL before pagination: ' . $sql);
-            
-            $observations = $observations->orderBy('patrol_year', 'desc')
+            $baseQuery = $baseQuery->orderBy('patrol_year', 'desc')
                 ->orderBy('patrol_semester', 'desc')
-                ->orderBy('station_code')
-                ->paginate(20);
+                ->orderBy('station_code');
+
+            // Get all filtered results (single query) for summary stats + pagination
+            $allResults = $baseQuery->get();
+
+            // Compute summary stats from full filtered dataset (not just current page)
+            $summaryStats = [
+                'total_observations' => $allResults->count(),
+                'total_recorded_count' => $allResults->sum('recorded_count'),
+                'total_protected_areas' => $allResults->pluck('protected_area_id')->unique()->count(),
+                'total_species' => $allResults->pluck('scientific_name')->filter(fn ($v) => !empty(trim((string) $v)))->unique()->count(),
+            ];
+
+            // Load protected area for each observation
+            $allResults->each(function ($observation) {
+                if (method_exists($observation, 'load')) {
+                    $observation->load('protectedArea');
+                } else {
+                    $observation->protectedArea = ProtectedArea::find($observation->protected_area_id);
+                }
+            });
+
+            // Paginate for table display
+            $currentPage = $request->get('page', 1);
+            $perPage = 20;
+            $slice = $allResults->slice(($currentPage - 1) * $perPage, $perPage)->values();
+            $observations = new \Illuminate\Pagination\LengthAwarePaginator(
+                $slice,
+                $allResults->count(),
+                $perPage,
+                $currentPage,
+                ['path' => $request->url(), 'query' => $request->query()]
+            );
                 
             Log::info('Final pagination result:', [
                 'total_count' => $observations->total(),
                 'current_page' => $observations->currentPage(),
-                'per_page' => $observations->perPage()
+                'per_page' => $observations->perPage(),
+                'summary_stats' => $summaryStats
             ]);
         }
-
-        // Load protected area relationships for all observations
-        $observations->getCollection()->each(function ($observation) {
-            $observation->load('protectedArea');
-        });
 
         // Get filter options
         $filterOptions = $this->getFilterOptions();
 
         return view('species-observations.enhanced-index', compact(
             'observations',
-            'filterOptions'
+            'filterOptions',
+            'summaryStats'
         ));
     }
 
@@ -530,13 +561,16 @@ class SpeciesObservationController extends Controller
             
             return response()->json([
                 'success' => true,
-                'site_names' => $siteNames
+                'site_names' => $siteNames,
+                'sites' => $siteNames, // Alias for consistency with GET /protected-areas/{id}/sites
             ]);
         }
         
         return response()->json([
             'success' => false,
-            'error' => 'Protected area not found'
+            'error' => 'Protected area not found',
+            'site_names' => [],
+            'sites' => [],
         ]);
     }
 
@@ -686,6 +720,11 @@ class SpeciesObservationController extends Controller
     public function update(Request $request, $id)
     {
         try {
+            // Normalize site_name_id to site_name for backward compatibility
+            if ($request->has('site_name_id')) {
+                $request->merge(['site_name' => $request->site_name_id === '0' || $request->site_name_id === '' ? null : $request->site_name_id]);
+            }
+
             $validated = $request->validate([
                 'protected_area_id' => 'required|exists:protected_areas,id',
                 'transaction_code' => 'required|string|max:50',
@@ -696,7 +735,10 @@ class SpeciesObservationController extends Controller
                 'common_name' => 'required|string|max:150',
                 'scientific_name' => 'nullable|string|max:200',
                 'recorded_count' => 'required|integer|min:0',
-                'site_name' => 'nullable|exists:site_names,id',
+                'site_name' => [
+                    'nullable',
+                    Rule::exists('site_names', 'id')->where('protected_area_id', $request->protected_area_id),
+                ],
                 'table_name' => 'required|string',
             ], [], [
                 'protected_area_id' => 'protected area',
@@ -838,16 +880,30 @@ class SpeciesObservationController extends Controller
     public function store(Request $request)
     {
         try {
+            // Debug: verify payload (remove or comment in production if not needed)
+            Log::info('Species observation store payload', $request->only([
+                'transaction_code', 'station_code', 'protected_area_id', 'site_name_id',
+                'patrol_year', 'patrol_semester', 'bio_group', 'common_name', 'scientific_name', 'recorded_count'
+            ]));
+
+            // Normalize site_name_id: treat "0" or empty as null
+            if ($request->site_name_id === '0' || $request->site_name_id === '' || $request->site_name_id === null) {
+                $request->merge(['site_name_id' => null]);
+            }
+
             $validated = $request->validate([
                 'protected_area_id' => 'required|exists:protected_areas,id',
-                'site_name_id' => 'nullable|exists:site_names,id',
+                'site_name_id' => [
+                    'nullable',
+                    Rule::exists('site_names', 'id')->where('protected_area_id', $request->protected_area_id),
+                ],
                 'transaction_code' => 'required|string|max:50',
-                'station_code' => 'nullable|string|max:60',
+                'station_code' => 'required|string|max:60',
                 'patrol_year' => 'required|integer|min:2000|max:2100',
                 'patrol_semester' => 'required|integer|in:1,2',
                 'bio_group' => 'required|in:fauna,flora',
                 'common_name' => 'required|string|max:150',
-                'scientific_name' => 'nullable|string|max:200',
+                'scientific_name' => 'required|string|max:200',
                 'recorded_count' => 'required|integer|min:0',
             ], [], [
                 'protected_area_id' => 'protected area',
@@ -910,11 +966,8 @@ class SpeciesObservationController extends Controller
                 // Protected Area + Site: Save to the Site's table
                 $siteName = SiteName::find($validated['site_name_id']);
                 
-                // Get station code for the site
-                $stationCode = $siteName->getStationCodeAttribute();
-                
-                // Override any station code from the form with the auto-generated one
-                $validated['station_code'] = $stationCode;
+                // Use user-provided station_code (all fields are manually entered)
+                $stationCode = $validated['station_code'];
                 
                 // Determine which table to use based on protected area and site
                 if ($protectedArea->code === 'PPLS') {
@@ -1535,11 +1588,12 @@ class SpeciesObservationController extends Controller
                                ->with('error', 'Failed to delete species observation.');
             }
             
-            Log::info('Successfully deleted observation with ID: ' . $id);
+            Log::info('Successfully deleted observation with ID: ' . $id . ' (table: ' . (isset($observation->table_name) ? $observation->table_name : 'model') . ')');
             
             if ($request->expectsJson()) {
                 return response()->json([
-                    'success' => true, 
+                    'success' => true,
+                    'deleted_id' => (int) $id,
                     'message' => 'Species observation deleted successfully.'
                 ]);
             }

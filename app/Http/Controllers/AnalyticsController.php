@@ -45,18 +45,8 @@ class AnalyticsController extends Controller
             }
         }
 
-        // Calculate species diversity across all tables (true unique species)
-        $allScientificNames = collect();
-        foreach ($tables as $table) {
-            try {
-                $species = \DB::table($table)->pluck('scientific_name')->filter();
-                $allScientificNames = $allScientificNames->merge($species);
-            } catch (\Exception $e) {
-                // Skip tables that don't exist
-                continue;
-            }
-        }
-        $speciesDiversity = $allScientificNames->unique()->count();
+        // Species Tracked: unique scientific_name across all tables (single source of truth)
+        $speciesDiversity = DynamicTableService::getUniqueSpeciesCount();
 
         $stats = [
             'total_areas' => ProtectedArea::count(),
