@@ -6,8 +6,6 @@ use App\Http\Controllers\ForgotPasswordController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\SpeciesObservationController;
 use App\Http\Controllers\ProtectedAreaController;
-use App\Http\Controllers\AnalyticsController;
-use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SettingsController;
 
 Route::get('/', function () {
@@ -46,9 +44,6 @@ Route::middleware('auth')->group(function () {
 // Protected areas routes (protected)
 Route::middleware('auth')->group(function () {
     Route::get('/protected-areas', [ProtectedAreaController::class, 'index'])->name('protected-areas.index');
-    Route::get('/protected-areas/bangan-hill-map', function () {
-        return view('protected-areas.bangan-hill-map');
-    })->name('protected-areas.bangan-hill-map');
     Route::post('/protected-areas', [ProtectedAreaController::class, 'store'])->name('protected-areas.store');
     Route::get('/protected-area-sites', [ProtectedAreaController::class, 'sites'])->name('protected-area-sites.index');
     Route::get('/protected-areas/{protectedAreaId}/site-names', [SpeciesObservationController::class, 'getSiteNames'])->name('protected-areas.site-names');
@@ -66,19 +61,6 @@ Route::middleware('auth')->group(function () {
     Route::put('/protected-area-sites/{siteName}', [ProtectedAreaController::class, 'updateSite'])->name('protected-area-sites.update');
     Route::delete('/protected-area-sites/{siteName}', [ProtectedAreaController::class, 'destroySite'])->name('protected-area-sites.destroy');
     Route::get('/api/protected-area-sites/{id}', [ProtectedAreaController::class, 'getSiteData'])->name('protected-area-sites.data');
-});
-
-// Analytics routes (protected)
-Route::middleware('auth')->group(function () {
-    Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics.index');
-    Route::get('/analytics/data', [AnalyticsController::class, 'getObservationData'])->name('analytics.data');
-    Route::get('/analytics/species-trends', [AnalyticsController::class, 'getTopSpeciesTrends'])->name('analytics.species-trends');
-    Route::get('/analytics/species-trend-data', [AnalyticsController::class, 'getSpeciesTrendData'])->name('analytics.species-trend-data');
-});
-
-// Reports routes (protected)
-Route::middleware('auth')->group(function () {
-    Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
 });
 
 // Settings routes (protected)

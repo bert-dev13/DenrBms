@@ -218,16 +218,17 @@ body.sidebar-collapsed {
     padding: 0.52rem 0.6rem;
     border-radius: 0.72rem;
     border: 1px solid rgba(21, 128, 61, 0.2);
-    background: rgba(255, 255, 255, 0.78);
+    background: #ffffff;
 }
 
 .sidebar__avatar {
     width: 2rem;
     height: 2rem;
-    border-radius: 9999px;
+    border-radius: 0.4rem;
     flex-shrink: 0;
-    background: radial-gradient(circle at 35% 30%, #4ade80 0%, #16a34a 55%, #166534 100%);
-    color: #f0fdf4;
+    background: #16a34a;
+    color: #ffffff;
+    border: 1px solid #15803d;
     font-size: 0.82rem;
     font-weight: 700;
     display: inline-flex;

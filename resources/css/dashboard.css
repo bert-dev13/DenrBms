@@ -398,7 +398,7 @@
     border-top-color: rgba(148, 163, 184, 0.25);
 }
 
-/* Yearly Monitoring Trends (analytics module) */
+/* Yearly Monitoring Trends */
 .monitoring-trends {
     position: relative;
     display: flex;
@@ -1030,11 +1030,6 @@
 .quick-action-btn--areas {
     --qa-accent: #2563eb;
     --qa-hover-bg: rgba(37, 99, 235, 0.09);
-}
-
-.quick-action-btn--analytics {
-    --qa-accent: #7c3aed;
-    --qa-hover-bg: rgba(124, 58, 237, 0.09);
 }
 
 .quick-action-btn--search {

@@ -1,864 +1,387 @@
 /**
- * Protected Area Modal System - Consolidated
- * Handles all modal interactions for protected areas (view, edit, add, delete)
- * Unified system replacing multiple modal implementations
+ * Protected Area Modal System (clean rebuild)
+ * - Fully namespaced to avoid selector conflicts
+ * - Accessible: ESC close, overlay close, focus trap
+ * - Smooth open/close transitions without layout shifts
  */
 
 class ProtectedAreaModalSystem {
     constructor() {
         this.overlay = null;
-        this.modal = null;
-        this.isOpening = false;
-        this.isClosing = false;
+        this.dialog = null;
+        this.focusable = [];
+        this.lastFocused = null;
+        this.activeType = null;
+        this.activeId = null;
+        this.boundKeydown = this.handleGlobalKeydown.bind(this);
         this.init();
     }
 
     init() {
-        // Create overlay element
-        this.createOverlay();
-        
-        // Setup global event listeners
-        this.setupEventListeners();
-    }
+        if (document.getElementById('pa-modal-overlay')) return;
 
-    createOverlay() {
-        // Remove any existing overlay first
-        const existingOverlay = document.getElementById('protected-area-modal-overlay');
-        if (existingOverlay) {
-            existingOverlay.remove();
-        }
-        
         this.overlay = document.createElement('div');
-        this.overlay.className = 'modal-overlay';
-        this.overlay.id = 'protected-area-modal-overlay';
+        this.overlay.id = 'pa-modal-overlay';
+        this.overlay.className = 'pa-modal-overlay';
+        this.overlay.setAttribute('aria-hidden', 'true');
+        this.overlay.innerHTML = '<div class="pa-modal-shell"></div>';
         document.body.appendChild(this.overlay);
-    }
 
-    setupEventListeners() {
-        // Close on overlay click
-        this.overlay.addEventListener('click', (e) => {
-            if (e.target === this.overlay) {
-                this.close();
-            }
+        this.overlay.addEventListener('click', (event) => {
+            if (event.target === this.overlay) this.close();
         });
 
-        // Close on escape key
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && this.overlay.style.display === 'flex') {
-                this.close();
-            }
-        });
+        document.addEventListener('keydown', this.boundKeydown);
     }
 
-    async open(type, data = {}) {
-        // Prevent multiple simultaneous opens
-        if (this.isOpening || this.isClosing) {
-            return false;
+    async open(type, payload = {}) {
+        this.activeType = type;
+        this.activeId = payload.areaId || null;
+        this.lastFocused = document.activeElement;
+
+        const data = await this.loadData(type, payload.areaId);
+        if (!data) return false;
+
+        const shell = this.overlay.querySelector('.pa-modal-shell');
+        shell.innerHTML = this.render(type, data);
+        this.dialog = shell.querySelector('.pa-modal');
+
+        this.overlay.classList.add('is-open');
+        this.overlay.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('pa-modal-open');
+
+        this.wireDialogEvents();
+        this.initializeFocusTrap();
+
+        if (typeof window.replaceLucideIcons === 'function') {
+            window.replaceLucideIcons(shell);
         }
 
-        this.isOpening = true;
-
-        try {
-            // Prepare all data before showing modal
-            const preparedData = await this.prepareModalData(type, data);
-            
-            if (!preparedData) {
-                this.isOpening = false;
-                return false;
-            }
-
-            // Create modal content
-            this.createModalContent(type, preparedData);
-
-            // Show modal
-            this.showModal();
-
-            this.isOpening = false;
-            return true;
-        } catch (error) {
-            console.error('Error opening modal:', error);
-            this.isOpening = false;
-            return false;
-        }
-    }
-
-    async prepareModalData(type, data) {
-        switch (type) {
-            case 'view':
-                return await this.prepareViewData(data);
-            case 'edit':
-                return await this.prepareEditData(data);
-            case 'add':
-                return await this.prepareAddData(data);
-            case 'delete':
-                return await this.prepareDeleteData(data);
-            default:
-                console.error('Unknown modal type:', type);
-                return null;
-        }
-    }
-
-    async prepareViewData(data) {
-        const { areaId } = data;
-        
-        try {
-            // Fetch protected area data
-            const response = await fetch(`/api/protected-areas/${areaId}`, {
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Accept': 'application/json'
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const result = await response.json();
-            
-            if (!result.success) {
-                throw new Error(result.error || 'Failed to load protected area data');
-            }
-
-            return {
-                type: 'view',
-                area: result.protectedArea,
-                areaId
-            };
-
-        } catch (error) {
-            console.error('Error preparing view data:', error);
-            this.showNotification('Error loading protected area data', 'error');
-            return null;
-        }
-    }
-
-    async prepareEditData(data) {
-        const { areaId } = data;
-        
-        try {
-            // Fetch protected area data
-            const response = await fetch(`/api/protected-areas/${areaId}`, {
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Accept': 'application/json'
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const result = await response.json();
-            
-            if (!result.success) {
-                throw new Error(result.error || 'Failed to load protected area data');
-            }
-
-            return {
-                type: 'edit',
-                area: result.protectedArea,
-                areaId
-            };
-
-        } catch (error) {
-            console.error('Error preparing edit data:', error);
-            this.showNotification('Error loading protected area data', 'error');
-            return null;
-        }
-    }
-
-    async prepareAddData(data) {
-        // For adding a new protected area, we don't need to fetch any data
-        // Just return the type to create the add modal
-        return {
-            type: 'add'
-        };
-    }
-
-    async prepareDeleteData(data) {
-        const { areaId } = data;
-        
-        try {
-            // Fetch protected area data for confirmation
-            const response = await fetch(`/api/protected-areas/${areaId}`, {
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Accept': 'application/json'
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const result = await response.json();
-            
-            if (!result.success) {
-                throw new Error(result.error || 'Failed to load protected area data');
-            }
-
-            return {
-                type: 'delete',
-                area: result.protectedArea,
-                areaId
-            };
-
-        } catch (error) {
-            console.error('Error preparing delete data:', error);
-            this.showNotification('Error loading protected area data', 'error');
-            return null;
-        }
-    }
-
-    createModalContent(type, data) {
-        // Clear existing modal content
-        this.overlay.innerHTML = '';
-
-        // Create modal container - match Species Observation modal-add design
-        const modal = document.createElement('div');
-        modal.className = 'modal-content';
-        
-        switch (type) {
-            case 'view':
-                modal.classList.add('large', 'modal-add');
-                modal.innerHTML = this.createViewModalHTML(data);
-                break;
-            case 'edit':
-                modal.classList.add('large', 'modal-add');
-                modal.innerHTML = this.createEditModalHTML(data);
-                break;
-            case 'add':
-                modal.classList.add('large', 'modal-add');
-                modal.innerHTML = this.createAddModalHTML(data);
-                break;
-            case 'delete':
-                modal.classList.add('small');
-                modal.innerHTML = this.createDeleteModalHTML(data);
-                break;
-        }
-
-        this.overlay.appendChild(modal);
-        this.modal = modal;
-    }
-
-    createViewModalHTML(data) {
-        const { area } = data;
-        const areaName = (area.name || 'N/A').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-        const statusText = area.species_observations_count > 0 ? 'Active' : 'No Data';
-        const observationCount = area.species_observations_count ?? 0;
-        
-        return `
-            <div class="modal-header modal-header-add">
-                <h2 class="modal-title">View Protected Area</h2>
-                <button class="modal-close" onclick="closeProtectedAreaModal()" aria-label="Close">
-                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                </button>
-            </div>
-            <div class="modal-form modal-form-add">
-                <div class="modal-body modal-body-add modal-view-protected-area">
-                    <section class="form-section">
-                        <h3 class="form-section-title">Protected Area Information</h3>
-                        <div class="form-section-grid">
-                            <div class="form-group">
-                                <label class="form-label">Area Code</label>
-                                <input type="text" class="form-input" value="${area.code || 'N/A'}" readonly>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Status</label>
-                                <input type="text" class="form-input" value="${statusText}" readonly>
-                            </div>
-                            <div class="form-group form-group-span-full">
-                                <label class="form-label">Name</label>
-                                <input type="text" class="form-input" value="${areaName}" readonly>
-                            </div>
-                        </div>
-                    </section>
-                    <hr class="form-section-divider">
-                    <section class="form-section">
-                        <h3 class="form-section-title">Observation Summary</h3>
-                        <div class="form-section-grid">
-                            <div class="form-group form-group-span-full">
-                                <label class="form-label">Total Observations</label>
-                                <input type="text" class="form-input" value="${observationCount}" readonly>
-                            </div>
-                        </div>
-                    </section>
-                </div>
-                <div class="modal-footer modal-footer-add">
-                    <button type="button" class="btn btn-secondary-add" onclick="closeProtectedAreaModal()">Close</button>
-                </div>
-            </div>
-        `;
-    }
-
-    createEditModalHTML(data) {
-        const { area } = data;
-        
-        return `
-            <div class="modal-header modal-header-add">
-                <h2 class="modal-title">Edit Protected Area</h2>
-                <button class="modal-close" onclick="closeProtectedAreaModal()" aria-label="Close">
-                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                </button>
-            </div>
-            <form class="modal-form modal-form-add" onsubmit="protectedAreaModalSystem.submitEditForm(event, ${area.id})">
-                <input type="hidden" name="_token" value="${document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''}">
-                <div class="modal-body modal-body-add">
-                    <section class="form-section">
-                        <h3 class="form-section-title">Identification</h3>
-                        <div class="form-section-grid form-section-grid-full">
-                            <div class="form-group form-group-span-full">
-                                <label class="form-label form-label-required">Area Code</label>
-                                <input type="text" class="form-input" name="code" value="${(area.code || '').replace(/"/g, '&quot;')}" required maxlength="255" placeholder="e.g., PPLS">
-                            </div>
-                            <div class="form-group form-group-span-full">
-                                <label class="form-label form-label-required">Name</label>
-                                <input type="text" class="form-input" name="name" value="${(area.name || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}" required maxlength="255" placeholder="e.g., Puerto Princesa Subterranean River National Park">
-                            </div>
-                        </div>
-                    </section>
-                </div>
-                <div class="modal-footer modal-footer-add">
-                    <button type="button" class="btn btn-secondary-add" onclick="closeProtectedAreaModal()">Cancel</button>
-                    <button type="submit" class="btn btn-primary-add" id="editProtectedAreaSubmitBtn">Update</button>
-                </div>
-            </form>
-        `;
-    }
-
-    createAddModalHTML(data) {
-        const timestamp = Date.now();
-        const uniqueCode = 'PA' + timestamp.toString().slice(-4);
-        
-        return `
-            <div class="modal-header modal-header-add">
-                <h2 class="modal-title">Add Protected Area</h2>
-                <button class="modal-close" onclick="closeProtectedAreaModal()" aria-label="Close">
-                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                </button>
-            </div>
-            <form class="modal-form modal-form-add" onsubmit="protectedAreaModalSystem.submitAddForm(event)">
-                <input type="hidden" name="_token" value="${document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''}">
-                <div class="modal-body modal-body-add">
-                    <section class="form-section">
-                        <h3 class="form-section-title">Identification</h3>
-                        <div class="form-section-grid form-section-grid-full">
-                            <div class="form-group form-group-span-full">
-                                <label class="form-label form-label-required">Area Code</label>
-                                <input type="text" class="form-input" name="code" value="${uniqueCode}" required maxlength="255" placeholder="e.g., PA1234">
-                            </div>
-                            <div class="form-group form-group-span-full">
-                                <label class="form-label form-label-required">Name</label>
-                                <input type="text" class="form-input" name="name" required maxlength="255" placeholder="e.g., Puerto Princesa Subterranean River National Park">
-                            </div>
-                        </div>
-                    </section>
-                </div>
-                <div class="modal-footer modal-footer-add">
-                    <button type="button" class="btn btn-secondary-add" onclick="closeProtectedAreaModal()">Cancel</button>
-                    <button type="submit" class="btn btn-primary-add" id="addProtectedAreaSubmitBtn">Save</button>
-                </div>
-            </form>
-        `;
-    }
-
-    createDeleteModalHTML(data) {
-        const { area } = data;
-        const name = (area.name || 'this area').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-        
-        return `
-            <div class="modal-header">
-                <h2 class="modal-title">Delete Protected Area</h2>
-                <button class="modal-close" onclick="closeProtectedAreaModal()" aria-label="Close">
-                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div class="delete-modal-content">
-                    <div class="delete-modal-icon-wrap">
-                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="delete-modal-icon">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                        </svg>
-                    </div>
-                    <h3 class="delete-modal-title">Delete ${name}?</h3>
-                    <p class="delete-modal-warning">Cannot be undone</p>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeProtectedAreaModal()">Cancel</button>
-                <button type="button" class="btn btn-danger" onclick="confirmDeleteProtectedArea(${area.id})">Delete</button>
-            </div>
-        `;
-    }
-
-    showModal() {
-        this.overlay.style.display = 'flex';
-        document.body.style.overflow = 'hidden';
-        
-        // Add animation
-        setTimeout(() => {
-            this.overlay.classList.add('active');
-        }, 10);
+        return true;
     }
 
     close() {
-        if (this.isClosing) {
+        if (!this.overlay || !this.overlay.classList.contains('is-open')) return;
+
+        this.overlay.classList.remove('is-open');
+        this.overlay.classList.add('is-closing');
+        this.overlay.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('pa-modal-open');
+
+        window.setTimeout(() => {
+            this.overlay.classList.remove('is-closing');
+            this.overlay.querySelector('.pa-modal-shell').innerHTML = '';
+            this.dialog = null;
+            this.focusable = [];
+            if (this.lastFocused && typeof this.lastFocused.focus === 'function') {
+                this.lastFocused.focus();
+            }
+            this.lastFocused = null;
+            this.activeType = null;
+            this.activeId = null;
+        }, 180);
+    }
+
+    handleGlobalKeydown(event) {
+        if (!this.overlay || !this.overlay.classList.contains('is-open')) return;
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            this.close();
             return;
         }
 
-        this.isClosing = true;
-
-        // Add closing animation
-        this.overlay.classList.remove('active');
-
-        setTimeout(() => {
-            this.overlay.style.display = 'none';
-            document.body.style.overflow = '';
-            this.isClosing = false;
-        }, 200);
-    }
-
-    showNotification(message, type = 'info') {
-        // Create notification element
-        const notification = document.createElement('div');
-        notification.className = `notification notification-${type}`;
-        notification.textContent = message;
-        
-        document.body.appendChild(notification);
-        
-        // Show notification
-        setTimeout(() => notification.classList.add('show'), 10);
-        
-        // Remove after 3 seconds
-        setTimeout(() => {
-            notification.classList.remove('show');
-            setTimeout(() => notification.remove(), 300);
-        }, 3000);
-    }
-
-    async submitEditForm(event, areaId) {
-        event.preventDefault();
-        
-        const form = event.target;
-        const formData = new FormData(form);
-        
-        // Add method override for Laravel PUT support
-        formData.append('_method', 'PUT');
-        
-        // Add loading state to submit button (matches Species Observation modal)
-        const submitBtn = form.querySelector('button[type="submit"]');
-        submitBtn.disabled = true;
-        submitBtn.classList.add('loading');
-        submitBtn.textContent = '';
-
-        try {
-            // Log form data for debugging
-            console.log('Submitting edit form for area ID:', areaId);
-            console.log('Form data entries:');
-            for (let [key, value] of formData.entries()) {
-                console.log(`  ${key}: ${value}`);
-            }
-            
-            const response = await fetch(`/protected-areas/${areaId}`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': formData.get('_token'),
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Accept': 'application/json'
-                },
-                body: formData
-            });
-
-            console.log('Response status:', response.status);
-            console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-
-            const result = await response.json();
-            console.log('Response result:', result);
-
-            if (result.success) {
-                this.showNotification('Protected area updated successfully!', 'success');
-                this.close();
-                
-                // Update the table row without page reload
-                this.updateTableRow(areaId, result.area);
-            } else {
-                if (result.errors) {
-                    this.showFormErrors(form, result.errors);
-                    this.showNotification(result.error || 'Validation failed', 'error');
-                } else {
-                    this.showNotification(result.error || 'Failed to update protected area', 'error');
-                }
-            }
-        } catch (error) {
-            console.error('Error updating protected area:', error);
-            this.showNotification('Error updating protected area', 'error');
-        } finally {
-            submitBtn.disabled = false;
-            submitBtn.classList.remove('loading');
-            submitBtn.textContent = 'Update';
+        if (event.key === 'Tab' && this.dialog) {
+            this.trapFocus(event);
         }
     }
 
-    async submitAddForm(event) {
-        event.preventDefault();
-        
-        const form = event.target;
-        const formData = new FormData(form);
-        
-        // Add loading state to submit button (matches Species Observation modal)
-        const submitBtn = form.querySelector('button[type="submit"]');
-        const originalText = submitBtn.textContent;
-        submitBtn.disabled = true;
-        submitBtn.classList.add('loading');
-        submitBtn.textContent = '';
-        
-        // Clear any existing errors
-        this.clearFormErrors(form);
+    initializeFocusTrap() {
+        if (!this.dialog) return;
+        this.focusable = Array.from(this.dialog.querySelectorAll(
+            'button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])'
+        )).filter((el) => !el.disabled && el.offsetParent !== null);
 
-        try {
-            console.log('Submitting form...');
-            console.log('CSRF Token:', formData.get('_token') ? 'Present' : 'Missing');
-            console.log('Form data entries:');
-            for (let [key, value] of formData.entries()) {
-                console.log(`  ${key}: ${value}`);
-            }
-            
-            const response = await fetch('/protected-areas', {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': formData.get('_token'),
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Accept': 'application/json'
-                },
-                body: formData
-            });
-
-            console.log('Response status:', response.status);
-            console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-
-            // Check if response is JSON first
-            const contentType = response.headers.get('content-type');
-            console.log('Content-Type:', contentType);
-            
-            let result;
-            if (contentType && contentType.includes('application/json')) {
-                result = await response.json();
-            } else {
-                const text = await response.text();
-                console.error('Non-JSON response (first 500 chars):', text.substring(0, 500));
-                result = { success: false, error: 'Server returned non-JSON response' };
-            }
-
-            if (result.success) {
-                this.showNotification('Protected area created successfully!', 'success');
-                this.close();
-                
-                // Add the new row to the table without page reload
-                this.addTableRow(result.area);
-                this.updateRecordCount();
-            } else {
-                if (result.errors) {
-                    this.showFormErrors(form, result.errors);
-                } else {
-                    this.showNotification(result.error || 'Failed to add protected area', 'error');
-                }
-            }
-        } catch (error) {
-            console.error('Error adding protected area:', error);
-            console.error('Error details:', {
-                message: error.message,
-                stack: error.stack
-            });
-            this.showNotification('Network error: ' + error.message, 'error');
-        } finally {
-            submitBtn.disabled = false;
-            submitBtn.classList.remove('loading');
-            submitBtn.textContent = 'Save';
+        if (this.focusable.length > 0) {
+            this.focusable[0].focus();
+        } else {
+            this.dialog.setAttribute('tabindex', '-1');
+            this.dialog.focus();
         }
     }
 
-    async confirmDelete(areaId) {
+    trapFocus(event) {
+        if (this.focusable.length === 0) return;
+        const first = this.focusable[0];
+        const last = this.focusable[this.focusable.length - 1];
+        const active = document.activeElement;
+
+        if (event.shiftKey && active === first) {
+            event.preventDefault();
+            last.focus();
+        } else if (!event.shiftKey && active === last) {
+            event.preventDefault();
+            first.focus();
+        }
+    }
+
+    wireDialogEvents() {
+        const closeButtons = this.overlay.querySelectorAll('[data-pa-close]');
+        closeButtons.forEach((button) => {
+            button.addEventListener('click', () => this.close(), { once: true });
+        });
+
+        const form = this.overlay.querySelector('form[data-pa-form]');
+        if (form) {
+            form.addEventListener('submit', (event) => this.submitForm(event));
+        }
+
+        const deleteButton = this.overlay.querySelector('[data-pa-delete-confirm]');
+        if (deleteButton) {
+            deleteButton.addEventListener('click', () => this.submitDelete());
+        }
+    }
+
+    async loadData(type, areaId) {
+        try {
+            if (type === 'add') return { area: null };
+            const res = await this.requestJSON(`/api/protected-areas/${areaId}`);
+            if (!res.success) throw new Error(res.error || 'Unable to load protected area');
+            return { area: res.protectedArea };
+        } catch (error) {
+            this.notify(error.message || 'Failed to open modal', 'error');
+            return null;
+        }
+    }
+
+    render(type, data) {
+        if (type === 'delete') return this.renderDelete(data.area);
+
+        return `
+            <section class="pa-modal" role="dialog" aria-modal="true" aria-labelledby="pa-modal-title">
+                ${this.renderHeader(type)}
+                ${this.renderBody(type, data.area)}
+                ${this.renderFooter(type)}
+            </section>
+        `;
+    }
+
+    renderHeader(type) {
+        const icon = type === 'view' ? 'eye' : type === 'edit' ? 'pencil' : 'plus';
+        const subtitle = type === 'view'
+            ? 'Protected area details'
+            : 'Manage protected area records';
+
+        return `
+            <div class="pa-modal-header">
+                <div class="pa-modal-header-main">
+                    <span class="pa-modal-header-icon" aria-hidden="true"><i data-lucide="${icon}"></i></span>
+                    <div>
+                        <h2 id="pa-modal-title" class="pa-modal-title">Protected Area</h2>
+                        <p class="pa-modal-subtitle">${subtitle}</p>
+                    </div>
+                </div>
+                <button type="button" class="pa-modal-close" data-pa-close aria-label="Close modal">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+        `;
+    }
+
+    renderBody(type, area) {
+        if (type === 'view') {
+            const status = (area?.species_observations_count || 0) > 0 ? 'Active' : 'No Data';
+            return `
+                <div class="pa-modal-body">
+                    <div class="pa-form-grid">
+                        <label class="pa-field"><span>Area Code</span><input class="pa-input" readonly value="${this.escape(area?.code)}"></label>
+                        <label class="pa-field"><span>Status</span><input class="pa-input" readonly value="${status}"></label>
+                        <label class="pa-field pa-col-span"><span>Name</span><input class="pa-input" readonly value="${this.escape(area?.name)}"></label>
+                        <label class="pa-field"><span>Observations</span><input class="pa-input" readonly value="${area?.species_observations_count ?? 0}"></label>
+                    </div>
+                </div>
+            `;
+        }
+
+        const codeValue = type === 'edit' ? this.escape(area?.code) : this.generateDefaultCode();
+        const nameValue = type === 'edit' ? this.escape(area?.name) : '';
+        const submitLabel = type === 'edit' ? 'Update Protected Area' : 'Save Protected Area';
+        const formId = type === 'edit' ? 'pa-edit-form' : 'pa-add-form';
+        return `
+            <form id="${formId}" class="pa-modal-body" data-pa-form data-mode="${type}">
+                <input type="hidden" name="_token" value="${document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''}">
+                <div class="pa-form-section">
+                    <h3 class="pa-section-title">Identification</h3>
+                    <div class="pa-form-grid pa-form-grid-single">
+                        <label class="pa-field pa-col-span">
+                            <span>Area Code</span>
+                            <input class="pa-input" name="code" required maxlength="255" value="${codeValue}" placeholder="e.g. PA1001">
+                        </label>
+                        <label class="pa-field pa-col-span">
+                            <span>Name</span>
+                            <input class="pa-input" name="name" required maxlength="255" value="${nameValue}" placeholder="Enter protected area name">
+                        </label>
+                    </div>
+                </div>
+                <input type="hidden" name="_submit_label" value="${submitLabel}">
+            </form>
+        `;
+    }
+
+    renderFooter(type) {
+        if (type === 'view') {
+            return `
+                <div class="pa-modal-footer">
+                    <button type="button" class="pa-btn pa-btn-secondary" data-pa-close>Close</button>
+                </div>
+            `;
+        }
+
+        const label = type === 'edit' ? 'Update Protected Area' : 'Save Protected Area';
+        const formId = type === 'edit' ? 'pa-edit-form' : 'pa-add-form';
+        return `
+            <div class="pa-modal-footer">
+                <button type="button" class="pa-btn pa-btn-secondary" data-pa-close>Cancel</button>
+                <button type="submit" class="pa-btn pa-btn-primary" form="${formId}" data-pa-submit>${label}</button>
+            </div>
+        `;
+    }
+
+    renderDelete(area) {
+        return `
+            <section class="pa-modal pa-modal-delete" role="dialog" aria-modal="true" aria-labelledby="pa-delete-title">
+                <div class="pa-delete-body">
+                    <h2 id="pa-delete-title" class="pa-delete-title">Delete protected area?</h2>
+                    <p class="pa-delete-name">${this.escape(area?.name || 'Selected area')}</p>
+                    <p class="pa-delete-note">This action cannot be undone.</p>
+                </div>
+                <div class="pa-modal-footer">
+                    <button type="button" class="pa-btn pa-btn-secondary" data-pa-close>Cancel</button>
+                    <button type="button" class="pa-btn pa-btn-danger" data-pa-delete-confirm>Delete</button>
+                </div>
+            </section>
+        `;
+    }
+
+    async submitForm(event) {
+        event.preventDefault();
+        const form = event.target;
+        const mode = form.getAttribute('data-mode');
+        const submitBtn = this.overlay.querySelector('[data-pa-submit]');
+        if (!submitBtn) return;
+
+        submitBtn.disabled = true;
+
+        const formData = new FormData(form);
+        const submitLabel = formData.get('_submit_label') || 'Save';
+        formData.delete('_submit_label');
+
+        try {
+            let url = '/protected-areas';
+            if (mode === 'edit' && this.activeId) {
+                formData.append('_method', 'PUT');
+                url = `/protected-areas/${this.activeId}`;
+            }
+
+            const result = await this.requestJSON(url, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                body: formData
+            });
+
+            if (!result.success) throw new Error(result.error || 'Failed to save protected area');
+            this.notify(mode === 'edit' ? 'Protected area updated.' : 'Protected area added.', 'success');
+            this.close();
+            window.setTimeout(() => window.location.reload(), 250);
+        } catch (error) {
+            this.notify(error.message || 'Failed to save protected area', 'error');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = submitLabel;
+        }
+    }
+
+    async submitDelete() {
+        if (!this.activeId) return;
         try {
             const formData = new FormData();
             formData.append('_method', 'DELETE');
-            formData.append('_token', document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'));
-            
-            const response = await fetch(`/protected-areas/${areaId}`, {
+            formData.append('_token', document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '');
+            const result = await this.requestJSON(`/protected-areas/${this.activeId}`, {
                 method: 'POST',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Accept': 'application/json'
-                },
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
                 body: formData
             });
-
-            const result = await response.json();
-
-            if (result.success) {
-                this.showNotification('Protected area deleted successfully!', 'success');
-                this.close();
-                this.removeTableRow(areaId);
-            } else {
-                this.showNotification(result.error || 'Failed to delete protected area', 'error');
-            }
+            if (!result.success) throw new Error(result.error || 'Failed to delete protected area');
+            this.notify('Protected area deleted.', 'success');
+            this.close();
+            window.setTimeout(() => window.location.reload(), 250);
         } catch (error) {
-            console.error('Error deleting protected area:', error);
-            this.showNotification('Error deleting protected area', 'error');
+            this.notify(error.message || 'Failed to delete protected area', 'error');
         }
     }
 
-    updateTableRow(areaId, updatedArea) {
-        const row = document.querySelector(`tr[data-area-id="${areaId}"]`);
-        if (row) {
-            // Update area code
-            const codeCell = row.querySelector('td:first-child');
-            if (codeCell) {
-                codeCell.innerHTML = `<div class="font-medium text-gray-900">${updatedArea.code}</div>`;
-            }
-            
-            // Update name
-            const nameCell = row.querySelector('td:nth-child(2)');
-            if (nameCell) {
-                nameCell.innerHTML = `<div class="font-medium text-gray-900">${updatedArea.name}</div>`;
-            }
-            
-            // Update status
-            const statusCell = row.querySelector('td:nth-child(4)');
-            if (statusCell) {
-                const statusBadge = updatedArea.species_observations_count > 0 
-                    ? '<span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Active</span>'
-                    : '<span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">No Data</span>';
-                statusCell.innerHTML = statusBadge;
-            }
-        }
-    }
-
-    addTableRow(newArea) {
-        const tableBody = document.getElementById('protected-area-table-body');
-        if (!tableBody) {
-            console.error('Table body not found!');
-            return;
-        }
-
-        // Create new row element
-        const newRow = document.createElement('tr');
-        newRow.className = 'hover:bg-gray-50 protected-area-row';
-        newRow.setAttribute('data-area-id', newArea.id);
-        
-        // Create status badge
-        const observationCount = newArea.species_observations_count || 0;
-        const statusBadge = observationCount > 0 
-            ? '<span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Active</span>'
-            : '<span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">No Data</span>';
-
-        // Set row HTML
-        newRow.innerHTML = `
-            <td>
-                <div class="font-medium text-gray-900">${newArea.code || 'N/A'}</div>
-            </td>
-            <td>
-                <div class="font-medium text-gray-900">${newArea.name || 'N/A'}</div>
-            </td>
-            <td>
-                <div>
-                    <div class="text-sm text-gray-900">${observationCount}</div>
-                    <div class="text-xs text-gray-500">observations</div>
-                </div>
-            </td>
-            <td>${statusBadge}</td>
-            <td>
-                <div class="flex items-center gap-1 sm:gap-2 action-buttons-container">
-                    <!-- View Button -->
-                    <button type="button" onclick="openViewModal(${newArea.id})" 
-                       class="action-btn view p-1.5 sm:p-1 rounded transition-colors flex-shrink-0"
-                       title="View Protected Area">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                        </svg>
-                    </button>
-                    
-                     <!-- Edit Button -->
-                    <button type="button" onclick="openEditModal(${newArea.id})" 
-                       class="action-btn edit p-1.5 sm:p-1 rounded transition-colors flex-shrink-0"
-                       title="Edit Protected Area">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                        </svg>
-                    </button>
-                    
-                    <!-- Delete Button -->
-                    <button type="button" onclick="openDeleteModal(${newArea.id})" 
-                       class="action-btn delete p-1.5 sm:p-1 rounded transition-colors flex-shrink-0"
-                       title="Delete Protected Area">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                        </svg>
-                    </button>
-                </div>
-            </td>
-        `;
-
-        // Add row to the beginning of the table body (so new items appear at top)
-        tableBody.insertBefore(newRow, tableBody.firstChild);
-
-        // Add fade-in animation
-        newRow.style.opacity = '0';
-        newRow.style.transform = 'translateY(-10px)';
-        newRow.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-        
-        // Trigger animation
-        setTimeout(() => {
-            newRow.style.opacity = '1';
-            newRow.style.transform = 'translateY(0)';
-        }, 10);
-    }
-
-    removeTableRow(areaId) {
-        const row = document.querySelector(`tr[data-area-id="${areaId}"]`);
-        if (row) {
-            row.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-            row.style.opacity = '0';
-            row.style.transform = 'translateX(-20px)';
-            
-            setTimeout(() => {
-                row.remove();
-                this.updateRecordCount();
-            }, 300);
-        }
-    }
-
-    updateRecordCount() {
-        // Get current row count
-        const currentRows = document.querySelectorAll('#protected-area-table-body .protected-area-row').length;
-        console.log('Updating record count. Current rows:', currentRows);
-        
-        // Update the record count in the header
-        const recordElements = document.querySelectorAll('h2.text-lg.font-semibold.text-gray-900');
-        recordElements.forEach(element => {
-            if (element.textContent.includes('Protected Areas')) {
-                const newCount = `Protected Areas (${currentRows} records)`;
-                element.textContent = newCount;
-                console.log('Updated header to:', newCount);
-            }
+    async requestJSON(url, options = {}) {
+        const response = await fetch(url, {
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                Accept: 'application/json',
+                ...(options.headers || {})
+            },
+            ...options
         });
-        
-        // Update the Total Areas count in the stats grid
-        const totalAreasElement = document.getElementById('total-areas-count');
-        console.log('Total areas element found:', !!totalAreasElement);
-        if (totalAreasElement) {
-            console.log('Current total areas text:', totalAreasElement.textContent);
-            totalAreasElement.textContent = currentRows;
-            console.log('Updated total areas to:', currentRows);
-        } else {
-            console.error('Total areas element not found!');
+
+        const text = await response.text();
+        let payload = {};
+        try {
+            payload = text ? JSON.parse(text) : {};
+        } catch {
+            throw new Error('Unexpected server response');
         }
+        if (!response.ok) throw new Error(payload.error || payload.message || `HTTP ${response.status}`);
+        return payload;
     }
 
-    clearFormErrors(form) {
-        // Remove error classes
-        form.querySelectorAll('.error').forEach(el => el.classList.remove('error'));
-        
-        // Remove error messages
-        form.querySelectorAll('.error-message').forEach(el => el.remove());
+    notify(message, type = 'info') {
+        const n = document.createElement('div');
+        n.className = `pa-toast pa-toast-${type}`;
+        n.textContent = message;
+        document.body.appendChild(n);
+        window.setTimeout(() => n.classList.add('show'), 10);
+        window.setTimeout(() => {
+            n.classList.remove('show');
+            window.setTimeout(() => n.remove(), 180);
+        }, 2200);
     }
 
-    showFormErrors(form, errors) {
-        this.clearFormErrors(form);
-        
-        Object.keys(errors).forEach(field => {
-            const input = form.querySelector(`[name="${field}"]`);
-            if (input) {
-                input.classList.add('error');
-                
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'error-message';
-                
-                let errorMessage = Array.isArray(errors[field]) ? errors[field][0] : errors[field];
-                
-                // Make the error message more user-friendly
-                if (errorMessage.includes('has already been taken')) {
-                    errorMessage = 'This code already exists. Please try a different code.';
-                }
-                
-                errorDiv.textContent = errorMessage;
-                input.parentNode.appendChild(errorDiv);
-            }
-        });
+    generateDefaultCode() {
+        const last4 = String(Date.now()).slice(-4);
+        return `PA${last4}`;
+    }
+
+    escape(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
     }
 }
 
-// Initialize and make globally available
 let protectedAreaModalSystem;
 
-document.addEventListener('DOMContentLoaded', function() {
-    protectedAreaModalSystem = new ProtectedAreaModalSystem();
-    // Attach to window for global access
-    window.protectedAreaModalSystem = protectedAreaModalSystem;
-});
-
-// Global functions for onclick handlers
-function openViewModal(areaId) {
+function ensureSystem() {
     if (!protectedAreaModalSystem) {
         protectedAreaModalSystem = new ProtectedAreaModalSystem();
         window.protectedAreaModalSystem = protectedAreaModalSystem;
     }
-    protectedAreaModalSystem.open('view', { areaId });
+    return protectedAreaModalSystem;
 }
 
-function openEditModal(areaId) {
-    if (!protectedAreaModalSystem) {
-        protectedAreaModalSystem = new ProtectedAreaModalSystem();
-        window.protectedAreaModalSystem = protectedAreaModalSystem;
-    }
-    protectedAreaModalSystem.open('edit', { areaId });
-}
+window.openViewModal = (areaId) => ensureSystem().open('view', { areaId });
+window.openEditModal = (areaId) => ensureSystem().open('edit', { areaId });
+window.openAddModal = () => ensureSystem().open('add', {});
+window.openDeleteModal = (areaId) => ensureSystem().open('delete', { areaId });
+window.closeProtectedAreaModal = () => ensureSystem().close();
 
-function openAddModal() {
-    if (!protectedAreaModalSystem) {
-        protectedAreaModalSystem = new ProtectedAreaModalSystem();
-        window.protectedAreaModalSystem = protectedAreaModalSystem;
-    }
-    protectedAreaModalSystem.open('add', {});
-}
-
-function openDeleteModal(areaId) {
-    if (!protectedAreaModalSystem) {
-        protectedAreaModalSystem = new ProtectedAreaModalSystem();
-        window.protectedAreaModalSystem = protectedAreaModalSystem;
-    }
-    protectedAreaModalSystem.open('delete', { areaId });
-}
-
-function closeProtectedAreaModal() {
-    if (protectedAreaModalSystem) {
-        protectedAreaModalSystem.close();
-    }
-}
-
-function confirmDeleteProtectedArea(areaId) {
-    if (protectedAreaModalSystem) {
-        protectedAreaModalSystem.confirmDelete(areaId);
-    }
-}
-
-// Attach class and functions to window object for global access
-window.ProtectedAreaModalSystem = ProtectedAreaModalSystem;
-window.openViewModal = openViewModal;
-window.openEditModal = openEditModal;
-window.openAddModal = openAddModal;
-window.openDeleteModal = openDeleteModal;
-window.closeProtectedAreaModal = closeProtectedAreaModal;
-window.confirmDeleteProtectedArea = confirmDeleteProtectedArea;
+document.addEventListener('DOMContentLoaded', () => ensureSystem());

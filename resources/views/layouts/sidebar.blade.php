@@ -32,21 +32,9 @@
             <i data-lucide="map-pin" class="lucide-icon sidebar__nav-icon" stroke-width="1.75"></i>
             <span class="sidebar__nav-label">Protected Areas</span>
         </a>
-        <a href="{{ route('protected-areas.bangan-hill-map') }}" class="sidebar__nav-item {{ request()->routeIs('protected-areas.bangan-hill-map') ? 'sidebar__nav-item--active' : '' }}" data-tooltip="PA Boundary Map">
-            <i data-lucide="polygon" class="lucide-icon sidebar__nav-icon" stroke-width="1.75"></i>
-            <span class="sidebar__nav-label">PA Boundary Map</span>
-        </a>
         <a href="{{ route('protected-area-sites.index') }}" class="sidebar__nav-item {{ request()->routeIs('protected-area-sites.*') ? 'sidebar__nav-item--active' : '' }}" data-tooltip="PA Sites">
             <i data-lucide="map" class="lucide-icon sidebar__nav-icon" stroke-width="1.75"></i>
             <span class="sidebar__nav-label">PA Sites</span>
-        </a>
-        <a href="{{ route('analytics.index') }}" class="sidebar__nav-item {{ request()->routeIs('analytics.*') ? 'sidebar__nav-item--active' : '' }}" data-tooltip="Analytics">
-            <i data-lucide="bar-chart-3" class="lucide-icon sidebar__nav-icon" stroke-width="1.75"></i>
-            <span class="sidebar__nav-label">Analytics</span>
-        </a>
-        <a href="{{ route('reports.index') }}" class="sidebar__nav-item {{ request()->routeIs('reports.*') ? 'sidebar__nav-item--active' : '' }}" data-tooltip="Reports">
-            <i data-lucide="file-bar-chart" class="lucide-icon sidebar__nav-icon" stroke-width="1.75"></i>
-            <span class="sidebar__nav-label">Reports</span>
         </a>
     </nav>
 

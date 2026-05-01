@@ -121,17 +121,6 @@
                 <i data-lucide="arrow-up-right" class="lucide-icon quick-action-btn__arrow" aria-hidden="true"></i>
             </a>
 
-            <a href="{{ route('analytics.index') }}" class="quick-action-btn quick-action-btn--analytics {{ request()->routeIs('analytics.*') ? 'is-active' : '' }}" title="Go to analytics reports">
-                <span class="quick-action-btn__icon-wrap">
-                    <i data-lucide="bar-chart-3" class="lucide-icon quick-action-btn__icon" aria-hidden="true"></i>
-                </span>
-                <span class="quick-action-btn__content">
-                    <span class="quick-action-btn__label">Analytics</span>
-                    <span class="quick-action-btn__meta">View trends</span>
-                </span>
-                <i data-lucide="arrow-up-right" class="lucide-icon quick-action-btn__arrow" aria-hidden="true"></i>
-            </a>
-
             <a href="{{ route('species-observations.index') }}" class="quick-action-btn quick-action-btn--search {{ request()->routeIs('species-observations.*') ? 'is-active' : '' }}" title="Search and filter observation data">
                 <span class="quick-action-btn__icon-wrap">
                     <i data-lucide="search" class="lucide-icon quick-action-btn__icon" aria-hidden="true"></i>
@@ -146,7 +135,7 @@
     </div>
 </div>
 
-<!-- Yearly Monitoring Trends (analytics insight panel) -->
+<!-- Yearly Monitoring Trends -->
 <section class="monitoring-trends">
     <div class="monitoring-trends__left">
         <header class="monitoring-trends__header">

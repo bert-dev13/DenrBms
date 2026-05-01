@@ -91,14 +91,6 @@ function populateViewSiteModal(site) {
                 </div>
             </div>
 
-            <!-- Station Code -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Station Code</label>
-                <div class="px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg">
-                    <p class="text-gray-900">${site.station_code || 'N/A'}</p>
-                </div>
-            </div>
-
             <!-- Protected Area -->
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Protected Area</label>

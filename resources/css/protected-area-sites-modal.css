@@ -1,203 +1,358 @@
-/* Protected Area Sites Modal – Matches Protected Areas modal design system
-   Uses species-observation-modal.css for base styles (modal-add, modal-header-add, etc.) */
+/* Protected Area Sites Modal (clean rebuild, scoped) */
 
-/* ========== System modal backdrop (same as Protected Areas / Species Observation) ========== */
-#protected-area-sites-modal-overlay {
+body.pas-modal-open {
+    overflow: hidden;
+}
+
+.pas-modal-overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background-color: rgba(0, 0, 0, 0.6);
-    z-index: 9999;
+    inset: 0;
+    z-index: 10010;
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: 1rem;
+    background: rgba(15, 23, 42, 0.48);
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.2s ease, visibility 0.2s ease;
+    pointer-events: none;
+    transition: opacity 180ms ease, visibility 180ms ease;
 }
 
-#protected-area-sites-modal-overlay.active,
-#protected-area-sites-modal-overlay.show {
+.pas-modal-overlay.is-open {
     opacity: 1;
     visibility: visible;
+    pointer-events: auto;
 }
 
-#protected-area-sites-modal-overlay.active .modal-content,
-#protected-area-sites-modal-overlay.show .modal-content {
+.pas-modal-overlay.is-closing {
+    opacity: 0;
+}
+
+.pas-modal {
+    width: min(620px, calc(100vw - 1.25rem));
+    max-height: calc(100vh - 1.25rem);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: 12px;
+    border: 1px solid #d1d5db;
+    background: #ffffff;
+    box-shadow: 0 16px 28px rgba(15, 23, 42, 0.16);
+    transform: scale(0.98);
+    opacity: 0;
+    transition: transform 180ms ease, opacity 180ms ease;
+}
+
+.pas-modal-overlay.is-open .pas-modal {
     transform: scale(1);
+    opacity: 1;
 }
 
-[data-theme="dark"] #protected-area-sites-modal-overlay {
-    background-color: rgba(0, 0, 0, 0.75);
+.pas-modal-delete {
+    width: min(380px, calc(100vw - 1.25rem));
 }
 
-/* Modal width – same as Protected Areas (560px for Add/Edit/View) */
-#protected-area-sites-modal-overlay .modal-content.large.modal-add {
-    width: 560px;
-    max-width: 95vw;
+.pas-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.95rem 1rem;
+    background: #dcf5e5;
+    border-bottom: 1px solid #6bb287;
 }
 
-/* Full-width fields – inputs span entire modal */
-#protected-area-sites-modal-overlay .form-section-grid-full {
+.pas-modal-header-main {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-width: 0;
+}
+
+.pas-modal-header-icon {
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 999px;
+    border: 1px solid #4d9b6b;
+    background: #86efac;
+    color: #14532d;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.pas-modal-header-icon .lucide {
+    width: 0.92rem;
+    height: 0.92rem;
+    stroke-width: 2;
+}
+
+.pas-modal-title {
+    margin: 0;
+    font-size: 1.02rem;
+    font-weight: 700;
+    color: #1f2937;
+    line-height: 1.2;
+}
+
+.pas-modal-subtitle {
+    margin: 0.16rem 0 0;
+    font-size: 0.78rem;
+    color: #64748b;
+}
+
+.pas-modal-close {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #475569;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 130ms ease, border-color 130ms ease, color 130ms ease;
+}
+
+.pas-modal-close:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+    color: #1f2937;
+}
+
+.pas-modal-close:focus-visible {
+    outline: 2px solid rgba(31, 143, 79, 0.45);
+    outline-offset: 1px;
+}
+
+.pas-modal-body {
+    padding: 1rem;
+    overflow-y: auto;
+    background: #ffffff;
+}
+
+.pas-form-section + .pas-form-section {
+    margin-top: 0.8rem;
+}
+
+.pas-section-title {
+    margin: 0 0 0.62rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #64748b;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.pas-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.72rem 0.92rem;
+}
+
+.pas-form-grid-single {
     grid-template-columns: 1fr;
 }
 
-#protected-area-sites-modal-overlay .form-section-grid-full .form-group-span-full {
-    grid-column: 1;
-}
-
-/* View Site modal – clean label-value layout, match Protected Areas View */
-#protected-area-sites-modal-overlay .modal-view-protected-area-site .form-section {
-    margin-bottom: 0;
-}
-
-#protected-area-sites-modal-overlay .modal-view-protected-area-site .form-section-title {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--denr-sage, #475569);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin: 0 0 0.5rem 0;
-}
-
-#protected-area-sites-modal-overlay .modal-view-protected-area-site .form-section-divider {
-    border: none;
-    border-top: 1px solid var(--denr-border, #e2e8f0);
-    margin: 0.75rem 0;
-}
-
-#protected-area-sites-modal-overlay .modal-view-protected-area-site .form-label {
-    font-size: 0.6875rem;
-    font-weight: 500;
-    color: var(--denr-text-muted, #64748b);
-}
-
-#protected-area-sites-modal-overlay .modal-view-protected-area-site .form-input {
-    font-weight: 500;
-    color: var(--denr-text, #1e293b);
-}
-
-#protected-area-sites-modal-overlay .modal-view-protected-area-site .form-section-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 0.5rem 1rem;
-}
-
-#protected-area-sites-modal-overlay .modal-view-protected-area-site .form-section-grid .form-group-span-full {
+.pas-col-span {
     grid-column: 1 / -1;
 }
 
-@media (max-width: 768px) {
-    #protected-area-sites-modal-overlay .modal-view-protected-area-site .form-section-grid {
-        grid-template-columns: 1fr;
-    }
+.pas-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.34rem;
 }
 
-/* Error display for validation */
-#protected-area-sites-modal-overlay .error-message {
+.pas-field > span {
     font-size: 0.75rem;
-    color: #dc2626;
-    margin-top: 0.25rem;
+    color: #475569;
     font-weight: 500;
 }
 
-/* Notifications */
-.protected-area-sites-notification {
+.pas-input {
+    width: 100%;
+    box-sizing: border-box;
+    height: 2.52rem;
+    border-radius: 10px;
+    border: 1px solid #d1d5db;
+    background: #ffffff;
+    color: #111827;
+    padding: 0 0.72rem;
+    font-size: 0.88rem;
+    transition: border-color 130ms ease, box-shadow 130ms ease, background-color 130ms ease;
+}
+
+.pas-input:focus {
+    outline: none;
+    border-color: #1f8f4f;
+    box-shadow: 0 0 0 2px rgba(31, 143, 79, 0.14);
+}
+
+.pas-input[readonly] {
+    background: #f8fafc;
+    color: #1f2937;
+}
+
+.pas-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.85rem 1rem 1rem;
+    background: #e0f2e7;
+    border-top: 1px solid #6bb287;
+}
+
+.pas-modal-footer-neutral {
+    background: #ffffff;
+    border-top: 1px solid #e5e7eb;
+}
+
+.pas-btn {
+    height: 2.44rem;
+    min-width: 8.8rem;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    font-size: 0.86rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0 0.95rem;
+    transition: background-color 130ms ease, border-color 130ms ease, color 130ms ease;
+}
+
+.pas-btn-secondary {
+    background: #ffffff;
+    border-color: #cbd5e1;
+    color: #374151;
+}
+
+.pas-btn-secondary:hover {
+    background: #fef2f2;
+    border-color: #dc2626;
+    color: #b91c1c;
+}
+
+.pas-btn-primary {
+    background: #ffffff;
+    border-color: #cbd5e1;
+    color: #374151;
+}
+
+.pas-btn-primary:hover {
+    background: #14532d;
+    border-color: #14532d;
+    color: #ffffff;
+}
+
+.pas-btn-danger {
+    background: #b91c1c;
+    border-color: #b91c1c;
+    color: #ffffff;
+}
+
+.pas-btn-danger:hover {
+    background: #991b1b;
+    border-color: #991b1b;
+}
+
+.pas-btn:disabled {
+    opacity: 0.68;
+    cursor: not-allowed;
+}
+
+.pas-delete-body {
+    padding: 1.02rem 1rem 0.78rem;
+    text-align: center;
+    background: #ffffff;
+}
+
+.pas-delete-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #111827;
+}
+
+.pas-delete-name {
+    margin: 0.35rem 0 0;
+    font-size: 0.86rem;
+    color: #374151;
+    font-weight: 600;
+}
+
+.pas-delete-note {
+    margin: 0.4rem 0 0;
+    font-size: 0.78rem;
+    color: #6b7280;
+}
+
+.pas-toast {
     position: fixed;
     top: 1rem;
     right: 1rem;
-    z-index: 10000;
-    padding: 1rem 1.5rem;
-    border-radius: 0.5rem;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    font-weight: 500;
-    max-width: 400px;
-    transform: translateX(100%);
-    transition: transform 0.3s ease;
+    z-index: 10030;
+    border-radius: 8px;
+    padding: 0.72rem 0.95rem;
+    color: #ffffff;
+    font-size: 0.84rem;
+    font-weight: 600;
+    transform: translateX(105%);
+    transition: transform 160ms ease;
 }
 
-.protected-area-sites-notification.show {
+.pas-toast.show {
     transform: translateX(0);
 }
 
-.protected-area-sites-notification-success {
-    background-color: #10b981;
-    color: white;
-}
+.pas-toast-success { background: #166534; }
+.pas-toast-error { background: #b91c1c; }
+.pas-toast-info { background: #2563eb; }
 
-.protected-area-sites-notification-error {
-    background-color: #ef4444;
-    color: white;
-}
-
-.protected-area-sites-notification-info {
-    background-color: #3b82f6;
-    color: white;
-}
-
-/* Action buttons (table row) */
-.protected-area-sites-action-btn {
-    padding: 0.375rem;
-    border-radius: 0.375rem;
-    transition: all 0.1s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: none;
-    background: none;
-    cursor: pointer;
-}
-
-.protected-area-sites-action-btn:hover {
-    transform: scale(1.05);
-}
-
-.protected-area-sites-action-btn.view {
-    color: #3b82f6;
-}
-
-.protected-area-sites-action-btn.view:hover {
-    background-color: #eff6ff;
-    color: #1d4ed8;
-}
-
-.protected-area-sites-action-btn.edit {
-    color: #10b981;
-}
-
-.protected-area-sites-action-btn.edit:hover {
-    background-color: #ecfdf5;
-    color: #059669;
-}
-
-.protected-area-sites-action-btn.delete {
-    color: #ef4444;
-}
-
-.protected-area-sites-action-btn.delete:hover {
-    background-color: #fef2f2;
-    color: #dc2626;
-}
-
-/* Responsive */
 @media (max-width: 768px) {
-    #protected-area-sites-modal-overlay .modal-content {
-        margin: 1rem;
-        max-width: calc(100vw - 2rem);
+    .pas-modal {
+        width: calc(100vw - 1rem);
+        max-height: calc(100vh - 1rem);
     }
 
-    .protected-area-sites-notification {
+    .pas-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .pas-col-span {
+        grid-column: auto;
+    }
+
+    .pas-modal-footer {
+        flex-wrap: wrap;
+    }
+
+    .pas-btn {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .pas-toast {
         left: 1rem;
         right: 1rem;
-        max-width: none;
+        transform: translateY(-120%);
+    }
+
+    .pas-toast.show {
+        transform: translateY(0);
     }
 }
 
-@media (max-width: 480px) {
-    #protected-area-sites-modal-overlay .modal-content.small,
-    #protected-area-sites-modal-overlay .modal-content.large.modal-add {
-        width: calc(100vw - 1rem);
-        max-width: calc(100vw - 1rem);
+@media (prefers-reduced-motion: reduce) {
+    .pas-modal-overlay,
+    .pas-modal,
+    .pas-modal-close,
+    .pas-input,
+    .pas-btn,
+    .pas-toast {
+        transition: none !important;
     }
 }

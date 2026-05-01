@@ -31,9 +31,7 @@ export default defineConfig({
                 'resources/js/species-observation-modal.js',
                 /* Protected Areas */
                 'resources/css/protected-areas.css',
-                'resources/css/protected-area-map.css',
                 'resources/css/protected-area-modal.css',
-                'resources/js/protected-area-map.js',
                 'resources/js/protected-area-modal.js',
                 'resources/js/protected-areas.js',
                 /* Protected Area Sites */
@@ -41,12 +39,6 @@ export default defineConfig({
                 'resources/css/protected-area-sites-modal.css',
                 'resources/js/protected-area-sites.js',
                 'resources/js/protected-area-sites-modal.js',
-                /* Analytics */
-                'resources/css/analytics.css',
-                'resources/js/analytics.js',
-                /* Reports */
-                'resources/css/reports.css',
-                'resources/js/reports.js',
                 /* Settings */
                 'resources/css/settings.css',
                 'resources/js/settings.js',

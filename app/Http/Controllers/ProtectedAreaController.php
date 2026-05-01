@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ProtectedArea;
 use App\Models\SiteName;
 use App\Services\DynamicTableService;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -109,13 +110,13 @@ class ProtectedAreaController extends Controller
     public function store(Request $request)
     {
         // Log request details for debugging
-        \Log::info('ProtectedArea store called', [
+        Log::info('ProtectedArea store called', [
             'method' => $request->method(),
             'ajax' => $request->ajax(),
             'wants_json' => $request->wantsJson(),
             'expects_json' => $request->expectsJson(),
-            'user_authenticated' => auth()->check(),
-            'user_id' => auth()->id(),
+            'user_authenticated' => Auth::check(),
+            'user_id' => Auth::id(),
             'has_code' => $request->has('code'),
             'has_name' => $request->has('name'),
             'headers' => [
@@ -135,9 +136,9 @@ class ProtectedAreaController extends Controller
                 'name' => 'required|string|max:255',
             ]);
             
-            \Log::info('Validation passed', ['validated' => $validated]);
+            Log::info('Validation passed', ['validated' => $validated]);
         } catch (\Illuminate\Validation\ValidationException $e) {
-            \Log::error('Validation failed', ['errors' => $e->errors()]);
+            Log::error('Validation failed', ['errors' => $e->errors()]);
             
             if ($isAjax) {
                 return response()->json([
@@ -165,7 +166,7 @@ class ProtectedAreaController extends Controller
 
             // Return JSON response for AJAX requests
             if ($isAjax) {
-                \Log::info('Returning JSON response', [
+                Log::info('Returning JSON response', [
                     'success' => true,
                     'area_id' => $protectedArea->id,
                     'area_code' => $protectedArea->code
@@ -179,7 +180,7 @@ class ProtectedAreaController extends Controller
                 ]);
             }
 
-            \Log::info('Not AJAX, returning redirect');
+            Log::info('Not AJAX, returning redirect');
             // Return redirect for regular form submissions
             return redirect()
                 ->route('protected-areas.index')
@@ -202,7 +203,7 @@ class ProtectedAreaController extends Controller
     /**
      * Create a safe table name from protected area code
      */
-    private function createSafeTableName($code)
+    private function createSafeTableName(string $code): string
     {
         // Use DynamicTableService for consistent table naming
         return DynamicTableService::getTableNameForProtectedArea($code);
@@ -211,14 +212,14 @@ class ProtectedAreaController extends Controller
     /**
      * Create observation table for the protected area
      */
-    private function createObservationTable($tableName, $protectedAreaId)
+    private function createObservationTable(string $tableName, int $protectedAreaId): void
     {
         try {
-            \Log::info("Creating table: {$tableName}");
+            Log::info("Creating table: {$tableName}");
             
             // Check if table already exists
             if (Schema::hasTable($tableName)) {
-                \Log::info("Table {$tableName} already exists, skipping creation.");
+                Log::info("Table {$tableName} already exists, skipping creation.");
                 return;
             }
 
@@ -247,10 +248,10 @@ class ProtectedAreaController extends Controller
                       ->onDelete('cascade');
             });
             
-            \Log::info("Successfully created observation table: {$tableName}");
+            Log::info("Successfully created observation table: {$tableName}");
             
         } catch (\Exception $e) {
-            \Log::error("Failed to create observation table {$tableName}: " . $e->getMessage());
+            Log::error("Failed to create observation table {$tableName}: " . $e->getMessage());
             
             // Don't throw the error - log it and continue
             // The protected area was still created successfully
@@ -261,20 +262,20 @@ class ProtectedAreaController extends Controller
     /**
      * Create default site entry for the protected area
      */
-    private function createDefaultSite($protectedArea)
+    private function createDefaultSite(ProtectedArea $protectedArea): void
     {
         try {
-            \DB::table('site_names')->insert([
+            DB::table('site_names')->insert([
                 'name' => $protectedArea->name . ' - Main Site',
                 'protected_area_id' => $protectedArea->id,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
             
-            \Log::info("Created default site for protected area: {$protectedArea->name}");
+            Log::info("Created default site for protected area: {$protectedArea->name}");
             
         } catch (\Exception $e) {
-            \Log::error("Failed to create default site: " . $e->getMessage());
+            Log::error("Failed to create default site: " . $e->getMessage());
             // Don't throw - the protected area was still created successfully
         }
     }
@@ -308,22 +309,11 @@ class ProtectedAreaController extends Controller
         // Get all sites for filtering (we'll filter in collection so we can use the computed observation count)
         $allSites = $query->get();
         
-        // Add observation counts to each site (static + dynamic tables + site-specific tables)
+        // Add observation counts to each site from its site-specific table
         $tables = DynamicTableService::getAllObservationTables();
-        
-        // Define all station code mappings for each site
-        $stationCodeMappings = [
-            'PPLS Site 1 – Toyota Project, Cabasan, Peñablanca, Cagayan' => ['TOYOTA-S1'],
-            'PPLS Site 2 – Sitio Spring, San Roque, Peñablanca, Cagayan' => ['SANROQUE-S1'],
-            'PPLS Site 3 – Sitio Danna, Manga, Peñablanca, Cagayan' => ['MANGA-S1'],
-            'PPLS Site 4 – Sitio Abukay, Quibal, Peñablanca, Cagayan' => ['QUIBAL-S1'],
-            'MPL SITE 1 – San Mariano, Lal-lo, Cagayan' => ['R2-MPL-BMS-T - S1'],
-            'MPL SITE 2 – Sitio Madupapa, Sta. Ana, Gattaran, Cagayan' => ['R2-MPL-BMS-T - S2'],
-        ];
         
         foreach ($allSites as $site) {
             $siteObservationCount = 0;
-            $siteStationCodes = $stationCodeMappings[$site->name] ?? [];
             
             // First, check if there's a site-specific table for this site
             $siteTableName = $this->createSafeSiteTableName($site->name, $site->id);
@@ -332,56 +322,16 @@ class ProtectedAreaController extends Controller
             if (Schema::hasTable($siteTableName)) {
                 try {
                     $siteObservationCount += DB::table($siteTableName)->count();
-                    \Log::info("Found {$siteObservationCount} observations in site-specific table: {$siteTableName}");
+                    Log::info("Found {$siteObservationCount} observations in site-specific table: {$siteTableName}");
                 } catch (\Exception $e) {
-                    \Log::error("Error counting observations in site table {$siteTableName}: " . $e->getMessage());
-                }
-            }
-            
-            // Then check all other tables for matching station codes (excluding site-specific tables)
-            foreach ($siteStationCodes as $stationCode) {
-                foreach ($tables as $table) {
-                    // Skip site-specific tables to avoid double-counting
-                    if (strpos($table, '_site_tbl') !== false) {
-                        continue;
-                    }
-                    
-                    try {
-                        $siteObservationCount += DB::table($table)
-                            ->where('station_code', $stationCode)
-                            ->count();
-                    } catch (\Exception $e) {
-                        // Skip tables that don't exist
-                        continue;
-                    }
-                }
-            }
-            
-            // If no station codes are mapped, try to use the site's station_code attribute
-            if (empty($siteStationCodes) && $site->station_code) {
-                foreach ($tables as $table) {
-                    // Skip site-specific tables to avoid double-counting
-                    if (strpos($table, '_site_tbl') !== false) {
-                        continue;
-                    }
-                    
-                    try {
-                        $siteObservationCount += DB::table($table)
-                            ->where('station_code', $site->station_code)
-                            ->count();
-                    } catch (\Exception $e) {
-                        // Skip tables that don't exist
-                        continue;
-                    }
+                    Log::error("Error counting observations in site table {$siteTableName}: " . $e->getMessage());
                 }
             }
             
             $site->species_observations_count = $siteObservationCount;
             
-            \Log::info("Site {$site->name} (ID: {$site->id}) has {$siteObservationCount} observations", [
-                'site_table' => $siteTableName,
-                'station_codes' => $siteStationCodes,
-                'site_station_code' => $site->station_code
+            Log::info("Site {$site->name} (ID: {$site->id}) has {$siteObservationCount} observations", [
+                'site_table' => $siteTableName
             ]);
         }
         
@@ -458,7 +408,7 @@ class ProtectedAreaController extends Controller
     /**
      * Get protected area data for View modal (AJAX)
      */
-    public function getProtectedAreaData($id)
+    public function getProtectedAreaData(int $id)
     {
         try {
             $protectedArea = ProtectedArea::findOrFail($id);
@@ -501,7 +451,7 @@ class ProtectedAreaController extends Controller
     public function update(Request $request, ProtectedArea $protectedArea)
     {
         // Log request details for debugging
-        \Log::info('ProtectedArea update called', [
+        Log::info('ProtectedArea update called', [
             'method' => $request->method(),
             'ajax' => $request->ajax(),
             'wants_json' => $request->wantsJson(),
@@ -523,7 +473,7 @@ class ProtectedAreaController extends Controller
             'name' => 'required|string|max:255',
         ]);
         
-        \Log::info('Validation passed', ['validated' => $validated]);
+        Log::info('Validation passed', ['validated' => $validated]);
 
         try {
             $protectedArea->update($validated);
@@ -543,7 +493,7 @@ class ProtectedAreaController extends Controller
             return redirect()->route('protected-areas.index')
                 ->with('success', 'Protected area updated successfully.');
         } catch (\Illuminate\Validation\ValidationException $e) {
-            \Log::error('Validation failed in update', ['errors' => $e->errors()]);
+            Log::error('Validation failed in update', ['errors' => $e->errors()]);
             
             if ($request->expectsJson() || $request->wantsJson()) {
                 return response()->json([
@@ -647,7 +597,7 @@ class ProtectedAreaController extends Controller
     /**
      * Get site data for View modal (AJAX)
      */
-    public function getSiteData($id)
+    public function getSiteData(int $id)
     {
         try {
             $siteName = SiteName::with('protectedArea')->findOrFail($id);
@@ -657,7 +607,6 @@ class ProtectedAreaController extends Controller
                 'siteName' => [
                     'id' => $siteName->id,
                     'name' => $siteName->name,
-                    'station_code' => $siteName->station_code,
                     'protected_area_id' => $siteName->protected_area_id,
                     'protected_area' => $siteName->protectedArea ? [
                         'id' => $siteName->protectedArea->id,
@@ -694,7 +643,6 @@ class ProtectedAreaController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'protected_area_id' => 'nullable|exists:protected_areas,id',
-            'station_code' => 'nullable|string|max:60',
         ]);
 
         try {
@@ -716,7 +664,6 @@ class ProtectedAreaController extends Controller
                             'name' => $siteName->protectedArea->name,
                             'code' => $siteName->protectedArea->code,
                         ] : null,
-                        'station_code' => $siteName->station_code,
                         'created_at' => $siteName->created_at,
                         'updated_at' => $siteName->updated_at,
                     ]
@@ -752,7 +699,7 @@ class ProtectedAreaController extends Controller
     /**
      * Create a safe table name from site name
      */
-    private function createSafeSiteTableName($siteName, $siteId)
+    private function createSafeSiteTableName(string $siteName, int $siteId): string
     {
         // Extract first few words and convert to safe format
         $words = explode(' ', $siteName);
@@ -777,19 +724,18 @@ class ProtectedAreaController extends Controller
     /**
      * Create observation table for the protected area site
      */
-    private function createSiteObservationTable($tableName, $siteId)
+    private function createSiteObservationTable(string $tableName, int $siteId): void
     {
         try {
-            \Log::info("Creating site observation table: {$tableName}");
+            Log::info("Creating site observation table: {$tableName}");
             
             // Check if table already exists
             if (Schema::hasTable($tableName)) {
-                \Log::info("Site observation table {$tableName} already exists, checking schema...");
+                Log::info("Site observation table {$tableName} already exists, checking schema...");
                 
                 // Check if required columns exist
                 $requiredColumns = [
                     'protected_area_id',
-                    'station_code',
                     'patrol_year',
                     'patrol_semester',
                     'bio_group',
@@ -806,13 +752,13 @@ class ProtectedAreaController extends Controller
                 }
                 
                 if (!empty($missingColumns)) {
-                    \Log::warning("Table {$tableName} is missing columns: " . implode(', ', $missingColumns));
+                    Log::warning("Table {$tableName} is missing columns: " . implode(', ', $missingColumns));
                     
                     // Drop and recreate the table to ensure proper schema
                     Schema::dropIfExists($tableName);
-                    \Log::info("Dropped incomplete table {$tableName}, will recreate...");
+                    Log::info("Dropped incomplete table {$tableName}, will recreate...");
                 } else {
-                    \Log::info("Table {$tableName} has all required columns, using existing table.");
+                    Log::info("Table {$tableName} has all required columns, using existing table.");
                     return;
                 }
             }
@@ -825,7 +771,6 @@ class ProtectedAreaController extends Controller
                 $table->unsignedBigInteger('protected_area_id');
                 
                 // Standard observation columns
-                $table->string('station_code', 60);
                 $table->year('patrol_year');
                 $table->unsignedTinyInteger('patrol_semester'); // 1 or 2
                 $table->enum('bio_group', ['fauna', 'flora']);
@@ -842,10 +787,10 @@ class ProtectedAreaController extends Controller
                       ->onDelete('cascade');
             });
             
-            \Log::info("Successfully created site observation table: {$tableName}");
+            Log::info("Successfully created site observation table: {$tableName}");
             
         } catch (\Exception $e) {
-            \Log::error("Failed to create site observation table {$tableName}: " . $e->getMessage());
+            Log::error("Failed to create site observation table {$tableName}: " . $e->getMessage());
             
             // Don't throw the error - log it and continue
             // The site was still created successfully
@@ -859,13 +804,13 @@ class ProtectedAreaController extends Controller
     public function storeSite(Request $request)
     {
         // Log request details for debugging
-        \Log::info('ProtectedAreaSite store called', [
+        Log::info('ProtectedAreaSite store called', [
             'method' => $request->method(),
             'ajax' => $request->ajax(),
             'wants_json' => $request->wantsJson(),
             'expects_json' => $request->expectsJson(),
-            'user_authenticated' => auth()->check(),
-            'user_id' => auth()->id(),
+            'user_authenticated' => Auth::check(),
+            'user_id' => Auth::id(),
             'has_name' => $request->has('name'),
             'has_protected_area_id' => $request->has('protected_area_id'),
             'headers' => [
@@ -883,12 +828,11 @@ class ProtectedAreaController extends Controller
             $validated = $request->validate([
                 'name' => 'required|string|max:255',
                 'protected_area_id' => 'nullable|exists:protected_areas,id',
-                'station_code' => 'nullable|string|max:60',
             ]);
             
-            \Log::info('Site validation passed', ['validated' => $validated]);
+            Log::info('Site validation passed', ['validated' => $validated]);
         } catch (\Illuminate\Validation\ValidationException $e) {
-            \Log::error('Site validation failed', ['errors' => $e->errors()]);
+            Log::error('Site validation failed', ['errors' => $e->errors()]);
             
             if ($isAjax) {
                 return response()->json([
@@ -915,7 +859,7 @@ class ProtectedAreaController extends Controller
 
             // Return JSON response for AJAX requests
             if ($isAjax) {
-                \Log::info('Returning site JSON response', [
+                Log::info('Returning site JSON response', [
                     'success' => true,
                     'site_id' => $siteName->id,
                     'site_name' => $siteName->name,
@@ -934,7 +878,6 @@ class ProtectedAreaController extends Controller
                             'name' => $siteName->protectedArea->name,
                             'code' => $siteName->protectedArea->code,
                         ] : null,
-                        'station_code' => $siteName->station_code,
                         'created_at' => $siteName->created_at,
                         'updated_at' => $siteName->updated_at,
                     ],
@@ -942,14 +885,14 @@ class ProtectedAreaController extends Controller
                 ]);
             }
 
-            \Log::info('Not AJAX, returning redirect');
+            Log::info('Not AJAX, returning redirect');
             // Return redirect for regular form submissions
             return redirect()
                 ->route('protected-area-sites.index')
                 ->with('success', 'Site created successfully with observation table.');
                 
         } catch (\Exception $e) {
-            \Log::error('Failed to create site: ' . $e->getMessage());
+            Log::error('Failed to create site: ' . $e->getMessage());
             
             if ($isAjax) {
                 return response()->json([
@@ -1006,17 +949,17 @@ class ProtectedAreaController extends Controller
     /**
      * Drop observation table for a deleted protected area
      */
-    private function dropObservationTable($tableName)
+    private function dropObservationTable(string $tableName): void
     {
         try {
             if (Schema::hasTable($tableName)) {
                 Schema::dropIfExists($tableName);
-                \Log::info("Successfully dropped observation table: {$tableName}");
+                Log::info("Successfully dropped observation table: {$tableName}");
             } else {
-                \Log::info("Observation table {$tableName} does not exist, skipping drop.");
+                Log::info("Observation table {$tableName} does not exist, skipping drop.");
             }
         } catch (\Exception $e) {
-            \Log::error("Failed to drop observation table {$tableName}: " . $e->getMessage());
+            Log::error("Failed to drop observation table {$tableName}: " . $e->getMessage());
             // Don't throw - the protected area was still deleted successfully
         }
     }
@@ -1024,17 +967,17 @@ class ProtectedAreaController extends Controller
     /**
      * Drop observation table for a deleted site
      */
-    private function dropSiteObservationTable($tableName)
+    private function dropSiteObservationTable(string $tableName): void
     {
         try {
             if (Schema::hasTable($tableName)) {
                 Schema::dropIfExists($tableName);
-                \Log::info("Successfully dropped site observation table: {$tableName}");
+                Log::info("Successfully dropped site observation table: {$tableName}");
             } else {
-                \Log::info("Site observation table {$tableName} does not exist, skipping drop.");
+                Log::info("Site observation table {$tableName} does not exist, skipping drop.");
             }
         } catch (\Exception $e) {
-            \Log::error("Failed to drop site observation table {$tableName}: " . $e->getMessage());
+            Log::error("Failed to drop site observation table {$tableName}: " . $e->getMessage());
             // Don't throw - the site was still deleted successfully
         }
     }
@@ -1092,7 +1035,7 @@ class ProtectedAreaController extends Controller
     /**
      * Export to print-friendly view
      */
-    private function exportPrint($protectedAreas, Request $request)
+    private function exportPrint(\Illuminate\Support\Collection $protectedAreas, Request $request)
     {
         // Get filter information for title
         $filterInfo = $this->getFilterInfo($request);
@@ -1103,7 +1046,7 @@ class ProtectedAreaController extends Controller
     /**
      * Export to Excel
      */
-    private function exportExcel($protectedAreas, Request $request)
+    private function exportExcel(\Illuminate\Support\Collection $protectedAreas, Request $request)
     {
         $filename = 'protected-areas-' . date('Y-m-d-H-i-s') . '.csv';
         
@@ -1149,7 +1092,7 @@ class ProtectedAreaController extends Controller
     /**
      * Export to PDF
      */
-    private function exportPdf($protectedAreas, Request $request)
+    private function exportPdf(\Illuminate\Support\Collection $protectedAreas, Request $request)
     {
         // Limit the number of records for PDF to prevent memory issues
         $maxRecords = 100;
@@ -1238,37 +1181,20 @@ class ProtectedAreaController extends Controller
         // Get all sites for filtering
         $allSites = $query->get();
         
-        // Add observation counts to each site (static + dynamic tables)
-        $tables = DynamicTableService::getAllObservationTables();
-        
-        // Define all station code mappings for each site
-        $stationCodeMappings = [
-            'PPLS Site 1 – Toyota Project, Cabasan, Peñablanca, Cagayan' => ['TOYOTA-S1'],
-            'PPLS Site 2 – Sitio Spring, San Roque, Peñablanca, Cagayan' => ['SANROQUE-S1'],
-            'PPLS Site 3 – Sitio Danna, Manga, Peñablanca, Cagayan' => ['MANGA-S1'],
-            'PPLS Site 4 – Sitio Abukay, Quibal, Peñablanca, Cagayan' => ['QUIBAL-S1'],
-            'MPL SITE 1 – San Mariano, Lal-lo, Cagayan' => ['R2-MPL-BMS-T - S1'],
-            'MPL SITE 2 – Sitio Madupapa, Sta. Ana, Gattaran, Cagayan' => ['R2-MPL-BMS-T - S2'],
-        ];
-        
+        // Add observation counts to each site from its site-specific table
         foreach ($allSites as $site) {
             $siteObservationCount = 0;
-            $siteStationCodes = $stationCodeMappings[$site->name] ?? [];
-            
-            foreach ($siteStationCodes as $stationCode) {
-                foreach ($tables as $table) {
-                    try {
-                        $siteObservationCount += DB::table($table)
-                            ->where('station_code', $stationCode)
-                            ->count();
-                    } catch (\Exception $e) {
-                        // Skip tables that don't exist
-                        continue;
-                    }
+            $siteTableName = $this->createSafeSiteTableName($site->name, $site->id);
+
+            if (Schema::hasTable($siteTableName)) {
+                try {
+                    $siteObservationCount += DB::table($siteTableName)->count();
+                } catch (\Exception $e) {
+                    Log::error("Error counting observations in site table {$siteTableName}: " . $e->getMessage());
                 }
             }
+
             $site->species_observations_count = $siteObservationCount;
-            $site->station_code = $this->getStationCodeForSite($site->name);
         }
         
         // Apply status filter in PHP
@@ -1311,7 +1237,7 @@ class ProtectedAreaController extends Controller
     /**
      * Export Protected Area Sites to print-friendly view
      */
-    private function exportSitesPrint($siteNames, Request $request)
+    private function exportSitesPrint(\Illuminate\Support\Collection $siteNames, Request $request)
     {
         // Get filter information for title
         $filterInfo = $this->getSitesFilterInfo($request);
@@ -1322,7 +1248,7 @@ class ProtectedAreaController extends Controller
     /**
      * Export Protected Area Sites to Excel
      */
-    private function exportSitesExcel($siteNames, Request $request)
+    private function exportSitesExcel(\Illuminate\Support\Collection $siteNames, Request $request)
     {
         $filename = 'protected-area-sites-' . date('Y-m-d-H-i-s') . '.csv';
         
@@ -1341,7 +1267,6 @@ class ProtectedAreaController extends Controller
             fputcsv($file, [
                 'Site Name',
                 'Protected Area',
-                'Station Code',
                 'Observations Count',
                 'Status',
                 'Created At'
@@ -1352,7 +1277,6 @@ class ProtectedAreaController extends Controller
                 fputcsv($file, [
                     $site->name ?? 'N/A',
                     $site->protectedArea->name ?? 'Not assigned',
-                    $this->getStationCodeForSite($site->name) ?? 'N/A',
                     $site->species_observations_count ?? 0,
                     $site->species_observations_count > 0 ? 'Active' : 'No Data',
                     $site->created_at ? $site->created_at->format('Y-m-d H:i:s') : 'N/A'
@@ -1368,7 +1292,7 @@ class ProtectedAreaController extends Controller
     /**
      * Export Protected Area Sites to PDF
      */
-    private function exportSitesPdf($siteNames, Request $request)
+    private function exportSitesPdf(\Illuminate\Support\Collection $siteNames, Request $request)
     {
         // Limit the number of records for PDF to prevent memory issues
         $maxRecords = 100;
@@ -1430,20 +1354,4 @@ class ProtectedAreaController extends Controller
         return $filterInfo;
     }
 
-    /**
-     * Get station code for a site name
-     */
-    private function getStationCodeForSite($siteName)
-    {
-        $stationCodeMappings = [
-            'PPLS Site 1 – Toyota Project, Cabasan, Peñablanca, Cagayan' => 'TOYOTA-S1',
-            'PPLS Site 2 – Sitio Spring, San Roque, Peñablanca, Cagayan' => 'SANROQUE-S1',
-            'PPLS Site 3 – Sitio Danna, Manga, Peñablanca, Cagayan' => 'MANGA-S1',
-            'PPLS Site 4 – Sitio Abukay, Quibal, Peñablanca, Cagayan' => 'QUIBAL-S1',
-            'MPL SITE 1 – San Mariano, Lal-lo, Cagayan' => 'R2-MPL-BMS-T - S1',
-            'MPL SITE 2 – Sitio Madupapa, Sta. Ana, Gattaran, Cagayan' => 'R2-MPL-BMS-T - S2',
-        ];
-        
-        return $stationCodeMappings[$siteName] ?? null;
-    }
 }

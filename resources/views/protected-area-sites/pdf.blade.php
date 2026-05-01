@@ -71,6 +71,22 @@
             border-top: 1px solid #000;
             padding-top: 5px;
         }
+
+        .status-badge {
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 8pt;
+        }
+
+        .status-badge--active {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .status-badge--no-data {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
     </style>
 </head>
 <body>
@@ -102,11 +118,10 @@
         <thead>
             <tr>
                 <th width="25%">Site Name</th>
-                <th width="20%">Protected Area</th>
-                <th width="15%">Station Code</th>
+                <th width="25%">Protected Area</th>
                 <th width="15%">Observations Count</th>
                 <th width="10%">Status</th>
-                <th width="15%">Created At</th>
+                <th width="25%">Created At</th>
             </tr>
         </thead>
         <tbody>
@@ -114,11 +129,9 @@
                 <tr>
                     <td>{{ $site->name ?? 'N/A' }}</td>
                     <td>{{ $site->protectedArea->name ?? 'Not assigned' }}</td>
-                    <td>{{ $site->station_code ?? 'N/A' }}</td>
                     <td>{{ number_format($site->species_observations_count ?? 0) }}</td>
                     <td>
-                        <span style="padding: 2px 6px; border-radius: 3px; font-size: 8pt; 
-                               {{ $site->species_observations_count > 0 ? 'background-color: #d4edda; color: #155724;' : 'background-color: #f8d7da; color: #721c24;' }}">
+                        <span class="status-badge {{ $site->species_observations_count > 0 ? 'status-badge--active' : 'status-badge--no-data' }}">
                             {{ $site->species_observations_count > 0 ? 'Active' : 'No Data' }}
                         </span>
                     </td>
@@ -126,7 +139,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="6" style="text-align: center; font-style: italic;">
+                    <td colspan="5" style="text-align: center; font-style: italic;">
                         No protected area sites found
                     </td>
                 </tr>
