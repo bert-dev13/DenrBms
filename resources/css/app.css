@@ -2,7 +2,7 @@
 
 /* App shell: single source of truth for layout dimensions */
 :root {
-    --sidebar-width: 16rem;
+    --sidebar-width: 17.5rem;
     --topbar-height: 3.5rem;
 }
 

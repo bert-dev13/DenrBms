@@ -6,6 +6,7 @@ class SidebarManager {
     constructor() {
         this.sidebar = null;
         this.sidebarOpen = true;
+        this.sidebarCollapsed = false;
         this.isMobile = false;
         this.breakpoints = { tablet: 1024 };
         this.init();
@@ -55,9 +56,12 @@ class SidebarManager {
         this.isMobile = window.innerWidth < this.breakpoints.tablet;
         if (this.isMobile) {
             this.sidebarOpen = false;
+            this.sidebarCollapsed = false;
         } else {
             const saved = localStorage.getItem('sidebarOpen');
+            const savedCollapsed = localStorage.getItem('sidebarCollapsed');
             this.sidebarOpen = saved !== null ? saved === 'true' : true;
+            this.sidebarCollapsed = savedCollapsed !== null ? savedCollapsed === 'true' : false;
         }
     }
 
@@ -65,6 +69,14 @@ class SidebarManager {
         if (!this.sidebar) return;
 
         const overlay = document.getElementById('sidebar-overlay');
+        const collapseToggle = document.getElementById('sidebar-collapse-toggle');
+
+        document.body.classList.toggle('sidebar-collapsed', !this.isMobile && this.sidebarCollapsed);
+        this.sidebar.classList.toggle('sidebar--collapsed', !this.isMobile && this.sidebarCollapsed);
+        if (collapseToggle) {
+            collapseToggle.setAttribute('aria-label', this.sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar');
+            collapseToggle.setAttribute('title', this.sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar');
+        }
 
         if (this.isMobile) {
             this.sidebar.classList.toggle('open', this.sidebarOpen);
@@ -109,6 +121,15 @@ class SidebarManager {
         this.adjustLayout();
     }
 
+    toggleCollapse() {
+        if (this.isMobile) return;
+        this.sidebarCollapsed = !this.sidebarCollapsed;
+        try {
+            localStorage.setItem('sidebarCollapsed', this.sidebarCollapsed.toString());
+        } catch (e) {}
+        this.adjustLayout();
+    }
+
     debounce(fn, wait) {
         let t;
         return function (...args) {
@@ -133,6 +154,12 @@ document.addEventListener('DOMContentLoaded', () => {
 window.toggleSidebar = function () {
     if (window.sidebarManager) {
         window.sidebarManager.toggleSidebar();
+    }
+};
+
+window.toggleSidebarCollapse = function () {
+    if (window.sidebarManager) {
+        window.sidebarManager.toggleCollapse();
     }
 };
 

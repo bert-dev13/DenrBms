@@ -54,8 +54,9 @@
                     <div class="login-logo-wrap" aria-hidden="true">
                         <img src="{{ asset('images/denr-logo.png') }}" alt="" class="login-logo" width="72" height="72" />
                     </div>
-                    <h1 class="login-title">DENR BMS</h1>
-                    <p class="login-subtitle">Biodiversity Management System</p>
+                    <p class="login-kicker">DENR BMS</p>
+                    <h1 class="login-title">Biodiversity Management System</h1>
+                    <p class="login-subtitle">Secure access for biodiversity monitoring and protected area records.</p>
                 </header>
 
                 <!-- Login Form -->
@@ -145,7 +146,7 @@
                         <span id="remember-desc">Remember me</span>
                     </label>
                     <a href="{{ route('password.request') }}" class="forgot-password-link">
-                        Forgot Password?
+                        Forgot password
                     </a>
                 </div>
 

@@ -96,18 +96,34 @@ class DashboardController extends Controller
         foreach ($tables as $table) {
             try {
                 $data = DB::table($table)
-                    ->select('patrol_year', DB::raw('COUNT(*) as count'))
+                    ->select('patrol_year', DB::raw('COUNT(*) as observations'))
                     ->whereNotNull('patrol_year')
                     ->groupBy('patrol_year')
                     ->orderBy('patrol_year')
                     ->get();
+
+                $speciesByYear = DB::table($table)
+                    ->select('patrol_year', 'scientific_name')
+                    ->whereNotNull('patrol_year')
+                    ->whereNotNull('scientific_name')
+                    ->distinct()
+                    ->get()
+                    ->groupBy('patrol_year');
                 
                 foreach ($data as $row) {
                     $year = $row->patrol_year;
                     if (!isset($yearlyData[$year])) {
-                        $yearlyData[$year] = 0;
+                        $yearlyData[$year] = [
+                            'observations' => 0,
+                            'species' => [],
+                        ];
                     }
-                    $yearlyData[$year] += $row->count;
+                    $yearlyData[$year]['observations'] += (int) $row->observations;
+
+                    foreach (($speciesByYear[$year] ?? collect()) as $speciesRow) {
+                        $scientificName = $speciesRow->scientific_name;
+                        $yearlyData[$year]['species'][$scientificName] = true;
+                    }
                 }
             } catch (\Exception $e) {
                 // Skip tables that don't exist
@@ -115,17 +131,15 @@ class DashboardController extends Controller
             }
         }
         
-        // Sort by year and convert to cumulative totals
+        // Sort by year and return plain yearly totals for long-term trend reading.
         ksort($yearlyData);
         $chartData = [];
-        $cumulativeTotal = 0;
         
-        foreach ($yearlyData as $year => $count) {
-            $cumulativeTotal += $count;
+        foreach ($yearlyData as $year => $metrics) {
             $chartData[] = [
                 'year' => $year,
-                'count' => $cumulativeTotal, // Use cumulative total instead of individual year count
-                'yearly_count' => $count // Keep individual year count for reference
+                'observations' => $metrics['observations'],
+                'species_tracked' => count($metrics['species']),
             ];
         }
         

@@ -8,12 +8,6 @@
 @endsection
 
 @section('content')
-            <!-- Welcome Section -->
-            <div class="mb-8">
-                <h1 class="text-3xl font-bold text-gray-900">Observation Analytics</h1>
-                <p class="text-gray-600 mt-2">Analyze biodiversity observation trends over time for protected areas.</p>
-            </div>
-
             <!-- Stats Grid (KPI Cards) -->
             <div class="kpi-grid mb-6">
                 <!-- Total Areas -->
@@ -130,7 +124,7 @@
             <div class="chart-widget">
                 <header class="chart-widget__header">
                     <div>
-                        <h2 class="chart-widget__title">Species Observation Trends (2021–2025)</h2>
+                        <h2 class="chart-widget__title">Species Observation Trends ({{ $patrolYearRange }})</h2>
                         <p class="chart-widget__subtitle">Select a species to view its observation trends across all protected areas</p>
                     </div>
                     <div class="d-flex align-items-center gap-2">

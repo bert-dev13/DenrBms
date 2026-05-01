@@ -14,60 +14,60 @@
             </div>
             <div class="sidebar__brand-text">
                 <h1 class="sidebar__title">DENR BMS</h1>
-                <p class="sidebar__subtitle">Biodiversity Management System</p>
             </div>
         </div>
-    </div>
-
-    {{-- User profile (static, no dropdown) --}}
-    <div class="sidebar__user-wrap">
-        <div class="sidebar__user" aria-label="Signed in as {{ auth()->user()->name ?? 'User' }}">
-            <div class="sidebar__avatar" aria-hidden="true">
-                {{ strtoupper(substr(auth()->user()->name ?? 'U', 0, 1)) }}
-            </div>
-            <div class="sidebar__user-info">
-                <span class="sidebar__user-name">{{ auth()->user()->name ?? 'User' }}</span>
-                <span class="sidebar__user-email">{{ auth()->user()->email ?? 'user@example.com' }}</span>
-            </div>
-        </div>
-        <div class="sidebar__divider"></div>
     </div>
 
     {{-- Navigation --}}
     <nav class="sidebar__nav" aria-label="Primary">
-        <a href="{{ route('dashboard') }}" class="sidebar__nav-item {{ request()->routeIs('dashboard') ? 'sidebar__nav-item--active' : '' }}">
+        <a href="{{ route('dashboard') }}" class="sidebar__nav-item {{ request()->routeIs('dashboard') ? 'sidebar__nav-item--active' : '' }}" data-tooltip="Dashboard">
             <i data-lucide="layout-dashboard" class="lucide-icon sidebar__nav-icon" stroke-width="1.75"></i>
             <span class="sidebar__nav-label">Dashboard</span>
         </a>
-        <a href="{{ route('species-observations.index') }}" class="sidebar__nav-item {{ request()->routeIs('species-observations.*') ? 'sidebar__nav-item--active' : '' }}">
+        <a href="{{ route('species-observations.index') }}" class="sidebar__nav-item {{ request()->routeIs('species-observations.*') ? 'sidebar__nav-item--active' : '' }}" data-tooltip="Species Observations">
             <i data-lucide="clipboard-list" class="lucide-icon sidebar__nav-icon" stroke-width="1.75"></i>
             <span class="sidebar__nav-label">Species Observations</span>
         </a>
-        <a href="{{ route('protected-areas.index') }}" class="sidebar__nav-item {{ request()->routeIs('protected-areas.*') ? 'sidebar__nav-item--active' : '' }}">
+        <a href="{{ route('protected-areas.index') }}" class="sidebar__nav-item {{ request()->routeIs('protected-areas.*') ? 'sidebar__nav-item--active' : '' }}" data-tooltip="Protected Areas">
             <i data-lucide="map-pin" class="lucide-icon sidebar__nav-icon" stroke-width="1.75"></i>
             <span class="sidebar__nav-label">Protected Areas</span>
         </a>
-        <a href="{{ route('protected-area-sites.index') }}" class="sidebar__nav-item {{ request()->routeIs('protected-area-sites.*') ? 'sidebar__nav-item--active' : '' }}">
+        <a href="{{ route('protected-areas.bangan-hill-map') }}" class="sidebar__nav-item {{ request()->routeIs('protected-areas.bangan-hill-map') ? 'sidebar__nav-item--active' : '' }}" data-tooltip="PA Boundary Map">
+            <i data-lucide="polygon" class="lucide-icon sidebar__nav-icon" stroke-width="1.75"></i>
+            <span class="sidebar__nav-label">PA Boundary Map</span>
+        </a>
+        <a href="{{ route('protected-area-sites.index') }}" class="sidebar__nav-item {{ request()->routeIs('protected-area-sites.*') ? 'sidebar__nav-item--active' : '' }}" data-tooltip="PA Sites">
             <i data-lucide="map" class="lucide-icon sidebar__nav-icon" stroke-width="1.75"></i>
             <span class="sidebar__nav-label">PA Sites</span>
         </a>
-        <a href="{{ route('analytics.index') }}" class="sidebar__nav-item {{ request()->routeIs('analytics.*') ? 'sidebar__nav-item--active' : '' }}">
+        <a href="{{ route('analytics.index') }}" class="sidebar__nav-item {{ request()->routeIs('analytics.*') ? 'sidebar__nav-item--active' : '' }}" data-tooltip="Analytics">
             <i data-lucide="bar-chart-3" class="lucide-icon sidebar__nav-icon" stroke-width="1.75"></i>
             <span class="sidebar__nav-label">Analytics</span>
         </a>
-        <a href="{{ route('reports.index') }}" class="sidebar__nav-item {{ request()->routeIs('reports.*') ? 'sidebar__nav-item--active' : '' }}">
+        <a href="{{ route('reports.index') }}" class="sidebar__nav-item {{ request()->routeIs('reports.*') ? 'sidebar__nav-item--active' : '' }}" data-tooltip="Reports">
             <i data-lucide="file-bar-chart" class="lucide-icon sidebar__nav-icon" stroke-width="1.75"></i>
             <span class="sidebar__nav-label">Reports</span>
         </a>
-        <a href="{{ route('settings.index') }}" class="sidebar__nav-item {{ request()->routeIs('settings.*') ? 'sidebar__nav-item--active' : '' }}">
+    </nav>
+
+    {{-- Footer: profile + utilities --}}
+    <div class="sidebar__footer">
+        <div class="sidebar__user-wrap">
+            <div class="sidebar__user" aria-label="Signed in as {{ auth()->user()->name ?? 'Juan Dela Cruz' }}">
+                <div class="sidebar__avatar" aria-hidden="true">
+                    {{ strtoupper(substr(auth()->user()->name ?? 'Juan Dela Cruz', 0, 1)) }}
+                </div>
+                <div class="sidebar__user-info">
+                    <span class="sidebar__user-name">{{ auth()->user()->name ?? 'Juan Dela Cruz' }}</span>
+                    <span class="sidebar__user-email">{{ auth()->user()->email ?? 'test@denr.gov.ph' }}</span>
+                </div>
+            </div>
+        </div>
+        <a href="{{ route('settings.index') }}" class="sidebar__nav-item {{ request()->routeIs('settings.*') ? 'sidebar__nav-item--active' : '' }}" data-tooltip="Settings">
             <i data-lucide="settings" class="lucide-icon sidebar__nav-icon" stroke-width="1.75"></i>
             <span class="sidebar__nav-label">Settings</span>
         </a>
-    </nav>
-
-    {{-- Footer: Logout when expanded --}}
-    <div class="sidebar__footer">
-        <button type="button" class="sidebar__logout-btn" onclick="showLogoutModal()" aria-label="Logout">
+        <button type="button" class="sidebar__logout-btn" onclick="showLogoutModal()" aria-label="Logout" data-tooltip="Logout">
             <i data-lucide="log-out" class="lucide-icon sidebar__nav-icon"></i>
             <span class="sidebar__nav-label">Logout</span>
         </button>

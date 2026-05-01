@@ -23,6 +23,7 @@ use App\Models\ToyotaObservation;
 use App\Models\TumauiniObservation;
 use App\Models\WangagObservation;
 use App\Models\MagapitObservation;
+use App\Helpers\PatrolYearHelper;
 use App\Services\DynamicTableService;
 use Illuminate\Http\Request;
 
@@ -54,8 +55,13 @@ class AnalyticsController extends Controller
             'total_observations' => $totalObservations,
             'species_diversity' => $speciesDiversity,
         ];
+
+        $patrolYears = PatrolYearHelper::getYears();
+        $patrolYearRange = !empty($patrolYears)
+            ? min($patrolYears) . '–' . max($patrolYears)
+            : date('Y');
         
-        return view('analytics', compact('protectedAreas', 'stats'));
+        return view('analytics', compact('protectedAreas', 'stats', 'patrolYearRange'));
     }
 
     public function getObservationData(Request $request)
@@ -222,7 +228,7 @@ class AnalyticsController extends Controller
                               ->orWhere('common_name', '!=', '');
                     })
                     ->whereNotNull('patrol_year')
-                    ->whereBetween('patrol_year', [2021, 2025])
+                    ->whereBetween('patrol_year', [PatrolYearHelper::getCurrentYear() - PatrolYearHelper::getYearCount() + 1, PatrolYearHelper::getCurrentYear()])
                     ->groupBy('scientific_name', 'common_name', 'patrol_year')
                     ->get();
                 
@@ -299,7 +305,7 @@ class AnalyticsController extends Controller
                               ->orWhere('common_name', $scientificName);
                     })
                     ->whereNotNull('patrol_year')
-                    ->whereBetween('patrol_year', [2021, 2025])
+                    ->whereBetween('patrol_year', [PatrolYearHelper::getCurrentYear() - PatrolYearHelper::getYearCount() + 1, PatrolYearHelper::getCurrentYear()])
                     ->groupBy('scientific_name', 'common_name', 'patrol_year')
                     ->get();
                 
@@ -311,11 +317,12 @@ class AnalyticsController extends Controller
             }
         }
         
+        $years = PatrolYearHelper::getYears();
         if ($allSpeciesData->isEmpty()) {
             return response()->json([
                 'error' => 'No data found for the selected species',
-                'years' => range(2021, 2025),
-                'data' => array_fill(0, 5, 0),
+                'years' => $years,
+                'data' => array_fill(0, count($years), 0),
                 'species_info' => null
             ]);
         }
@@ -326,8 +333,7 @@ class AnalyticsController extends Controller
                 return $yearGroup->sum('total_count');
             });
         
-        // Prepare data for all years 2021-2025
-        $years = range(2021, 2025);
+        // Prepare data for all patrol years (dynamic)
         $data = [];
         foreach ($years as $year) {
             $data[] = $yearlyData->get($year, 0);

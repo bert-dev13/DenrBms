@@ -41,6 +41,10 @@ import {
   Building2,
   RefreshCw,
   Panda,
+  Calendar,
+  CalendarDays,
+  Activity,
+  LineChart,
 } from 'lucide';
 
 const ICONS = {
@@ -80,6 +84,10 @@ const ICONS = {
   Building2,
   RefreshCw,
   Panda,
+  Calendar,
+  CalendarDays,
+  Activity,
+  LineChart,
 };
 
 const defaultAttrs = {

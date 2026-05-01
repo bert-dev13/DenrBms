@@ -25,6 +25,7 @@ use App\Models\SiteName;
 use App\Models\ToyotaObservation;
 use App\Models\TumauiniObservation;
 use App\Models\WangagObservation;
+use App\Helpers\PatrolYearHelper;
 use App\Services\DynamicTableService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -529,7 +530,7 @@ class SpeciesObservationController extends Controller
         return [
             'protectedAreas' => ProtectedArea::orderBy('name')->get(),
             'bioGroups' => ['fauna' => 'Fauna', 'flora' => 'Flora'],
-            'years' => $this->getAllYears(),
+            'years' => PatrolYearHelper::getYears(),
             'semesters' => [1 => '1st', 2 => '2nd']
         ];
     }
@@ -574,35 +575,6 @@ class SpeciesObservationController extends Controller
         ]);
     }
 
-    /**
-     * Get all unique years from all observation tables
-     */
-    private function getAllYears()
-    {
-        return BmsSpeciesObservation::distinct()->pluck('patrol_year')->sort()->reverse()
-                    ->merge(FuyotObservation::distinct()->pluck('patrol_year')->sort()->reverse())
-                    ->merge(QuirinoObservation::distinct()->pluck('patrol_year')->sort()->reverse())
-                    ->merge(PalauiObservation::distinct()->pluck('patrol_year')->sort()->reverse())
-                    ->merge(BauaObservation::distinct()->pluck('patrol_year')->sort()->reverse())
-                    ->merge(WangagObservation::distinct()->pluck('patrol_year')->sort()->reverse())
-                    ->merge(MagapitObservation::distinct()->pluck('patrol_year')->sort()->reverse())
-                    ->merge(MadupapaObservation::distinct()->pluck('patrol_year')->sort()->reverse())
-                    ->merge(MarianoObservation::distinct()->pluck('patrol_year')->sort()->reverse())
-                    ->merge(ToyotaObservation::distinct()->pluck('patrol_year')->sort()->reverse())
-                    ->merge(SanRoqueObservation::distinct()->pluck('patrol_year')->sort()->reverse())
-                    ->merge(MangaObservation::distinct()->pluck('patrol_year')->sort()->reverse())
-                    ->merge(QuibalObservation::distinct()->pluck('patrol_year')->sort()->reverse())
-                    ->merge(MadreObservation::distinct()->pluck('patrol_year')->sort()->reverse())
-                    ->merge(TumauiniObservation::distinct()->pluck('patrol_year')->sort()->reverse())
-                    ->merge(BanganObservation::distinct()->pluck('patrol_year')->sort()->reverse())
-                    ->merge(SalinasObservation::distinct()->pluck('patrol_year')->sort()->reverse())
-                    ->merge(DupaxObservation::distinct()->pluck('patrol_year')->sort()->reverse())
-                    ->merge(CasecnanObservation::distinct()->pluck('patrol_year')->sort()->reverse())
-                    ->merge(DipaniongObservation::distinct()->pluck('patrol_year')->sort()->reverse())
-                    ->unique()
-                    ->sort()
-                    ->reverse();
-    }
 
     /**
      * Get observation data for Edit modal
@@ -863,8 +835,7 @@ class SpeciesObservationController extends Controller
         // Get other form data
         $bioGroups = ['fauna' => 'Fauna', 'flora' => 'Flora'];
         $semesters = [1 => '1st', 2 => '2nd'];
-        $currentYear = date('Y');
-        $years = range($currentYear, $currentYear - 10); // Last 10 years
+        $years = PatrolYearHelper::getYears();
         
         return view('species-observations.create', compact(
             'protectedAreas',

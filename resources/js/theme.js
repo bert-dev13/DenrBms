@@ -198,22 +198,8 @@ class ThemeManager {
                     themeToggle.setAttribute('aria-label', 'Toggle dark mode');
                 }
             }
-            
-            this.updateTooltip(theme);
         } catch (error) {
             console.error('Error updating theme toggle UI:', error);
-        }
-    }
-
-    updateTooltip(theme) {
-        // Skip if on login page
-        if (this.isLoginPage()) {
-            return;
-        }
-        
-        const tooltip = document.querySelector('.theme-tooltip');
-        if (tooltip) {
-            tooltip.textContent = theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode';
         }
     }
 
@@ -307,6 +293,8 @@ class ThemeManager {
                 e.preventDefault();
                 try {
                     this.toggleTheme();
+                    /* Blur after mouse click to prevent focus ring persisting as visible box */
+                    if (e.detail !== 0) newThemeToggle.blur();
                 } catch (error) {
                     console.error('Error toggling theme:', error);
                     // Fallback: manually toggle theme

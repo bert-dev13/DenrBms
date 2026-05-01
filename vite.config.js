@@ -23,6 +23,7 @@ export default defineConfig({
                 /* Dashboard */
                 'resources/css/dashboard.css',
                 'resources/js/dashboard.js',
+
                 /* Species Observation */
                 'resources/css/species-observations.css',
                 'resources/css/species-observation-modal.css',
@@ -30,7 +31,9 @@ export default defineConfig({
                 'resources/js/species-observation-modal.js',
                 /* Protected Areas */
                 'resources/css/protected-areas.css',
+                'resources/css/protected-area-map.css',
                 'resources/css/protected-area-modal.css',
+                'resources/js/protected-area-map.js',
                 'resources/js/protected-area-modal.js',
                 'resources/js/protected-areas.js',
                 /* Protected Area Sites */

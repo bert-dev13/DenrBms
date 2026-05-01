@@ -1,24 +1,19 @@
-<div class="theme-toggle-container relative">
+<div class="theme-toggle-container">
     <button 
         id="theme-toggle" 
-        class="theme-toggle-btn relative inline-flex items-center justify-center p-2 rounded-lg transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
+        class="theme-toggle-btn relative inline-flex items-center justify-center p-2 rounded-lg transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none"
         aria-label="Toggle dark mode"
     >
         <!-- Sun Icon (Light Mode) -->
-        <span id="sun-icon" class="theme-icon-wrap w-5 h-5 text-yellow-500 transition-all duration-300 opacity-100 rotate-0 inline-flex items-center justify-center">
+        <span id="sun-icon" class="theme-icon-wrap w-5 h-5 text-yellow-500 transition-all duration-300 opacity-100 rotate-0 inline-flex items-center justify-center pointer-events-none">
             <i data-lucide="sun" class="lucide-icon w-full h-full"></i>
         </span>
         
-        <!-- Moon Icon (Dark Mode) -->
-        <span id="moon-icon" class="theme-icon-wrap w-5 h-5 text-gray-700 dark:text-gray-300 absolute transition-all duration-300 opacity-0 -rotate-180 inline-flex items-center justify-center">
+        <!-- Moon Icon (Dark Mode) - absolute overlay, pointer-events-none when hidden to avoid layout artifacts -->
+        <span id="moon-icon" class="theme-icon-wrap w-5 h-5 text-gray-700 dark:text-gray-300 absolute inset-0 m-auto transition-all duration-300 opacity-0 -rotate-180 inline-flex items-center justify-center pointer-events-none">
             <i data-lucide="moon" class="lucide-icon w-full h-full"></i>
         </span>
     </button>
-    
-    <!-- Tooltip -->
-    <div class="theme-tooltip absolute top-full right-0 mt-2 px-2 py-1 text-xs text-white bg-gray-900 dark:bg-gray-700 rounded opacity-0 pointer-events-none transition-opacity duration-200 whitespace-nowrap z-50">
-        Switch to Dark Mode
-    </div>
 </div>
 
 <script>
@@ -30,7 +25,6 @@
         const moonIcon = document.getElementById('moon-icon');
         /* #sun-icon and #moon-icon are wrappers; Lucide replaces inner <i> with SVG */
         const themeToggle = document.getElementById('theme-toggle');
-        const tooltip = document.querySelector('.theme-tooltip');
         
         if (!sunIcon || !moonIcon) {
             return false;
@@ -54,11 +48,6 @@
                 if (themeToggle) {
                     themeToggle.setAttribute('aria-label', 'Toggle light mode');
                 }
-                
-                // Update tooltip
-                if (tooltip) {
-                    tooltip.textContent = 'Switch to Light Mode';
-                }
             } else {
                 // Show sun icon, hide moon icon
                 sunIcon.classList.add('opacity-100', 'rotate-0');
@@ -70,11 +59,6 @@
                 // Update aria label
                 if (themeToggle) {
                     themeToggle.setAttribute('aria-label', 'Toggle dark mode');
-                }
-                
-                // Update tooltip
-                if (tooltip) {
-                    tooltip.textContent = 'Switch to Dark Mode';
                 }
             }
             return true;
@@ -125,10 +109,6 @@
     outline: none;
 }
 
-.theme-toggle-btn:hover .theme-tooltip {
-    opacity: 1;
-}
-
 .theme-toggle-btn:active {
     transform: scale(0.95);
 }
@@ -138,14 +118,6 @@
     width: 1.25rem;
     height: 1.25rem;
     flex-shrink: 0;
-}
-
-/* Tooltip positioning */
-.theme-tooltip {
-    white-space: nowrap;
-    pointer-events: none;
-    transform: translateX(-50%);
-    left: 50%;
 }
 
 /* Responsive adjustments */

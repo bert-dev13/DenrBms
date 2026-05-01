@@ -181,30 +181,17 @@ body {
 
 /* Sidebar specific styles */
 #sidebar {
-    background-color: var(--sidebar-bg) !important;
     border-right: 1px solid var(--border-primary);
 }
 
-#sidebar .bg-gradient-to-br,
-#sidebar .sidebar__header {
+#sidebar .bg-gradient-to-br {
     background: var(--sidebar-header-bg) !important;
 }
 
-#sidebar .text-gray-900 {
-    color: var(--sidebar-text) !important;
-}
-
-#sidebar .text-gray-700 {
-    color: var(--sidebar-text) !important;
-}
-
-#sidebar .text-gray-500 {
-    color: var(--text-tertiary) !important;
-}
-
-#sidebar .border-gray-200 {
-    border-color: var(--sidebar-border) !important;
-}
+#sidebar .text-gray-900 { color: var(--sidebar-text) !important; }
+#sidebar .text-gray-700 { color: var(--sidebar-text) !important; }
+#sidebar .text-gray-500 { color: var(--text-tertiary) !important; }
+#sidebar .border-gray-200 { border-color: var(--sidebar-border) !important; }
 
 /* Sidebar active item — ensure text visible in dark mode */
 [data-theme="dark"] #sidebar .sidebar__nav-item--active,
@@ -572,6 +559,16 @@ input, select, textarea {
 
 [data-theme="dark"] .focus\:ring-green-500:focus {
     --tw-ring-color: rgb(74 222 128 / var(--tw-ring-opacity, 0.5)) !important;
+}
+
+/* Theme toggle: focus-visible only (no ring-offset), avoids stray focus ring box */
+.theme-toggle-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgb(34 197 94 / 0.5);
+}
+
+[data-theme="dark"] .theme-toggle-btn:focus-visible {
+    box-shadow: 0 0 0 2px rgb(74 222 128 / 0.5);
 }
 
 /* Print styles - always use light mode */

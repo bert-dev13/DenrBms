@@ -4,20 +4,93 @@
 
 let monitoringChart = null;
 
-function setTrendUI(trend) {
-    const badge = document.getElementById('trendBadge');
-    const trendEl = document.getElementById('trendDirection');
-    if (!badge || !trendEl) return;
+function animateCountUp(element, targetValue) {
+    const duration = 900;
+    const startTime = performance.now();
+    const safeTarget = Number.isFinite(targetValue) ? Math.max(0, targetValue) : 0;
 
-    const up = { badgeClass: 'chart-trend-badge--up', valueClass: 'chart-mini-stat__value--up', text: '↑ Increasing' };
-    const down = { badgeClass: 'chart-trend-badge--down', valueClass: 'chart-mini-stat__value--down', text: '↓ Decreasing' };
-    const neutral = { badgeClass: 'chart-trend-badge--neutral', valueClass: 'chart-mini-stat__value--neutral', text: trend === 'insufficient' ? '— Insufficient Data' : '→ Stable' };
+    function frame(now) {
+        const progress = Math.min((now - startTime) / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const current = Math.round(safeTarget * eased);
+        element.textContent = current.toLocaleString();
+        if (progress < 1) requestAnimationFrame(frame);
+    }
+
+    requestAnimationFrame(frame);
+}
+
+function initializeSummaryCountUp() {
+    const countUpEls = document.querySelectorAll('[data-countup]');
+    countUpEls.forEach((el) => {
+        const target = parseInt(el.getAttribute('data-countup') || '0', 10);
+        animateCountUp(el, target);
+    });
+}
+
+function initializeSummaryContextTicker() {
+    const contextLine = document.getElementById('summaryContextLine');
+    if (!contextLine) return;
+
+    let messages = [];
+    try {
+        const raw = contextLine.getAttribute('data-context-lines') || '[]';
+        messages = JSON.parse(raw);
+    } catch (error) {
+        messages = [];
+    }
+
+    if (!Array.isArray(messages)) return;
+    const cleanMessages = messages.filter((message) => typeof message === 'string' && message.trim().length > 0);
+    if (cleanMessages.length <= 1) return;
+
+    let index = 0;
+    setInterval(() => {
+        index = (index + 1) % cleanMessages.length;
+        contextLine.textContent = cleanMessages[index];
+    }, 4800);
+}
+
+function setTrendUI(trend) {
+    const badge = document.getElementById('trendDirectionBadge');
+    const badgeText = document.getElementById('trendDirectionText');
+    const trendEl = document.getElementById('trendDirection');
+    const trendMetricIcon = document.getElementById('trendMetricIcon');
+    if (!trendEl) return;
+
+    const up = { badgeClass: 'trend-focus__badge--up', valueClass: 'trend-metric__value--up', text: '↑ Increasing', icon: 'trending-up' };
+    const down = { badgeClass: 'trend-focus__badge--down', valueClass: 'trend-metric__value--down', text: '↓ Decreasing', icon: 'trending-down' };
+    const neutral = {
+        badgeClass: 'trend-focus__badge--neutral',
+        valueClass: 'trend-metric__value--neutral',
+        text: trend === 'insufficient' ? '— Insufficient Data' : '→ Stable',
+        icon: 'trending-up',
+    };
 
     const state = trend === 'up' ? up : (trend === 'down' ? down : neutral);
-    badge.textContent = state.text;
-    badge.className = 'chart-trend-badge ' + state.badgeClass;
+
+    if (badge && badgeText) {
+        badge.className = 'trend-focus__badge ' + state.badgeClass;
+        badgeText.textContent = state.text;
+    }
+
     trendEl.textContent = state.text;
-    trendEl.className = 'chart-mini-stat__value ' + state.valueClass;
+    trendEl.className = 'trend-metric__value ' + state.valueClass;
+
+    if (trendMetricIcon) {
+        trendMetricIcon.setAttribute('data-lucide', state.icon);
+    }
+}
+
+function buildObservationGradient(context) {
+    const chart = context.chart;
+    const chartArea = chart.chartArea;
+    if (!chartArea) return '#15803d';
+
+    const gradient = chart.ctx.createLinearGradient(chartArea.left, chartArea.top, chartArea.right, chartArea.bottom);
+    gradient.addColorStop(0, '#166534');
+    gradient.addColorStop(1, '#22c55e');
+    return gradient;
 }
 
 async function loadMonitoringChart() {
@@ -28,16 +101,18 @@ async function loadMonitoringChart() {
         document.getElementById('chartLoading').classList.add('hidden');
         document.getElementById('totalYears').textContent = data.total_years;
 
-        const avgMonitoring = data.total_years > 0 ? Math.round(data.total_observations / data.total_years) : 0;
-        document.getElementById('avgMonitoring').textContent = avgMonitoring.toLocaleString();
+        const peakYearObservations = data.data.length > 0
+            ? Math.max(...data.data.map((item) => item.observations || 0))
+            : 0;
+        document.getElementById('peakYearObservations').textContent = `${peakYearObservations.toLocaleString()} obs`;
 
         let trend = 'neutral';
         if (data.data.length >= 2) {
             const recent = data.data.slice(-3);
             const older = data.data.slice(-6, -3);
             if (recent.length > 0 && older.length > 0) {
-                const recentAvg = recent.reduce((sum, item) => sum + item.count, 0) / recent.length;
-                const olderAvg = older.reduce((sum, item) => sum + item.count, 0) / older.length;
+                const recentAvg = recent.reduce((sum, item) => sum + item.observations, 0) / recent.length;
+                const olderAvg = older.reduce((sum, item) => sum + item.observations, 0) / older.length;
                 if (recentAvg > olderAvg) trend = 'up';
                 else if (recentAvg < olderAvg) trend = 'down';
             }
@@ -47,19 +122,13 @@ async function loadMonitoringChart() {
         setTrendUI(trend);
 
         const labels = data.data.map(item => item.year.toString());
-        const counts = data.data.map(item => item.count);
-        const yearlyCounts = data.data.map(item => item.yearly_count);
-
-        const backgroundColors = counts.map((count, index) => {
-            if (index === 0) return 'rgba(59, 130, 246, 0.1)';
-            const trendSeg = count - counts[index - 1];
-            return trendSeg >= 0 ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)';
-        });
-        const borderColors = counts.map((count, index) => {
-            if (index === 0) return 'rgba(59, 130, 246, 1)';
-            const trendSeg = count - counts[index - 1];
-            return trendSeg >= 0 ? 'rgba(34, 197, 94, 1)' : 'rgba(239, 68, 68, 1)';
-        });
+        const observations = data.data.map(item => item.observations);
+        const speciesTracked = data.data.map(item => item.species_tracked);
+        const latestIndex = Math.max(observations.length - 1, 0);
+        const latestPointRadius = observations.map((_, index) => index === latestIndex ? 6 : 3.5);
+        const latestPointHoverRadius = observations.map((_, index) => index === latestIndex ? 8 : 5);
+        const latestSpeciesPointRadius = speciesTracked.map((_, index) => index === latestIndex ? 5.5 : 3);
+        const latestSpeciesPointHoverRadius = speciesTracked.map((_, index) => index === latestIndex ? 7 : 4.5);
 
         if (monitoringChart) monitoringChart.destroy();
 
@@ -68,83 +137,117 @@ async function loadMonitoringChart() {
             type: 'line',
             data: {
                 labels: labels,
-                datasets: [{
-                    label: 'Monitoring Observations',
-                    data: counts,
-                    backgroundColor: backgroundColors,
-                    borderColor: borderColors,
-                    borderWidth: 2.5,
-                    fill: true,
-                    tension: 0.25,
-                    pointRadius: 4,
-                    pointHoverRadius: 6,
-                    pointBackgroundColor: borderColors,
-                    pointBorderColor: '#fff',
-                    pointBorderWidth: 2,
-                    segment: {
-                        borderColor: function(context) {
-                            const index = context.p0DataIndex;
-                            if (index === 0) return 'rgba(59, 130, 246, 1)';
-                            const trendSeg = counts[index] - counts[index - 1];
-                            return trendSeg >= 0 ? 'rgba(34, 197, 94, 1)' : 'rgba(239, 68, 68, 1)';
-                        }
+                datasets: [
+                    {
+                        label: 'Observations',
+                        data: observations,
+                        borderColor: (context) => buildObservationGradient(context),
+                        backgroundColor: 'rgba(22, 163, 74, 0.05)',
+                        borderWidth: 2.8,
+                        fill: false,
+                        tension: 0.42,
+                        pointRadius: latestPointRadius,
+                        pointHoverRadius: latestPointHoverRadius,
+                        pointBackgroundColor: observations.map((_, index) => index === latestIndex ? '#14532d' : '#16a34a'),
+                        pointBorderColor: '#bbf7d0',
+                        pointBorderWidth: observations.map((_, index) => index === latestIndex ? 3 : 2),
+                    },
+                    {
+                        label: 'Species Tracked',
+                        data: speciesTracked,
+                        borderColor: '#2563eb',
+                        backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                        borderWidth: 2.1,
+                        fill: false,
+                        tension: 0.42,
+                        pointRadius: latestSpeciesPointRadius,
+                        pointHoverRadius: latestSpeciesPointHoverRadius,
+                        pointBackgroundColor: speciesTracked.map((_, index) => index === latestIndex ? '#1d4ed8' : '#3b82f6'),
+                        pointBorderColor: '#dbeafe',
+                        pointBorderWidth: speciesTracked.map((_, index) => index === latestIndex ? 2.5 : 2),
                     }
-                }]
+                ]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                animation: {
+                    duration: 1300,
+                    easing: 'easeOutCubic',
+                },
                 plugins: {
-                    legend: { display: false },
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        align: 'start',
+                        labels: {
+                            usePointStyle: true,
+                            boxWidth: 8,
+                            boxHeight: 8,
+                            color: '#374151',
+                            font: { size: 12, weight: '600' }
+                        }
+                    },
                     tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.85)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
+                        backgroundColor: '#ffffff',
+                        borderColor: 'rgba(148, 163, 184, 0.4)',
+                        borderWidth: 1,
+                        titleColor: '#0f172a',
+                        bodyColor: '#0f172a',
                         padding: 14,
                         cornerRadius: 8,
-                        displayColors: false,
+                        displayColors: true,
+                        titleFont: { size: 12, weight: '700' },
+                        bodyFont: { size: 12, weight: '600' },
+                        bodySpacing: 4,
+                        boxPadding: 6,
                         callbacks: {
                             title: function(context) { return 'Year: ' + context[0].label; },
                             label: function(context) {
-                                const cumulativeTotal = context.parsed.y.toLocaleString();
-                                const yearlyCount = yearlyCounts[context.dataIndex].toLocaleString();
-                                let label = 'Cumulative: ' + cumulativeTotal;
-                                if (context.dataIndex > 0) {
-                                    const prevCumulative = counts[context.dataIndex - 1];
-                                    const change = context.parsed.y - prevCumulative;
-                                    const changePercent = prevCumulative > 0 ? ((change / prevCumulative) * 100).toFixed(1) : 0;
-                                    label += ' · This year: ' + yearlyCount + ' (' + (change >= 0 ? '+' : '') + changePercent + '%)';
-                                } else {
-                                    label += ' · This year: ' + yearlyCount;
-                                }
-                                return label;
-                            }
+                                return `${context.dataset.label}: ${context.parsed.y.toLocaleString()}`;
+                            },
+                            labelTextColor: function(context) {
+                                return context.datasetIndex === 0 ? '#15803d' : '#0369a1';
+                            },
                         }
                     }
                 },
                 scales: {
                     x: {
-                        grid: { display: false },
-                        ticks: { font: { size: 13 }, color: '#6b7280', maxRotation: 0, autoSkipPadding: 16 }
+                        grid: { color: 'rgba(148, 163, 184, 0.16)', drawTicks: false, lineWidth: 1 },
+                        border: { display: false },
+                        ticks: { font: { size: 12.5, weight: '500' }, color: '#64748b', maxRotation: 0, autoSkipPadding: 16 }
                     },
                     y: {
                         beginAtZero: true,
-                        grid: { color: 'rgba(0, 0, 0, 0.06)', drawTicks: false },
+                        grid: { color: 'rgba(148, 163, 184, 0.18)', drawTicks: false, lineWidth: 1 },
                         border: { display: false },
-                        ticks: { font: { size: 13 }, color: '#6b7280', callback: function(value) { return value.toLocaleString(); }, padding: 10 }
+                        ticks: { font: { size: 12.5, weight: '500' }, color: '#64748b', callback: function(value) { return value.toLocaleString(); }, padding: 10 }
                     }
                 },
-                interaction: { intersect: false, mode: 'index' }
+                interaction: { intersect: false, mode: 'index' },
+                elements: {
+                    line: { capBezierPoints: true },
+                    point: { hoverBorderWidth: 2.5 },
+                },
             }
         });
+
+        if (window.lucide && typeof window.lucide.createIcons === 'function') {
+            window.lucide.createIcons();
+        }
     } catch (error) {
         console.error('Error loading monitoring chart:', error);
         const chartLoading = document.getElementById('chartLoading');
         if (chartLoading) {
             chartLoading.innerHTML = '<div class="text-center text-red-600">Error loading monitoring data</div>';
-            chartLoading.classList.add('hidden');
+            chartLoading.classList.remove('hidden');
         }
     }
 }
 
-document.addEventListener('DOMContentLoaded', loadMonitoringChart);
+document.addEventListener('DOMContentLoaded', () => {
+    initializeSummaryContextTicker();
+    initializeSummaryCountUp();
+    loadMonitoringChart();
+});

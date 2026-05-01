@@ -46,6 +46,9 @@ Route::middleware('auth')->group(function () {
 // Protected areas routes (protected)
 Route::middleware('auth')->group(function () {
     Route::get('/protected-areas', [ProtectedAreaController::class, 'index'])->name('protected-areas.index');
+    Route::get('/protected-areas/bangan-hill-map', function () {
+        return view('protected-areas.bangan-hill-map');
+    })->name('protected-areas.bangan-hill-map');
     Route::post('/protected-areas', [ProtectedAreaController::class, 'store'])->name('protected-areas.store');
     Route::get('/protected-area-sites', [ProtectedAreaController::class, 'sites'])->name('protected-area-sites.index');
     Route::get('/protected-areas/{protectedAreaId}/site-names', [SpeciesObservationController::class, 'getSiteNames'])->name('protected-areas.site-names');
