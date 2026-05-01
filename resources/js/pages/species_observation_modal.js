@@ -3,10 +3,18 @@
  */
 
 class SpeciesObservationModalSystem {
+    static SITE_PLACEHOLDERS = {
+        selectProtectedAreaFirst: 'Select Protected Area first',
+        selectSite: 'Select Site Name',
+        loading: 'Loading sites...',
+        noSites: 'No sites available for this Protected Area'
+    };
+
     constructor() {
         this.overlay = null;
         this.modalType = null;
         this.modalData = null;
+        this.siteLoadRequestId = 0;
         this.init();
     }
 
@@ -47,6 +55,10 @@ class SpeciesObservationModalSystem {
 
         if (type === 'edit') {
             this.loadSiteNames('so_edit_protected_area', 'so_edit_site_name', this.modalData.observation.site_name_id || '');
+        }
+
+        if (type === 'add') {
+            this.resetSiteSelect('so_add_site_name', SpeciesObservationModalSystem.SITE_PLACEHOLDERS.selectProtectedAreaFirst, true);
         }
 
         return true;
@@ -254,8 +266,8 @@ class SpeciesObservationModalSystem {
                 </label>
                 <label>Station Code<input class="so-input" name="station_code" required maxlength="60" value="${observation?.station_code || ''}"></label>
                 <label class="so-span-2">Site Name
-                    <select class="so-input" id="${observation ? 'so_edit_site_name' : 'so_add_site_name'}" name="site_name_id">
-                        <option value="">No specific site</option>
+                    <select class="so-input" id="${observation ? 'so_edit_site_name' : 'so_add_site_name'}" name="site_name_id" disabled>
+                        <option value="">Select Protected Area first</option>
                     </select>
                 </label>
                 <label>Bio Group
@@ -287,7 +299,21 @@ class SpeciesObservationModalSystem {
     renderDelete() { return ''; }
 
     async onProtectedAreaChange(areaId, siteId) {
+        const siteSelect = document.getElementById(siteId);
+        if (siteSelect) {
+            siteSelect.setCustomValidity('');
+        }
+        this.resetSiteSelect(siteId, SpeciesObservationModalSystem.SITE_PLACEHOLDERS.loading, true);
         await this.loadSiteNames(areaId, siteId, '');
+    }
+
+    resetSiteSelect(siteId, placeholder, disabled = true) {
+        const siteSelect = document.getElementById(siteId);
+        if (!siteSelect) return;
+
+        siteSelect.innerHTML = `<option value="">${placeholder}</option>`;
+        siteSelect.value = '';
+        siteSelect.disabled = disabled;
     }
 
     async loadSiteNames(areaId, siteId, selectedValue = '') {
@@ -295,38 +321,124 @@ class SpeciesObservationModalSystem {
         const siteSelect = document.getElementById(siteId);
         if (!areaSelect || !siteSelect) return;
 
+        const requestId = ++this.siteLoadRequestId;
         const protectedAreaId = areaSelect.value;
         if (!protectedAreaId) {
-            siteSelect.innerHTML = '<option value="">No specific site</option>';
+            this.resetSiteSelect(siteId, SpeciesObservationModalSystem.SITE_PLACEHOLDERS.selectProtectedAreaFirst, true);
             return;
         }
 
-        siteSelect.innerHTML = '<option value="">Loading...</option>';
+        this.resetSiteSelect(siteId, SpeciesObservationModalSystem.SITE_PLACEHOLDERS.loading, true);
         try {
-            const result = await this.requestJSON(`/api/species-observations/site-names/${protectedAreaId}`);
-            const siteNames = result.success && Array.isArray(result.site_names) ? result.site_names : [];
-            let html = '<option value="">No specific site</option>';
+            const routeTemplate = window.routes?.speciesObservationsSiteNames || '/api/species-observations/site-names/:id';
+            const endpoint = routeTemplate.replace(':id', encodeURIComponent(String(protectedAreaId)));
+            const result = await this.requestJSON(endpoint);
+            if (requestId !== this.siteLoadRequestId) return;
+
+            const rawSiteNames = result && result.success
+                ? (Array.isArray(result.site_names) ? result.site_names : (Array.isArray(result.sites) ? result.sites : []))
+                : [];
+            const siteNames = rawSiteNames.filter((site) => {
+                if (!site || typeof site !== 'object') return false;
+                if (site.protected_area_id == null) return true;
+                return String(site.protected_area_id) === String(protectedAreaId);
+            });
+
+            if (!siteNames.length) {
+                this.resetSiteSelect(siteId, SpeciesObservationModalSystem.SITE_PLACEHOLDERS.noSites, true);
+                return;
+            }
+
+            let html = `<option value="">${SpeciesObservationModalSystem.SITE_PLACEHOLDERS.selectSite}</option>`;
             siteNames.forEach((site) => {
                 const isSelected = String(site.id) === String(selectedValue) ? 'selected' : '';
                 html += `<option value="${site.id}" ${isSelected}>${site.name}</option>`;
             });
             siteSelect.innerHTML = html;
+            siteSelect.disabled = false;
+            siteSelect.value = selectedValue ? String(selectedValue) : '';
         } catch (error) {
-            siteSelect.innerHTML = '<option value="">No specific site</option>';
+            if (requestId !== this.siteLoadRequestId) return;
+            this.resetSiteSelect(siteId, SpeciesObservationModalSystem.SITE_PLACEHOLDERS.noSites, true);
         }
+    }
+
+    normalizeSiteSelection(form, payload) {
+        const siteSelect = form.querySelector('select[name="site_name_id"]');
+        if (!siteSelect) {
+            payload.site_name_id = '';
+            return;
+        }
+
+        if (siteSelect.disabled) {
+            payload.site_name_id = '';
+            return;
+        }
+
+        const selectedOption = siteSelect.options[siteSelect.selectedIndex];
+        if (!selectedOption || !selectedOption.value) {
+            payload.site_name_id = '';
+            return;
+        }
+
+        const optionExists = Array.from(siteSelect.options).some((opt) => String(opt.value) === String(payload.site_name_id));
+        if (!optionExists) {
+            payload.site_name_id = '';
+        }
+    }
+
+    validateSiteSelectionBeforeSubmit(form) {
+        const protectedAreaSelect = form.querySelector('select[name="protected_area_id"]');
+        const siteSelect = form.querySelector('select[name="site_name_id"]');
+        if (!protectedAreaSelect || !siteSelect) return true;
+
+        const protectedAreaId = protectedAreaSelect.value;
+        if (!protectedAreaId) return true;
+
+        const placeholderText = siteSelect.options[0]?.textContent?.trim() || '';
+        const isLoading = siteSelect.disabled && placeholderText === SpeciesObservationModalSystem.SITE_PLACEHOLDERS.loading;
+        if (isLoading) {
+            this.notify('Please wait for sites to finish loading.', 'error');
+            return false;
+        }
+
+        const noSitesAvailable = siteSelect.disabled
+            && placeholderText === SpeciesObservationModalSystem.SITE_PLACEHOLDERS.noSites;
+        if (noSitesAvailable) {
+            siteSelect.setCustomValidity('');
+            return true;
+        }
+
+        if (!siteSelect.disabled && !siteSelect.value) {
+            siteSelect.setCustomValidity('Please select a Site Name for this Protected Area.');
+            siteSelect.reportValidity();
+            this.notify('Please select a Site Name for this Protected Area.', 'error');
+            return false;
+        }
+
+        siteSelect.setCustomValidity('');
+        return true;
     }
 
     async submitAdd(event) {
         event.preventDefault();
         const form = event.target;
+        if (!this.validateSiteSelectionBeforeSubmit(form)) return;
         const payload = Object.fromEntries(new FormData(form));
-        if (!payload.site_name_id) payload.site_name_id = '';
+        this.normalizeSiteSelection(form, payload);
+        payload.site_id = payload.site_name_id || '';
+        console.debug('[SpeciesObservation] submitAdd payload:', payload);
+        const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || window.csrfToken || '';
+        const formData = new FormData();
+        Object.entries(payload).forEach(([key, value]) => {
+            formData.append(key, value ?? '');
+        });
+        formData.append('_token', csrf);
 
         try {
             const result = await this.requestJSON('/species-observations', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+                body: formData
             });
             if (!result.success) throw new Error(result.message || 'Failed to save observation');
             this.notify('Observation added successfully.', 'success');
@@ -340,16 +452,24 @@ class SpeciesObservationModalSystem {
     async submitEdit(event, observationId, tableName) {
         event.preventDefault();
         const form = event.target;
+        if (!this.validateSiteSelectionBeforeSubmit(form)) return;
         const payload = Object.fromEntries(new FormData(form));
-        payload._method = 'PUT';
         payload.table_name = tableName || payload.table_name || '';
-        if (!payload.site_name_id) payload.site_name_id = '';
+        this.normalizeSiteSelection(form, payload);
+        payload.site_id = payload.site_name_id || '';
+        console.debug('[SpeciesObservation] submitEdit payload:', payload);
+        const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || window.csrfToken || '';
+        const formData = new FormData();
+        Object.entries(payload).forEach(([key, value]) => {
+            formData.append(key, value ?? '');
+        });
+        formData.append('_method', 'PUT');
+        formData.append('_token', csrf);
 
         try {
             const result = await this.requestJSON(`/species-observations/${observationId}`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+                body: formData
             });
             if (!result.success) throw new Error(result.message || 'Failed to update observation');
             this.notify('Observation updated successfully.', 'success');
@@ -363,10 +483,14 @@ class SpeciesObservationModalSystem {
     async confirmDelete(observationId, tableName) {
         try {
             const url = window.routes.speciesObservationsDestroy.replace(':id', String(observationId));
+            const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || window.csrfToken || '';
+            const formData = new FormData();
+            formData.append('_method', 'DELETE');
+            formData.append('_token', csrf);
+            formData.append('table_name', tableName || '');
             const result = await this.requestJSON(url, {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ table_name: tableName || '' })
+                method: 'POST',
+                body: formData
             });
             if (!result.success) throw new Error(result.message || 'Failed to delete observation');
             this.notify('Observation deleted successfully.', 'success');
@@ -379,6 +503,7 @@ class SpeciesObservationModalSystem {
 
     async requestJSON(url, options = {}) {
         const response = await fetch(url, {
+            credentials: 'same-origin',
             headers: {
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || window.csrfToken || '',
                 'X-Requested-With': 'XMLHttpRequest',
@@ -388,6 +513,9 @@ class SpeciesObservationModalSystem {
             ...options
         });
         const text = await response.text();
+        if (response.status === 419) {
+            throw new Error('Session expired (419). Please refresh the page and try again.');
+        }
         let json = {};
         try {
             json = text ? JSON.parse(text) : {};

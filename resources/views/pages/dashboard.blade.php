@@ -4,7 +4,7 @@
 @section('header', 'Dashboard')
 
 @section('head')
-@vite(['resources/css/dashboard.css', 'resources/js/dashboard.js'])
+@vite(['resources/css/pages/dashboard.css', 'resources/js/pages/dashboard.js'])
 @endsection
 
 @section('content')

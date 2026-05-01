@@ -24,7 +24,7 @@ class DashboardController extends Controller
     {
         $user = Auth::user();
         
-        return view('dashboard', [
+        return view('pages.dashboard', [
             'user' => $user,
             'stats' => $this->getDashboardStats(),
         ]);

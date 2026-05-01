@@ -6,7 +6,7 @@
                 <h1 class="topbar__title">@yield('header', 'Dashboard')</h1>
             </div>
             <div class="topbar__right">
-                @include('components.theme-toggle')
+                @include('components.theme_toggle')
             </div>
         </div>
     </div>

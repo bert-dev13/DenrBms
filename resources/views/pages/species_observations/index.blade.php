@@ -4,13 +4,14 @@
 @section('header', 'Species Observations')
 
 @section('head')
-@vite(['resources/css/species-observations.css', 'resources/css/species-observation-modal.css', 'resources/js/species-observation.js'])
+@vite(['resources/css/pages/species_observations.css', 'resources/css/pages/species_observation_modal.css', 'resources/js/pages/species_observation.js'])
 <script>
     window.csrfToken = '{{ csrf_token() }}';
     window.routes = {
         speciesObservationsShow: '{{ route("species-observations.show", ":id") }}',
         speciesObservationsUpdate: '{{ route("species-observations.update", ":id") }}',
-        speciesObservationsDestroy: '{{ route("species-observations.destroy", ":id") }}'
+        speciesObservationsDestroy: '{{ route("species-observations.destroy", ":id") }}',
+        speciesObservationsSiteNames: '{{ route("species-observations.site-names", ":id") }}'
     };
 </script>
 @endsection
@@ -478,92 +479,44 @@
         });
 
         // Toggle site name filter based on protected area selection
+        const FILTER_SITE_PLACEHOLDERS = {
+            selectProtectedAreaFirst: 'Select Protected Area first',
+            loading: 'Loading sites...',
+            noSites: 'No sites available for this Protected Area',
+            noSpecificSite: 'No specific site',
+        };
+
+        let siteFilterRequestId = 0;
+
+        function resetSiteFilterState(placeholder, disabled = true) {
+            const siteNameSelect = document.getElementById('site_name');
+            if (!siteNameSelect) return;
+            siteNameSelect.innerHTML = `<option value="">${placeholder}</option>`;
+            siteNameSelect.value = '';
+            siteNameSelect.disabled = disabled;
+        }
+
         function toggleSiteNameFilter() {
             const protectedAreaSelect = document.getElementById('protected_area_id');
             const siteNameSelect = document.getElementById('site_name');
-            const selectedOption = protectedAreaSelect.options[protectedAreaSelect.selectedIndex];
             const selectedAreaId = protectedAreaSelect.value;
             
             if (selectedAreaId) {
-                // Enable site name filter for any selected protected area
-                if (siteNameSelect._loading) {
-                    // Currently loading, don't do anything
-                    return;
-                }
-                
-                // Check if this is the same area that's already loaded
-                if (siteNameSelect._lastLoadedArea === selectedAreaId && siteNameSelect.options.length > 1) {
-                    // Same area already loaded, just enable the dropdown
-                    siteNameSelect.disabled = false;
-                    return;
-                }
-                
-                if (siteNameSelect._lastLoadedArea !== selectedAreaId) {
-                    // Need to load site names for this area
-                    loadSiteNames(selectedAreaId);
-                } else {
-                    // Already loaded for this area, just enable the dropdown
-                    siteNameSelect.disabled = false;
-                }
+                loadSiteNames(selectedAreaId);
             } else {
-                // Disable site name filter when no protected area is selected
-                siteNameSelect.disabled = true;
-                
-                // Store current selection before clearing
-                const currentSelection = siteNameSelect.value;
-                
-                // Clear selection but keep it in memory for potential restoration
-                if (currentSelection) {
-                    siteNameSelect._clearedSelection = currentSelection;
-                }
-                siteNameSelect.value = '';
-                
-                // Reset to default options
-                siteNameSelect.innerHTML = '<option value="">All Sites</option>';
-                
-                // Clear any loading state and last loaded area
-                siteNameSelect._loading = false;
-                siteNameSelect._lastLoadedArea = null;
+                resetSiteFilterState(FILTER_SITE_PLACEHOLDERS.selectProtectedAreaFirst, true);
             }
         }
 
         // Load site names via AJAX
         function loadSiteNames(protectedAreaId) {
             const siteNameSelect = document.getElementById('site_name');
-            // Get current selection from the dropdown (which should reflect URL parameters on page load)
-            const currentSelection = siteNameSelect.value;
-            const urlSelection = siteNameSelect._urlSelection;
-            
-            // Prevent multiple simultaneous requests for the same area
-            if (siteNameSelect._loading) {
-                return;
-            }
-            
-            // Skip if already loaded for this area and has options
-            if (siteNameSelect._lastLoadedArea === protectedAreaId && siteNameSelect.options.length > 1) {
-                siteNameSelect.disabled = false;
-                // Still try to restore the selection if needed
-                if (urlSelection && siteNameSelect.value !== urlSelection) {
-                    const optionExists = Array.from(siteNameSelect.options).some(opt => opt.value == urlSelection);
-                    if (optionExists) {
-                        siteNameSelect.value = urlSelection;
-                    }
-                }
-                return;
-            }
-            
-            // Set loading state
-            siteNameSelect._loading = true;
-            
-            // Store the current selection to preserve it during the update
-            const preservedSelection = currentSelection || urlSelection;
-            
-            // Only disable if we don't already have the correct options loaded
-            if (siteNameSelect._lastLoadedArea !== protectedAreaId) {
-                siteNameSelect.disabled = true;
-            }
-            
-            // Use the proper Laravel route
+            if (!siteNameSelect) return;
+
+            const requestId = ++siteFilterRequestId;
+            resetSiteFilterState(FILTER_SITE_PLACEHOLDERS.loading, true);
+
+            // Use the same route/data source as modal + PA sites.
             const url = `{{ route('species-observations.site-names', ':id') }}`.replace(':id', protectedAreaId);
             
             fetch(url)
@@ -573,60 +526,46 @@
                     }
                     return response.json();
                 })
-                .then(siteNames => {
-                    // Store the current selection before clearing
-                    const currentSelection = preservedSelection || siteNameSelect.value;
-                    
-                    // Create a document fragment for efficient DOM manipulation
-                    const fragment = document.createDocumentFragment();
-                    
-                    // Add "All Sites" option first (this allows filtering by all sites within the protected area)
-                    const allSitesOption = document.createElement('option');
-                    allSitesOption.value = '';
-                    allSitesOption.textContent = 'All Sites';
-                    fragment.appendChild(allSitesOption);
-                    
-                    // Add site name options only if sites exist
-                    // Fix: The backend returns { success: true, site_names: [...] }
-                    // So we need to access siteNames.site_names
-                    if (siteNames && siteNames.success && siteNames.site_names && siteNames.site_names.length > 0) {
-                        siteNames.site_names.forEach(siteName => {
-                            const option = document.createElement('option');
-                            option.value = siteName.id;
-                            option.textContent = siteName.name;
-                            fragment.appendChild(option);
-                        });
+                .then(data => {
+                    if (requestId !== siteFilterRequestId) return;
+
+                    const rawSites = data && data.success
+                        ? (Array.isArray(data.site_names) ? data.site_names : (Array.isArray(data.sites) ? data.sites : []))
+                        : [];
+                    const sites = rawSites.filter(site => {
+                        if (!site || typeof site !== 'object') return false;
+                        if (site.protected_area_id == null) return true;
+                        return String(site.protected_area_id) === String(protectedAreaId);
+                    });
+
+                    if (!sites.length) {
+                        // No sites: keep only "No specific site" and disable dropdown.
+                        siteNameSelect.innerHTML = `<option value="">${FILTER_SITE_PLACEHOLDERS.noSpecificSite}</option>`;
+                        siteNameSelect.value = '';
+                        siteNameSelect.disabled = true;
+                        return;
                     }
-                    
-                    // Store the current value to check if it needs to be restored
-                    const needsRestoration = currentSelection && siteNameSelect.value !== currentSelection;
-                    
-                    // Clear and append new options
+
+                    const fragment = document.createDocumentFragment();
+                    const noSpecificOption = document.createElement('option');
+                    noSpecificOption.value = '';
+                    noSpecificOption.textContent = FILTER_SITE_PLACEHOLDERS.noSpecificSite;
+                    fragment.appendChild(noSpecificOption);
+                    sites.forEach(site => {
+                        const option = document.createElement('option');
+                        option.value = site.id;
+                        option.textContent = site.name;
+                        fragment.appendChild(option);
+                    });
                     siteNameSelect.innerHTML = '';
                     siteNameSelect.appendChild(fragment);
-                    
-                    // Restore the selection immediately if it exists and is valid
-                    if (needsRestoration) {
-                        const optionExists = Array.from(siteNameSelect.options).some(opt => opt.value == currentSelection);
-                        if (optionExists) {
-                            siteNameSelect.value = currentSelection;
-                        }
-                    }
-                    
-                    // Mark this area as loaded
-                    siteNameSelect._lastLoadedArea = protectedAreaId;
+                    siteNameSelect.disabled = false;
+                    siteNameSelect.selectedIndex = 0;
                 })
                 .catch(error => {
+                    if (requestId !== siteFilterRequestId) return;
                     console.error('Error loading site names:', error);
-                    // Keep only "All Sites" option on error
-                    siteNameSelect.innerHTML = '<option value="">All Sites</option>';
-                    // Clear the last loaded area on error
-                    siteNameSelect._lastLoadedArea = null;
-                })
-                .finally(() => {
-                    // Always clear loading state and enable dropdown when done
-                    siteNameSelect._loading = false;
-                    siteNameSelect.disabled = false;
+                    resetSiteFilterState(FILTER_SITE_PLACEHOLDERS.noSites, true);
                 });
         }
 
@@ -635,85 +574,71 @@
         function initializeDropdownState() {
             const protectedAreaSelect = document.getElementById('protected_area_id');
             const siteNameSelect = document.getElementById('site_name');
+            if (!protectedAreaSelect || !siteNameSelect) return;
             
             // Get URL parameters
             const urlParams = new URLSearchParams(window.location.search);
             const protectedAreaId = urlParams.get('protected_area_id');
-            const siteName = urlParams.get('site_name');
-            
-            // Check sessionStorage for immediate restoration (priority over URL params for faster UI)
-            const lastSiteName = sessionStorage.getItem('lastSiteName');
-            const lastProtectedArea = sessionStorage.getItem('lastProtectedArea');
-            
-            // Store the target site name for restoration
-            const targetSiteName = lastSiteName || siteName;
-            
-            if (targetSiteName) {
-                siteNameSelect._urlSelection = targetSiteName;
-            }
-            
-            // Clear sessionStorage after use to prevent stale data
-            sessionStorage.removeItem('lastSiteName');
-            sessionStorage.removeItem('lastProtectedArea');
-            
-            // If we have a protected area selected, trigger the site name loading
+            const selectedSiteId = urlParams.get('site_name');
+
             if (protectedAreaId) {
-                // Check if we already have the correct selection in the HTML from Laravel
-                const currentSelection = siteNameSelect.value;
-                const needsLoading = siteNameSelect.options.length <= 1 || 
-                                   (targetSiteName && currentSelection !== targetSiteName);
-                
-                if (needsLoading) {
-                    // Store the current state to prevent flickering
-                    const originalHTML = siteNameSelect.innerHTML;
-                    const originalDisabled = siteNameSelect.disabled;
-                    
-                    // The static HTML doesn't have the correct selection, need to load sites
-                    setTimeout(() => {
-                        // Only disable if we actually need to load new sites
-                        if (siteNameSelect._lastLoadedArea !== protectedAreaId) {
+                const requestId = ++siteFilterRequestId;
+                resetSiteFilterState(FILTER_SITE_PLACEHOLDERS.loading, true);
+                const url = `{{ route('species-observations.site-names', ':id') }}`.replace(':id', protectedAreaId);
+                fetch(url)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (requestId !== siteFilterRequestId) return;
+
+                        const rawSites = data && data.success
+                            ? (Array.isArray(data.site_names) ? data.site_names : (Array.isArray(data.sites) ? data.sites : []))
+                            : [];
+                        const sites = rawSites.filter(site => {
+                            if (!site || typeof site !== 'object') return false;
+                            if (site.protected_area_id == null) return true;
+                            return String(site.protected_area_id) === String(protectedAreaId);
+                        });
+
+                        if (!sites.length) {
+                            siteNameSelect.innerHTML = `<option value="">${FILTER_SITE_PLACEHOLDERS.noSpecificSite}</option>`;
+                            siteNameSelect.value = '';
                             siteNameSelect.disabled = true;
+                            return;
                         }
-                        
-                        // Pre-set the target selection to reduce flickering
-                        if (targetSiteName) {
-                            siteNameSelect.value = targetSiteName;
+
+                        const fragment = document.createDocumentFragment();
+                        const noSpecificOption = document.createElement('option');
+                        noSpecificOption.value = '';
+                        noSpecificOption.textContent = FILTER_SITE_PLACEHOLDERS.noSpecificSite;
+                        fragment.appendChild(noSpecificOption);
+                        sites.forEach(site => {
+                            const option = document.createElement('option');
+                            option.value = site.id;
+                            option.textContent = site.name;
+                            fragment.appendChild(option);
+                        });
+                        siteNameSelect.innerHTML = '';
+                        siteNameSelect.appendChild(fragment);
+                        siteNameSelect.disabled = false;
+
+                        if (selectedSiteId && Array.from(siteNameSelect.options).some(opt => String(opt.value) === String(selectedSiteId))) {
+                            siteNameSelect.value = selectedSiteId;
+                        } else {
+                            siteNameSelect.selectedIndex = 0;
                         }
-                        
-                        toggleSiteNameFilter();
-                        
-                        // After loading sites, restore the target selection if it exists
-                        if (targetSiteName) {
-                            // Use a more reliable method to wait for the AJAX completion
-                            const waitForOptions = () => {
-                                if (siteNameSelect.options.length > 1) {
-                                    const optionExists = Array.from(siteNameSelect.options).some(opt => opt.value == targetSiteName);
-                                    if (optionExists) {
-                                        siteNameSelect.value = targetSiteName;
-                                    } else {
-                                        console.warn('Target site name option not found:', targetSiteName);
-                                    }
-                                } else {
-                                    // Options not loaded yet, wait a bit more
-                                    setTimeout(waitForOptions, 50);
-                                }
-                            };
-                            setTimeout(waitForOptions, 50);
-                        }
-                    }, 25); // Reduced initial delay for faster response
-                } else {
-                    // The HTML already has the correct selection, just enable the dropdown
-                    siteNameSelect.disabled = false;
-                    siteNameSelect._lastLoadedArea = protectedAreaId;
-                    
-                    // Ensure the target selection is set if available
-                    if (targetSiteName) {
-                        const optionExists = Array.from(siteNameSelect.options).some(opt => opt.value == targetSiteName);
-                        if (optionExists) {
-                            siteNameSelect.value = targetSiteName;
-                        }
-                    }
-                }
+                    })
+                    .catch(error => {
+                        if (requestId !== siteFilterRequestId) return;
+                        console.error('Error initializing site filter:', error);
+                        resetSiteFilterState(FILTER_SITE_PLACEHOLDERS.noSites, true);
+                    });
+            } else {
+                resetSiteFilterState(FILTER_SITE_PLACEHOLDERS.selectProtectedAreaFirst, true);
             }
         }
 
@@ -721,23 +646,6 @@
         document.addEventListener('DOMContentLoaded', function() {
             initializeDropdownState();
             initializeSearch();
-            
-            // Add form submit handler to preserve dropdown state
-            const filterForm = document.querySelector('form[method="GET"]');
-            if (filterForm) {
-                filterForm.addEventListener('submit', function(e) {
-                    const siteNameSelect = document.getElementById('site_name');
-                    const protectedAreaSelect = document.getElementById('protected_area_id');
-                    
-                    // Store the current values in session storage for immediate restoration after page reload
-                    if (siteNameSelect.value) {
-                        sessionStorage.setItem('lastSiteName', siteNameSelect.value);
-                    }
-                    if (protectedAreaSelect.value) {
-                        sessionStorage.setItem('lastProtectedArea', protectedAreaSelect.value);
-                    }
-                });
-            }
             
             // Auto-dismiss error message after 5 seconds
             const errorMessage = document.getElementById('error-message');
@@ -859,12 +767,6 @@
         document.addEventListener('DOMContentLoaded', function() {
             // Initialize pagination enhancement
             initializePagination();
-            
-            const siteNameSelect = document.getElementById('site_name');
-            
-            // Initialize loading state and tracking
-            siteNameSelect._loading = false;
-            siteNameSelect._lastLoadedArea = null;
         });
 
         // Export dropdown functionality

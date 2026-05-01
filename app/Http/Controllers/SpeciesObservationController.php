@@ -33,9 +33,71 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Schema\Blueprint;
 
 class SpeciesObservationController extends Controller
 {
+    /**
+     * Resolve available sites for a protected area using the same logic as site dropdown APIs.
+     */
+    private function resolveSitesForProtectedArea(ProtectedArea $protectedArea): \Illuminate\Support\Collection
+    {
+        $siteNames = SiteName::where('protected_area_id', $protectedArea->id)
+            ->orderBy('name')
+            ->get();
+
+        // Keep fallback behavior consistent with existing site loading API.
+        // Important: only run fallback for known legacy PA codes. Running an
+        // empty fallback condition can incorrectly return unrelated sites.
+        if ($siteNames->isEmpty()) {
+            if ($protectedArea->code === 'PPLS') {
+                $siteNames = SiteName::where('name', 'like', 'PPLS Site%')
+                    ->orderBy('name')
+                    ->get();
+            } elseif ($protectedArea->code === 'MPL') {
+                $siteNames = SiteName::where(function ($query) {
+                    $query->where('name', 'like', 'MPL SITE%')
+                        ->orWhere('name', 'like', 'MPL Site%');
+                })->orderBy('name')->get();
+            }
+        }
+
+        return $siteNames;
+    }
+
+    /**
+     * Enforce PA/Site consistency rules for save operations.
+     */
+    private function validateProtectedAreaSiteSelection(array $validated, ProtectedArea $protectedArea): ?JsonResponse
+    {
+        $availableSites = $this->resolveSitesForProtectedArea($protectedArea);
+        $hasSites = $availableSites->isNotEmpty();
+        $siteId = $validated['site_name_id'] ?? null;
+
+        if ($hasSites && empty($siteId)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Site Name is required because this Protected Area has available sites.'
+            ], 422);
+        }
+
+        if (!$hasSites && !empty($siteId)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Selected Protected Area has no sites. Site Name must be empty.'
+            ], 422);
+        }
+
+        if (!empty($siteId) && !$availableSites->contains(fn ($site) => (int) $site->id === (int) $siteId)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Selected site does not belong to the selected protected area.'
+            ], 422);
+        }
+
+        return null;
+    }
+
     /**
      * Display a listing of the resource.
      */
@@ -230,7 +292,7 @@ class SpeciesObservationController extends Controller
         // Get filter options
         $filterOptions = $this->getFilterOptions();
 
-        return view('species-observations.enhanced-index', compact(
+        return view('pages.species_observations.index', compact(
             'observations',
             'filterOptions',
             'summaryStats'
@@ -240,21 +302,27 @@ class SpeciesObservationController extends Controller
     /**
      * Build a filtered query for database tables
      */
-    private function buildTableQuery($tableName, Request $request)
+    private function buildTableQuery(string $tableName, Request $request)
     {
+        $selectOrNull = static function (string $column) use ($tableName) {
+            return Schema::hasColumn($tableName, $column)
+                ? $column
+                : DB::raw("NULL as {$column}");
+        };
+
         $query = DB::table($tableName)->select(
-            'id',
-            'protected_area_id',
-            'transaction_code',
-            'station_code',
-            'patrol_year',
-            'patrol_semester',
-            'bio_group',
-            'common_name',
-            'scientific_name',
-            'recorded_count',
-            'created_at',
-            'updated_at',
+            $selectOrNull('id'),
+            $selectOrNull('protected_area_id'),
+            $selectOrNull('transaction_code'),
+            $selectOrNull('station_code'),
+            $selectOrNull('patrol_year'),
+            $selectOrNull('patrol_semester'),
+            $selectOrNull('bio_group'),
+            $selectOrNull('common_name'),
+            $selectOrNull('scientific_name'),
+            $selectOrNull('recorded_count'),
+            $selectOrNull('created_at'),
+            $selectOrNull('updated_at'),
             DB::raw("'" . $tableName . "' as table_name")
         );
         
@@ -262,16 +330,26 @@ class SpeciesObservationController extends Controller
         if ($request->filled('search')) {
             $searchTerm = $request->search;
             $query->where(function($q) use ($searchTerm, $tableName) {
-                $q->where('common_name', 'like', '%' . $searchTerm . '%')
-                  ->orWhere('scientific_name', 'like', '%' . $searchTerm . '%')
-                  ->orWhere('station_code', 'like', '%' . $searchTerm . '%')
-                  ->orWhere('transaction_code', 'like', '%' . $searchTerm . '%')
-                  ->orWhereExists(function($subQuery) use ($searchTerm, $tableName) {
-                      $subQuery->select(DB::raw(1))
-                          ->from('protected_areas')
-                          ->whereRaw('protected_areas.id = ' . $tableName . '.protected_area_id')
-                          ->where('protected_areas.name', 'like', '%' . $searchTerm . '%');
-                  });
+                if (Schema::hasColumn($tableName, 'common_name')) {
+                    $q->where('common_name', 'like', '%' . $searchTerm . '%');
+                }
+                if (Schema::hasColumn($tableName, 'scientific_name')) {
+                    $q->orWhere('scientific_name', 'like', '%' . $searchTerm . '%');
+                }
+                if (Schema::hasColumn($tableName, 'station_code')) {
+                    $q->orWhere('station_code', 'like', '%' . $searchTerm . '%');
+                }
+                if (Schema::hasColumn($tableName, 'transaction_code')) {
+                    $q->orWhere('transaction_code', 'like', '%' . $searchTerm . '%');
+                }
+                if (Schema::hasColumn($tableName, 'protected_area_id')) {
+                    $q->orWhereExists(function($subQuery) use ($searchTerm, $tableName) {
+                        $subQuery->select(DB::raw(1))
+                            ->from('protected_areas')
+                            ->whereRaw('protected_areas.id = ' . $tableName . '.protected_area_id')
+                            ->where('protected_areas.name', 'like', '%' . $searchTerm . '%');
+                    });
+                }
             });
         }
         
@@ -284,7 +362,7 @@ class SpeciesObservationController extends Controller
         ];
 
         foreach ($filters as $requestKey => $dbField) {
-            if ($request->filled($requestKey)) {
+            if ($request->filled($requestKey) && Schema::hasColumn($tableName, $dbField)) {
                 $query->where($dbField, $request->$requestKey);
             }
         }
@@ -333,7 +411,7 @@ class SpeciesObservationController extends Controller
                     'station_code' => $stationCode
                 ]);
                 
-                if ($stationCode) {
+                if ($stationCode && Schema::hasColumn($tableName, 'station_code')) {
                     // Apply exact station code filtering for the specific site
                     $query->where('station_code', $stationCode);
                     Log::info('Applied station code filter: ' . $stationCode);
@@ -354,11 +432,15 @@ class SpeciesObservationController extends Controller
      * Build a filtered query for observation models WITHOUT station code filtering
      * Used for Mariano and Madupapa sites where the table contains all records for that site
      */
-    private function buildFilteredQueryWithoutStationCode($modelClass, Request $request)
+    private function buildFilteredQueryWithoutStationCode(string $modelClass, Request $request)
     {
         // Get table name from model
         $model = new $modelClass;
         $tableName = $model->getTable();
+        $hasColumn = static fn (string $column): bool => Schema::hasColumn($tableName, $column);
+        $selectOrNull = static fn (string $column) => Schema::hasColumn($tableName, $column)
+            ? $column
+            : DB::raw("NULL as {$column}");
         
         Log::info('Building filtered query WITHOUT station code for model:', [
             'model_class' => $modelClass,
@@ -368,32 +450,45 @@ class SpeciesObservationController extends Controller
         ]);
         
         $query = $modelClass::select(
-            'id',
-            'protected_area_id',
-            'transaction_code',
-            'station_code',
-            'patrol_year',
-            'patrol_semester',
-            'bio_group',
-            'common_name',
-            'scientific_name',
-            'recorded_count',
-            'created_at',
-            'updated_at',
+            $selectOrNull('id'),
+            $selectOrNull('protected_area_id'),
+            $selectOrNull('transaction_code'),
+            $selectOrNull('station_code'),
+            $selectOrNull('patrol_year'),
+            $selectOrNull('patrol_semester'),
+            $selectOrNull('bio_group'),
+            $selectOrNull('common_name'),
+            $selectOrNull('scientific_name'),
+            $selectOrNull('recorded_count'),
+            $selectOrNull('created_at'),
+            $selectOrNull('updated_at'),
             DB::raw("'" . $tableName . "' as table_name")
         );
         
         // Apply search filter if provided
         if ($request->filled('search')) {
             $searchTerm = $request->search;
-            $query->where(function($q) use ($searchTerm) {
-                $q->where('common_name', 'like', '%' . $searchTerm . '%')
-                  ->orWhere('scientific_name', 'like', '%' . $searchTerm . '%')
-                  ->orWhere('station_code', 'like', '%' . $searchTerm . '%')
-                  ->orWhere('transaction_code', 'like', '%' . $searchTerm . '%')
-                  ->orWhereHas('protectedArea', function($subQuery) use ($searchTerm) {
-                      $subQuery->where('name', 'like', '%' . $searchTerm . '%');
-                  });
+            $query->where(function($q) use ($searchTerm, $hasColumn, $tableName) {
+                if ($hasColumn('common_name')) {
+                    $q->where('common_name', 'like', '%' . $searchTerm . '%');
+                }
+                if ($hasColumn('scientific_name')) {
+                    $q->orWhere('scientific_name', 'like', '%' . $searchTerm . '%');
+                }
+                if ($hasColumn('station_code')) {
+                    $q->orWhere('station_code', 'like', '%' . $searchTerm . '%');
+                }
+                if ($hasColumn('transaction_code')) {
+                    $q->orWhere('transaction_code', 'like', '%' . $searchTerm . '%');
+                }
+                if ($hasColumn('protected_area_id')) {
+                    $q->orWhereExists(function($subQuery) use ($searchTerm, $tableName) {
+                        $subQuery->select(DB::raw(1))
+                            ->from('protected_areas')
+                            ->whereRaw('protected_areas.id = ' . $tableName . '.protected_area_id')
+                            ->where('protected_areas.name', 'like', '%' . $searchTerm . '%');
+                    });
+                }
             });
         }
         
@@ -406,7 +501,7 @@ class SpeciesObservationController extends Controller
         ];
 
         foreach ($filters as $requestKey => $dbField) {
-            if ($request->filled($requestKey)) {
+            if ($request->filled($requestKey) && $hasColumn($dbField)) {
                 $query->where($dbField, $request->$requestKey);
                 Log::info("Applied filter {$requestKey}: " . $request->$requestKey);
             }
@@ -422,11 +517,15 @@ class SpeciesObservationController extends Controller
     /**
      * Build a filtered query for observation models
      */
-    private function buildFilteredQuery($modelClass, Request $request)
+    private function buildFilteredQuery(string $modelClass, Request $request)
     {
         // Get table name from model
         $model = new $modelClass;
         $tableName = $model->getTable();
+        $hasColumn = static fn (string $column): bool => Schema::hasColumn($tableName, $column);
+        $selectOrNull = static fn (string $column) => Schema::hasColumn($tableName, $column)
+            ? $column
+            : DB::raw("NULL as {$column}");
         
         Log::info('Building filtered query for model:', [
             'model_class' => $modelClass,
@@ -436,32 +535,45 @@ class SpeciesObservationController extends Controller
         ]);
         
         $query = $modelClass::select(
-            'id',
-            'protected_area_id',
-            'transaction_code',
-            'station_code',
-            'patrol_year',
-            'patrol_semester',
-            'bio_group',
-            'common_name',
-            'scientific_name',
-            'recorded_count',
-            'created_at',
-            'updated_at',
+            $selectOrNull('id'),
+            $selectOrNull('protected_area_id'),
+            $selectOrNull('transaction_code'),
+            $selectOrNull('station_code'),
+            $selectOrNull('patrol_year'),
+            $selectOrNull('patrol_semester'),
+            $selectOrNull('bio_group'),
+            $selectOrNull('common_name'),
+            $selectOrNull('scientific_name'),
+            $selectOrNull('recorded_count'),
+            $selectOrNull('created_at'),
+            $selectOrNull('updated_at'),
             DB::raw("'" . $tableName . "' as table_name")
         );
         
         // Apply search filter if provided
         if ($request->filled('search')) {
             $searchTerm = $request->search;
-            $query->where(function($q) use ($searchTerm) {
-                $q->where('common_name', 'like', '%' . $searchTerm . '%')
-                  ->orWhere('scientific_name', 'like', '%' . $searchTerm . '%')
-                  ->orWhere('station_code', 'like', '%' . $searchTerm . '%')
-                  ->orWhere('transaction_code', 'like', '%' . $searchTerm . '%')
-                  ->orWhereHas('protectedArea', function($subQuery) use ($searchTerm) {
-                      $subQuery->where('name', 'like', '%' . $searchTerm . '%');
-                  });
+            $query->where(function($q) use ($searchTerm, $hasColumn, $tableName) {
+                if ($hasColumn('common_name')) {
+                    $q->where('common_name', 'like', '%' . $searchTerm . '%');
+                }
+                if ($hasColumn('scientific_name')) {
+                    $q->orWhere('scientific_name', 'like', '%' . $searchTerm . '%');
+                }
+                if ($hasColumn('station_code')) {
+                    $q->orWhere('station_code', 'like', '%' . $searchTerm . '%');
+                }
+                if ($hasColumn('transaction_code')) {
+                    $q->orWhere('transaction_code', 'like', '%' . $searchTerm . '%');
+                }
+                if ($hasColumn('protected_area_id')) {
+                    $q->orWhereExists(function($subQuery) use ($searchTerm, $tableName) {
+                        $subQuery->select(DB::raw(1))
+                            ->from('protected_areas')
+                            ->whereRaw('protected_areas.id = ' . $tableName . '.protected_area_id')
+                            ->where('protected_areas.name', 'like', '%' . $searchTerm . '%');
+                    });
+                }
             });
         }
         
@@ -474,7 +586,7 @@ class SpeciesObservationController extends Controller
         ];
 
         foreach ($filters as $requestKey => $dbField) {
-            if ($request->filled($requestKey)) {
+            if ($request->filled($requestKey) && $hasColumn($dbField)) {
                 $query->where($dbField, $request->$requestKey);
                 Log::info("Applied filter {$requestKey}: " . $request->$requestKey);
             }
@@ -506,7 +618,7 @@ class SpeciesObservationController extends Controller
                     'station_code' => $stationCode
                 ]);
                 
-                if ($stationCode) {
+                if ($stationCode && $hasColumn('station_code')) {
                     $query->where('station_code', $stationCode);
                     Log::info('Applied station code filter for model: ' . $stationCode);
                 } else {
@@ -525,7 +637,7 @@ class SpeciesObservationController extends Controller
     /**
      * Get filter options for the view
      */
-    private function getFilterOptions()
+    private function getFilterOptions(): array
     {
         return [
             'protectedAreas' => ProtectedArea::orderBy('name')->get(),
@@ -538,27 +650,12 @@ class SpeciesObservationController extends Controller
     /**
      * Get site names for a specific protected area (AJAX)
      */
-    public function getSiteNames($protectedAreaId)
+    public function getSiteNames(int $protectedAreaId)
     {
         $protectedArea = ProtectedArea::find($protectedAreaId);
         
         if ($protectedArea) {
-            // Use the proper relationship to get site names for this protected area
-            $siteNames = SiteName::where('protected_area_id', $protectedAreaId)
-                ->orderBy('name')
-                ->get();
-            
-            // Fallback to name-based filtering if no results found (for backward compatibility)
-            if ($siteNames->isEmpty()) {
-                $siteNames = SiteName::where(function($query) use ($protectedArea) {
-                    if ($protectedArea->code === 'PPLS') {
-                        $query->where('name', 'like', 'PPLS Site%');
-                    } elseif ($protectedArea->code === 'MPL') {
-                        $query->where('name', 'like', 'MPL SITE%')
-                              ->orWhere('name', 'like', 'MPL Site%'); // Handle both cases
-                    }
-                })->orderBy('name')->get();
-            }
+            $siteNames = $this->resolveSitesForProtectedArea($protectedArea);
             
             return response()->json([
                 'success' => true,
@@ -579,7 +676,7 @@ class SpeciesObservationController extends Controller
     /**
      * Get observation data for Edit modal
      */
-    public function getObservationForEdit($id)
+    public function getObservationForEdit(int $id)
     {
         $tableName = request()->query('table_name');
         Log::info('getObservationForEdit called with ID: ' . $id . ', tableName: ' . $tableName);
@@ -689,9 +786,14 @@ class SpeciesObservationController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, int $id)
     {
         try {
+            // Accept site_id alias from frontend and normalize to site_name_id.
+            if ($request->has('site_id') && !$request->has('site_name_id')) {
+                $request->merge(['site_name_id' => $request->site_id]);
+            }
+
             // Normalize site_name_id to site_name for backward compatibility
             if ($request->has('site_name_id')) {
                 $request->merge(['site_name' => $request->site_name_id === '0' || $request->site_name_id === '' ? null : $request->site_name_id]);
@@ -738,12 +840,28 @@ class SpeciesObservationController extends Controller
 
             // Get the protected area to determine which table to use
             $protectedArea = ProtectedArea::find($validated['protected_area_id']);
+            if (!$protectedArea) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Protected area not found.'
+                ], 422);
+            }
+
+            $normalizedSiteId = $validated['site_name'] ?? null;
+            $validated['site_name_id'] = $normalizedSiteId;
+            $siteValidationError = $this->validateProtectedAreaSiteSelection($validated, $protectedArea);
+            if ($siteValidationError) {
+                return $siteValidationError;
+            }
+            if (empty($validated['site_name_id'])) {
+                $validated['site_name'] = null;
+            }
             
             // Handle table changes if protected area is different
             $currentTableName = $observation->getTable();
             $targetTableName = null;
             
-            if ($protectedArea && $protectedArea->code === 'PPLS') {
+            if ($protectedArea->code === 'PPLS') {
                 // For PPLS, determine which site table based on selected site name
                 if (!empty($validated['site_name'])) {
                     $siteName = SiteName::find($validated['site_name']);
@@ -765,7 +883,7 @@ class SpeciesObservationController extends Controller
                         }
                     }
                 }
-            } elseif ($protectedArea) {
+            } else {
                 // For other protected areas, use their specific tables
                 $tableMap = [
                     'BPLS' => 'batanes_tbl',
@@ -837,7 +955,7 @@ class SpeciesObservationController extends Controller
         $semesters = [1 => '1st', 2 => '2nd'];
         $years = PatrolYearHelper::getYears();
         
-        return view('species-observations.create', compact(
+        return view('pages.species_observations.create', compact(
             'protectedAreas',
             'bioGroups',
             'semesters',
@@ -851,9 +969,14 @@ class SpeciesObservationController extends Controller
     public function store(Request $request)
     {
         try {
+            // Accept site_id alias from frontend and normalize to site_name_id.
+            if ($request->has('site_id') && !$request->has('site_name_id')) {
+                $request->merge(['site_name_id' => $request->site_id]);
+            }
+
             // Debug: verify payload (remove or comment in production if not needed)
             Log::info('Species observation store payload', $request->only([
-                'transaction_code', 'station_code', 'protected_area_id', 'site_name_id',
+                'transaction_code', 'station_code', 'protected_area_id', 'site_name_id', 'site_id',
                 'patrol_year', 'patrol_semester', 'bio_group', 'common_name', 'scientific_name', 'recorded_count'
             ]));
 
@@ -891,6 +1014,17 @@ class SpeciesObservationController extends Controller
 
             // Get the protected area
             $protectedArea = ProtectedArea::find($validated['protected_area_id']);
+            if (!$protectedArea) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Protected area not found.'
+                ], 422);
+            }
+
+            $siteValidationError = $this->validateProtectedAreaSiteSelection($validated, $protectedArea);
+            if ($siteValidationError) {
+                return $siteValidationError;
+            }
             
             // Enhanced validation: Check if site belongs to selected protected area
             if (!empty($validated['site_name_id'])) {
@@ -937,8 +1071,12 @@ class SpeciesObservationController extends Controller
                 // Protected Area + Site: Save to the Site's table
                 $siteName = SiteName::find($validated['site_name_id']);
                 
-                // Use user-provided station_code (all fields are manually entered)
-                $stationCode = $validated['station_code'];
+                // Keep site linkage deterministic for counts/filters:
+                // if site has a known station code mapping, use that station code.
+                $stationCode = $siteName?->station_code ?: ($validated['station_code'] ?? null);
+                if (!empty($stationCode)) {
+                    $validated['station_code'] = $stationCode;
+                }
                 
                 // Determine which table to use based on protected area and site
                 if ($protectedArea->code === 'PPLS') {
@@ -1164,7 +1302,7 @@ class SpeciesObservationController extends Controller
     /**
      * Create a safe table name from site name
      */
-    private function createSiteTableName($siteName, $siteId)
+    private function createSiteTableName(string $siteName, int $siteId): string
     {
         // Extract first few words and convert to safe format
         $words = explode(' ', $siteName);
@@ -1189,7 +1327,7 @@ class SpeciesObservationController extends Controller
     /**
      * Create observation table for the protected area site
      */
-    private function createSiteObservationTable($tableName, $siteId)
+    private function createSiteObservationTable(string $tableName, int $siteId): void
     {
         try {
             Log::info("Creating site observation table: {$tableName}");
@@ -1270,7 +1408,7 @@ class SpeciesObservationController extends Controller
     /**
      * Get model class by protected area code
      */
-    private function getModelByProtectedAreaCode($code)
+    private function getModelByProtectedAreaCode(string $code): ?string
     {
         $modelMap = [
             'BPLS' => BmsSpeciesObservation::class,
@@ -1304,7 +1442,7 @@ class SpeciesObservationController extends Controller
     /**
      * Get table name by protected area code
      */
-    private function getTableNameByProtectedAreaCode($code)
+    private function getTableNameByProtectedAreaCode(string $code): ?string
     {
         $tableMap = [
             'BPLS' => 'batanes_tbl',
@@ -1341,7 +1479,7 @@ class SpeciesObservationController extends Controller
     public function show(BaseObservation $speciesObservation)
     {
         $speciesObservation->load('protectedArea');
-        return view('species-observations.show', compact('speciesObservation'));
+        return view('pages.species_observations.show', compact('speciesObservation'));
     }
 
     /**
@@ -1353,7 +1491,7 @@ class SpeciesObservationController extends Controller
         $bioGroups = ['fauna' => 'Fauna', 'flora' => 'Flora'];
         $semesters = [1 => '1st', 2 => '2nd'];
 
-        return view('species-observations.edit', compact(
+        return view('pages.species_observations.edit', compact(
             'speciesObservation',
             'protectedAreas',
             'bioGroups',
@@ -1364,7 +1502,7 @@ class SpeciesObservationController extends Controller
     /**
      * Get observation data for View modal
      */
-    public function getObservationData($id)
+    public function getObservationData(int $id)
     {
         try {
             $tableName = request()->query('table_name');
@@ -1485,7 +1623,7 @@ class SpeciesObservationController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Request $request, $id)
+    public function destroy(Request $request, int $id)
     {
         // Debug: Log the ID being deleted
         Log::info('Attempting to delete observation with ID: ' . $id);
@@ -1590,7 +1728,7 @@ class SpeciesObservationController extends Controller
     /**
      * Find observation by ID across all tables
      */
-    private function findObservationById($id, $tableName = null)
+    private function findObservationById(int $id, ?string $tableName = null)
     {
         Log::info('findObservationById called with ID: ' . $id . ', tableName: ' . $tableName);
         
@@ -1700,7 +1838,7 @@ class SpeciesObservationController extends Controller
     /**
      * Get model class by table name
      */
-    private function getModelByTableName($tableName)
+    private function getModelByTableName(string $tableName): ?string
     {
         $tableModelMap = [
             'batanes_tbl' => BmsSpeciesObservation::class,
@@ -1858,18 +1996,18 @@ class SpeciesObservationController extends Controller
     /**
      * Export to print-friendly view
      */
-    private function exportPrint($observations, Request $request)
+    private function exportPrint(\Illuminate\Support\Collection $observations, Request $request)
     {
         // Get filter information for title
         $filterInfo = $this->getFilterInfo($request);
         
-        return view('species-observations.print', compact('observations', 'filterInfo'));
+        return view('pages.species_observations.print', compact('observations', 'filterInfo'));
     }
 
     /**
      * Export to Excel
      */
-    private function exportExcel($observations, Request $request)
+    private function exportExcel(\Illuminate\Support\Collection $observations, Request $request)
     {
         $filename = 'species-observations-' . date('Y-m-d-H-i-s') . '.csv';
         
@@ -1921,7 +2059,7 @@ class SpeciesObservationController extends Controller
     /**
      * Export to PDF
      */
-    private function exportPdf($observations, Request $request)
+    private function exportPdf(\Illuminate\Support\Collection $observations, Request $request)
     {
         // Limit the number of records for PDF to prevent memory issues
         $maxRecords = 100;
@@ -1953,7 +2091,7 @@ class SpeciesObservationController extends Controller
         ];
         
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::setOptions($options)
-            ->loadView('species-observations.pdf', compact('observations', 'filterInfo'));
+            ->loadView('pages.species_observations.pdf', compact('observations', 'filterInfo'));
         
         return $pdf->download($filename);
     }

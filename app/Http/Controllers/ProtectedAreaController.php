@@ -15,6 +15,44 @@ use Illuminate\Pagination\LengthAwarePaginator;
 
 class ProtectedAreaController extends Controller
 {
+    /**
+     * Count observations for a site from both site-specific tables and station-coded tables.
+     */
+    private function countObservationsForSite(SiteName $site, array $allObservationTables): int
+    {
+        $count = 0;
+        $siteTableName = $this->createSafeSiteTableName($site->name, $site->id);
+
+        if (Schema::hasTable($siteTableName)) {
+            try {
+                $count += DB::table($siteTableName)->count();
+            } catch (\Exception $e) {
+                Log::error("Error counting observations in site table {$siteTableName}: " . $e->getMessage());
+            }
+        }
+
+        $stationCodes = $site->all_station_codes ?? [];
+        if (empty($stationCodes)) {
+            return $count;
+        }
+
+        foreach ($allObservationTables as $tableName) {
+            if ($tableName === $siteTableName || !Schema::hasColumn($tableName, 'station_code')) {
+                continue;
+            }
+
+            try {
+                $count += DB::table($tableName)
+                    ->whereIn('station_code', $stationCodes)
+                    ->count();
+            } catch (\Exception $e) {
+                Log::error("Error counting station-coded observations in {$tableName}: " . $e->getMessage());
+            }
+        }
+
+        return $count;
+    }
+
     public function index(Request $request)
     {
         // Handle export requests
@@ -101,7 +139,7 @@ class ProtectedAreaController extends Controller
             'total_sites' => SiteName::count(),
         ];
 
-        return view('protected-areas.index', compact('protectedAreas', 'stats', 'statusFilter', 'sort'));
+        return view('pages.protected_areas.index', compact('protectedAreas', 'stats', 'statusFilter', 'sort'));
     }
 
     /**
@@ -308,31 +346,24 @@ class ProtectedAreaController extends Controller
         
         // Get all sites for filtering (we'll filter in collection so we can use the computed observation count)
         $allSites = $query->get();
+
+        // Deduplicate by protected area + normalized site name so duplicate records
+        // do not render twice in the table/modal flows.
+        $allSites = $allSites
+            ->unique(function ($site) {
+                $protectedAreaId = $site->protected_area_id ?? 'null';
+                $normalizedName = strtolower(trim((string) ($site->name ?? '')));
+
+                return $protectedAreaId . '|' . $normalizedName;
+            })
+            ->values();
         
         // Add observation counts to each site from its site-specific table
         $tables = DynamicTableService::getAllObservationTables();
         
         foreach ($allSites as $site) {
-            $siteObservationCount = 0;
-            
-            // First, check if there's a site-specific table for this site
-            $siteTableName = $this->createSafeSiteTableName($site->name, $site->id);
-            
-            // Check site-specific table first
-            if (Schema::hasTable($siteTableName)) {
-                try {
-                    $siteObservationCount += DB::table($siteTableName)->count();
-                    Log::info("Found {$siteObservationCount} observations in site-specific table: {$siteTableName}");
-                } catch (\Exception $e) {
-                    Log::error("Error counting observations in site table {$siteTableName}: " . $e->getMessage());
-                }
-            }
-            
+            $siteObservationCount = $this->countObservationsForSite($site, $tables);
             $site->species_observations_count = $siteObservationCount;
-            
-            Log::info("Site {$site->name} (ID: {$site->id}) has {$siteObservationCount} observations", [
-                'site_table' => $siteTableName
-            ]);
         }
         
         // Apply status filter in PHP so we can rely on the computed observation count
@@ -393,7 +424,7 @@ class ProtectedAreaController extends Controller
             'species_diversity' => $speciesDiversity,
         ];
 
-        return view('protected-area-sites.index', compact('siteNames', 'stats', 'statusFilter', 'sort'));
+        return view('pages.protected_area_sites.index', compact('siteNames', 'stats', 'statusFilter', 'sort'));
     }
 
     /**
@@ -402,7 +433,7 @@ class ProtectedAreaController extends Controller
     public function show(ProtectedArea $protectedArea)
     {
         $protectedArea->loadCount('speciesObservations');
-        return view('protected-areas.show', compact('protectedArea'));
+        return view('pages.protected_areas.show', compact('protectedArea'));
     }
 
     /**
@@ -442,7 +473,7 @@ class ProtectedAreaController extends Controller
      */
     public function edit(ProtectedArea $protectedArea)
     {
-        return view('protected-areas.edit', compact('protectedArea'));
+        return view('pages.protected_areas.edit', compact('protectedArea'));
     }
 
     /**
@@ -591,7 +622,7 @@ class ProtectedAreaController extends Controller
     public function showSite(SiteName $siteName)
     {
         $siteName->load('protectedArea');
-        return view('protected-area-sites.show', compact('siteName'));
+        return view('pages.protected_area_sites.show', compact('siteName'));
     }
 
     /**
@@ -632,7 +663,7 @@ class ProtectedAreaController extends Controller
     public function editSite(SiteName $siteName)
     {
         $protectedAreas = ProtectedArea::orderBy('name')->get();
-        return view('protected-area-sites.edit', compact('siteName', 'protectedAreas'));
+        return view('pages.protected_area_sites.edit', compact('siteName', 'protectedAreas'));
     }
 
     /**
@@ -641,7 +672,16 @@ class ProtectedAreaController extends Controller
     public function updateSite(Request $request, SiteName $siteName)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                \Illuminate\Validation\Rule::unique('site_names', 'name')
+                    ->where(function ($query) use ($request) {
+                        $query->where('protected_area_id', $request->input('protected_area_id'));
+                    })
+                    ->ignore($siteName->id),
+            ],
             'protected_area_id' => 'nullable|exists:protected_areas,id',
         ]);
 
@@ -736,6 +776,8 @@ class ProtectedAreaController extends Controller
                 // Check if required columns exist
                 $requiredColumns = [
                     'protected_area_id',
+                    'transaction_code',
+                    'station_code',
                     'patrol_year',
                     'patrol_semester',
                     'bio_group',
@@ -770,7 +812,9 @@ class ProtectedAreaController extends Controller
                 // Foreign key to protected areas (consistent with SpeciesObservationController)
                 $table->unsignedBigInteger('protected_area_id');
                 
-                // Standard observation columns
+                // Standard observation columns (must stay aligned with SpeciesObservationController)
+                $table->string('transaction_code', 50);
+                $table->string('station_code', 60);
                 $table->year('patrol_year');
                 $table->unsignedTinyInteger('patrol_semester'); // 1 or 2
                 $table->enum('bio_group', ['fauna', 'flora']);
@@ -826,7 +870,15 @@ class ProtectedAreaController extends Controller
         // Validate the request
         try {
             $validated = $request->validate([
-                'name' => 'required|string|max:255',
+                'name' => [
+                    'required',
+                    'string',
+                    'max:255',
+                    \Illuminate\Validation\Rule::unique('site_names', 'name')
+                        ->where(function ($query) use ($request) {
+                            $query->where('protected_area_id', $request->input('protected_area_id'));
+                        }),
+                ],
                 'protected_area_id' => 'nullable|exists:protected_areas,id',
             ]);
             
@@ -1040,7 +1092,7 @@ class ProtectedAreaController extends Controller
         // Get filter information for title
         $filterInfo = $this->getFilterInfo($request);
         
-        return view('protected-areas.print', compact('protectedAreas', 'filterInfo'));
+        return view('pages.protected_areas.print', compact('protectedAreas', 'filterInfo'));
     }
 
     /**
@@ -1124,7 +1176,7 @@ class ProtectedAreaController extends Controller
         ];
         
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::setOptions($options)
-            ->loadView('protected-areas.pdf', compact('protectedAreas', 'filterInfo'));
+            ->loadView('pages.protected_areas.pdf', compact('protectedAreas', 'filterInfo'));
         
         return $pdf->download($filename);
     }
@@ -1180,21 +1232,21 @@ class ProtectedAreaController extends Controller
         
         // Get all sites for filtering
         $allSites = $query->get();
+
+        // Keep export output aligned with table behavior (no duplicate site labels).
+        $allSites = $allSites
+            ->unique(function ($site) {
+                $protectedAreaId = $site->protected_area_id ?? 'null';
+                $normalizedName = strtolower(trim((string) ($site->name ?? '')));
+
+                return $protectedAreaId . '|' . $normalizedName;
+            })
+            ->values();
         
         // Add observation counts to each site from its site-specific table
+        $tables = DynamicTableService::getAllObservationTables();
         foreach ($allSites as $site) {
-            $siteObservationCount = 0;
-            $siteTableName = $this->createSafeSiteTableName($site->name, $site->id);
-
-            if (Schema::hasTable($siteTableName)) {
-                try {
-                    $siteObservationCount += DB::table($siteTableName)->count();
-                } catch (\Exception $e) {
-                    Log::error("Error counting observations in site table {$siteTableName}: " . $e->getMessage());
-                }
-            }
-
-            $site->species_observations_count = $siteObservationCount;
+            $site->species_observations_count = $this->countObservationsForSite($site, $tables);
         }
         
         // Apply status filter in PHP
@@ -1242,7 +1294,7 @@ class ProtectedAreaController extends Controller
         // Get filter information for title
         $filterInfo = $this->getSitesFilterInfo($request);
         
-        return view('protected-area-sites.print', compact('siteNames', 'filterInfo'));
+        return view('pages.protected_area_sites.print', compact('siteNames', 'filterInfo'));
     }
 
     /**
@@ -1324,7 +1376,7 @@ class ProtectedAreaController extends Controller
         ];
         
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::setOptions($options)
-            ->loadView('protected-area-sites.pdf', compact('siteNames', 'filterInfo'));
+            ->loadView('pages.protected_area_sites.pdf', compact('siteNames', 'filterInfo'));
         
         return $pdf->download($filename);
     }

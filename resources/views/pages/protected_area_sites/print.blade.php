@@ -2,11 +2,11 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="utf-8">
-    <title>Protected Areas Report | DENR BMS</title>
+    <title>Protected Area Sites Report | DENR BMS</title>
     
     <!-- Bootstrap CSS for print styling -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    @vite(['resources/css/icons.css', 'resources/js/icons.js'])
+    @vite(['resources/css/shared/icons.css', 'resources/js/shared/icons.js'])
     <style>
         @media print {
             body {
@@ -81,6 +81,22 @@
             .no-print {
                 display: none !important;
             }
+
+            .status-badge {
+                padding: 2px 6px;
+                border-radius: 3px;
+                font-size: 8pt;
+            }
+
+            .status-badge--active {
+                background-color: #d4edda;
+                color: #155724;
+            }
+
+            .status-badge--no-data {
+                background-color: #f8d7da;
+                color: #721c24;
+            }
             
             @page {
                 margin: 0.5cm;
@@ -110,8 +126,8 @@
 <body>
     <div class="no-print">
         <div class="print-header">
-            <h1>Protected Areas Report - Print Preview</h1>
-            <p class="text-muted">Total Records: {{ $protectedAreas->count() }}</p>
+            <h1>Protected Area Sites Report - Print Preview</h1>
+            <p class="text-muted">Total Records: {{ $siteNames->count() }}</p>
             <p class="text-muted">Generated on: {{ now()->format('F j, Y \a\t g:i A') }}</p>
             <button onclick="window.print()" class="btn btn-primary">
                 <i data-lucide="printer" class="lucide-icon"></i> Print
@@ -124,7 +140,7 @@
     
     <!-- Header -->
     <div class="header">
-        <h1>Protected Areas Report</h1>
+        <h1>Protected Area Sites Report</h1>
         <p>DENR Biodiversity Management System</p>
         
         @if(!empty($filterInfo))
@@ -140,7 +156,7 @@
         @endif
         
         <p style="font-size: 9pt; margin: 0;">
-            <strong>Total Records:</strong> {{ $protectedAreas->count() }} | 
+            <strong>Total Records:</strong> {{ $siteNames->count() }} | 
             <strong>Generated:</strong> {{ now()->format('F j, Y g:i A') }}
         </p>
     </div>
@@ -149,31 +165,30 @@
     <table class="table">
         <thead>
             <tr>
-                <th width="15%">Area Code</th>
-                <th width="35%">Name</th>
+                <th width="25%">Site Name</th>
+                <th width="25%">Protected Area</th>
                 <th width="15%">Observations Count</th>
-                <th width="15%">Status</th>
-                <th width="20%">Created At</th>
+                <th width="10%">Status</th>
+                <th width="25%">Created At</th>
             </tr>
         </thead>
         <tbody>
-            @forelse($protectedAreas as $area)
+            @forelse($siteNames as $site)
                 <tr>
-                    <td>{{ $area->code ?? 'N/A' }}</td>
-                    <td>{{ $area->name ?? 'N/A' }}</td>
-                    <td>{{ number_format($area->species_observations_count ?? 0) }}</td>
+                    <td>{{ $site->name ?? 'N/A' }}</td>
+                    <td>{{ $site->protectedArea->name ?? 'Not assigned' }}</td>
+                    <td>{{ number_format($site->species_observations_count ?? 0) }}</td>
                     <td>
-                        <span style="padding: 2px 6px; border-radius: 3px; font-size: 8pt; 
-                               {{ $area->species_observations_count > 0 ? 'background-color: #d4edda; color: #155724;' : 'background-color: #f8d7da; color: #721c24;' }}">
-                            {{ $area->species_observations_count > 0 ? 'Active' : 'No Data' }}
+                        <span class="status-badge {{ $site->species_observations_count > 0 ? 'status-badge--active' : 'status-badge--no-data' }}">
+                            {{ $site->species_observations_count > 0 ? 'Active' : 'No Data' }}
                         </span>
                     </td>
-                    <td>{{ $area->created_at ? $area->created_at->format('Y-m-d H:i') : 'N/A' }}</td>
+                    <td>{{ $site->created_at ? $site->created_at->format('Y-m-d H:i') : 'N/A' }}</td>
                 </tr>
             @empty
                 <tr>
                     <td colspan="5" style="text-align: center; font-style: italic;">
-                        No protected areas found
+                        No protected area sites found
                     </td>
                 </tr>
             @endforelse
@@ -181,24 +196,32 @@
     </table>
     
     <!-- Summary Statistics -->
-    @if($protectedAreas->count() > 0)
+    @if($siteNames->count() > 0)
         <div class="summary-stats">
             <h3 style="margin: 0 0 8px 0; font-size: 11pt;">Summary Statistics</h3>
             <table style="width: 100%; border: none; font-size: 9pt;">
                 <tr>
                     <td style="width: 50%; border: none; padding: 2px;">
-                        <strong>Total Protected Areas:</strong> {{ $protectedAreas->count() }}
+                        <strong>Total Sites:</strong> {{ $siteNames->count() }}
                     </td>
                     <td style="width: 50%; border: none; padding: 2px;">
-                        <strong>Total Observations:</strong> {{ number_format($protectedAreas->sum('species_observations_count')) }}
+                        <strong>Total Observations:</strong> {{ number_format($siteNames->sum('species_observations_count')) }}
                     </td>
                 </tr>
                 <tr>
                     <td style="border: none; padding: 2px;">
-                        <strong>Active Areas:</strong> {{ $protectedAreas->where('species_observations_count', '>', 0)->count() }}
+                        <strong>Active Sites:</strong> {{ $siteNames->where('species_observations_count', '>', 0)->count() }}
                     </td>
                     <td style="border: none; padding: 2px;">
-                        <strong>Areas with No Data:</strong> {{ $protectedAreas->where('species_observations_count', '=', 0)->count() }}
+                        <strong>Sites with No Data:</strong> {{ $siteNames->where('species_observations_count', '=', 0)->count() }}
+                    </td>
+                </tr>
+                <tr>
+                    <td style="border: none; padding: 2px;">
+                        <strong>Unique Protected Areas:</strong> {{ $siteNames->pluck('protectedArea.name')->unique()->filter()->count() }}
+                    </td>
+                    <td style="border: none; padding: 2px;">
+                        <strong>Sites with Assigned Areas:</strong> {{ $siteNames->where('protectedArea', '!=', null)->count() }}
                     </td>
                 </tr>
             </table>

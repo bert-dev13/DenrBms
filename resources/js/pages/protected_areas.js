@@ -2,7 +2,7 @@
  * Protected Areas Page - Filters, search, export, modal init
  */
 
-import { initSearchBar } from './search-bar.js';
+import { initSearchBar } from '../shared/search_bar.js';
 
 function ensureModalSystem() {
     if (typeof ProtectedAreaModalSystem !== 'undefined') {

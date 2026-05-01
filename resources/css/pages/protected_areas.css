@@ -301,3 +301,49 @@
     background-color: #f3f4f6;
     color: #6b7280;
 }
+
+/* Protected Areas filters: one-row layout on desktop */
+#protected-areas-filter-form .pa-filter-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+#protected-areas-filter-form .filter-panel__title {
+    margin: 0;
+    white-space: nowrap;
+    padding-bottom: 0.25rem;
+}
+
+#protected-areas-filter-form .pa-filter-field {
+    min-width: 300px;
+    margin: 0;
+}
+
+#protected-areas-filter-form .pa-filter-field .filter-panel__label {
+    margin-bottom: 0.375rem;
+}
+
+#protected-areas-filter-form .pa-filter-actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+@media (max-width: 768px) {
+    #protected-areas-filter-form .pa-filter-row {
+        align-items: stretch;
+    }
+
+    #protected-areas-filter-form .pa-filter-field {
+        min-width: 100%;
+    }
+
+    #protected-areas-filter-form .pa-filter-actions {
+        margin-left: 0;
+        width: 100%;
+        justify-content: flex-start;
+    }
+}

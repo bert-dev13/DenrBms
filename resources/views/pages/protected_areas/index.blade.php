@@ -4,7 +4,7 @@
 @section('header', 'Protected Areas')
 
 @section('head')
-@vite(['resources/css/protected-areas.css', 'resources/css/species-observation-modal.css', 'resources/css/protected-area-modal.css', 'resources/js/protected-area-modal.js', 'resources/js/protected-areas.js'])
+@vite(['resources/css/pages/protected_areas.css', 'resources/css/pages/species_observation_modal.css', 'resources/css/pages/protected_area_modal.css', 'resources/js/pages/protected_area_modal.js', 'resources/js/pages/protected_areas.js'])
 @endsection
 
 @section('content')
@@ -69,15 +69,9 @@
             <!-- Filters Section -->
             <div class="filter-panel">
                 <form method="GET" action="{{ route('protected-areas.index') }}" id="protected-areas-filter-form">
-                    <div class="filter-panel__header">
+                    <div class="pa-filter-row">
                         <h2 class="filter-panel__title">Filters</h2>
-                        <div class="filter-panel__actions">
-                            <button type="submit" class="btn-filter-apply">Apply</button>
-                            <button type="button" onclick="clearProtectedAreaFilters()" class="btn-filter-clear">Clear</button>
-                        </div>
-                    </div>
-                    <div class="filter-panel__grid">
-                        <div class="filter-panel__field">
+                        <div class="filter-panel__field pa-filter-field">
                             <label for="status" class="filter-panel__label">Status</label>
                             <select name="status" id="status" class="filter-panel__select">
                                 <option value="">All</option>
@@ -85,12 +79,16 @@
                                 <option value="no_data" {{ (isset($statusFilter) && $statusFilter === 'no_data') ? 'selected' : '' }}>No Data</option>
                             </select>
                         </div>
-                        <div class="filter-panel__field">
+                        <div class="filter-panel__field pa-filter-field">
                             <label for="sort" class="filter-panel__label">Sort By</label>
                             <select name="sort" id="sort" class="filter-panel__select">
                                 <option value="name" {{ (!isset($sort) || $sort === 'name') ? 'selected' : '' }}>Name (A–Z)</option>
                                 <option value="code" {{ (isset($sort) && $sort === 'code') ? 'selected' : '' }}>Code (A–Z)</option>
                             </select>
+                        </div>
+                        <div class="filter-panel__actions pa-filter-actions">
+                            <button type="submit" class="btn-filter-apply">Apply</button>
+                            <button type="button" onclick="clearProtectedAreaFilters()" class="btn-filter-clear">Clear</button>
                         </div>
                     </div>
                 </form>
@@ -195,21 +193,24 @@
                                             <button type="button"
                                                class="species-observation-action-btn view"
                                                title="View Protected Area"
-                                               onclick="openViewModal({{ $area->id }})">
+                                               data-area-id="{{ $area->id }}"
+                                               onclick="openViewModal(Number(this.dataset.areaId))">
                                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="species-observation-action-icon" aria-hidden="true"><path d="M21 17v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2"/><path d="M21 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v2"/><circle cx="12" cy="12" r="1"/><path d="M18.944 12.33a1 1 0 0 0 0-.66 7.5 7.5 0 0 0-13.888 0 1 1 0 0 0 0 .66 7.5 7.5 0 0 0 13.888 0"/></svg>
                                             </button>
                                             <!-- Edit Button -->
                                             <button type="button"
                                                class="species-observation-action-btn edit"
                                                title="Edit Protected Area"
-                                               onclick="openEditModal({{ $area->id }})">
+                                               data-area-id="{{ $area->id }}"
+                                               onclick="openEditModal(Number(this.dataset.areaId))">
                                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="species-observation-action-icon" aria-hidden="true"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></svg>
                                             </button>
                                             <!-- Delete Button -->
                                             <button type="button"
                                                class="species-observation-action-btn delete"
                                                title="Delete Protected Area"
-                                               onclick="openDeleteModal({{ $area->id }})">
+                                               data-area-id="{{ $area->id }}"
+                                               onclick="openDeleteModal(Number(this.dataset.areaId))">
                                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="species-observation-action-icon" aria-hidden="true"><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                                             </button>
                                             </div>

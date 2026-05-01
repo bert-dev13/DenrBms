@@ -4,9 +4,14 @@
 @section('header', 'Protected Area Sites')
 
 @section('head')
-@vite(['resources/css/protected-area-sites.css', 'resources/css/species-observation-modal.css', 'resources/css/protected-area-sites-modal.css', 'resources/js/protected-area-sites-modal.js'])
+@vite(['resources/css/pages/protected_area_sites.css', 'resources/css/pages/species_observation_modal.css', 'resources/css/pages/protected_area_sites_modal.css', 'resources/js/pages/protected_area_sites_modal.js'])
 @php
-    $protectedAreasForJs = \App\Models\ProtectedArea::orderBy('name')->get(['id', 'name', 'code']);
+    $protectedAreasForJs = \App\Models\ProtectedArea::orderBy('name')
+        ->get(['id', 'name', 'code'])
+        ->unique(function ($area) {
+            return strtolower(trim((string) $area->code)) . '|' . strtolower(trim((string) $area->name));
+        })
+        ->values();
 @endphp
 <script id="protected-areas-data" type="application/json">@json($protectedAreasForJs)</script>
 <script>
@@ -79,15 +84,9 @@ window.protectedAreas = protectedAreasDataElement
             <!-- Filters Section -->
             <div class="filter-panel">
                 <form method="GET" action="{{ route('protected-area-sites.index') }}" id="protected-area-sites-filter-form">
-                    <div class="filter-panel__header">
+                    <div class="pas-filter-row">
                         <h2 class="filter-panel__title">Filters</h2>
-                        <div class="filter-panel__actions">
-                            <button type="submit" class="btn-filter-apply">Apply</button>
-                            <button type="button" onclick="clearSiteFilters()" class="btn-filter-clear">Clear</button>
-                        </div>
-                    </div>
-                    <div class="filter-panel__grid">
-                        <div class="filter-panel__field">
+                        <div class="filter-panel__field pas-filter-field">
                             <label for="status" class="filter-panel__label">Status</label>
                             <select name="status" id="status" class="filter-panel__select">
                                 <option value="">All</option>
@@ -95,12 +94,16 @@ window.protectedAreas = protectedAreasDataElement
                                 <option value="no_data" {{ (isset($statusFilter) && $statusFilter === 'no_data') ? 'selected' : '' }}>No Data</option>
                             </select>
                         </div>
-                        <div class="filter-panel__field">
+                        <div class="filter-panel__field pas-filter-field">
                             <label for="sort" class="filter-panel__label">Sort By</label>
                             <select name="sort" id="sort" class="filter-panel__select">
                                 <option value="name" {{ (!isset($sort) || $sort === 'name') ? 'selected' : '' }}>Name (A–Z)</option>
                                 <option value="protected_area" {{ (isset($sort) && $sort === 'protected_area') ? 'selected' : '' }}>Protected Area (A–Z)</option>
                             </select>
+                        </div>
+                        <div class="filter-panel__actions pas-filter-actions">
+                            <button type="submit" class="btn-filter-apply">Apply</button>
+                            <button type="button" onclick="clearSiteFilters()" class="btn-filter-clear">Clear</button>
                         </div>
                     </div>
                 </form>
@@ -187,11 +190,15 @@ window.protectedAreas = protectedAreasDataElement
                                     <td class="pas-col-area">
                                         @if($site->protectedArea)
                                             @php
-                                                $paFull = $site->protectedArea->name . ' (' . $site->protectedArea->code . ')';
+                                                $paName = (string) ($site->protectedArea->name ?? '');
+                                                $paCode = trim((string) ($site->protectedArea->code ?? ''));
+                                                $hasCodeInName = $paCode !== '' && stripos($paName, '(' . $paCode . ')') !== false;
+                                                $paDisplay = $hasCodeInName || $paCode === ''
+                                                    ? $paName
+                                                    : $paName . ' (' . $paCode . ')';
                                             @endphp
-                                            <span class="data-table-cell-truncate" title="{{ e($paFull) }}">
-                                                <span class="font-medium">{{ $site->protectedArea->name }}</span>
-                                                <span class="text-xs text-gray-500"> ({{ $site->protectedArea->code }})</span>
+                                            <span class="data-table-cell-truncate" title="{{ e($paDisplay) }}">
+                                                <span class="font-medium">{{ $paDisplay }}</span>
                                             </span>
                                         @else
                                             <span class="text-sm text-gray-400">Not assigned</span>

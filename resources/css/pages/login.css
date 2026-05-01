@@ -63,6 +63,40 @@ body.login-page {
     background-color: var(--login-bg-base);
 }
 
+/* ---------------------------------------------------------------------------
+   Entrance animations
+   --------------------------------------------------------------------------- */
+@keyframes loginFadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes loginRiseIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes loginScaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.94);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
 /* Full viewport container: background image + subtle overlay */
 .login-container {
     min-height: 100vh;
@@ -124,6 +158,12 @@ body.login-page {
     align-items: center;
     width: 100%;
     max-width: 460px;
+    opacity: 0;
+    transform: translateY(18px);
+}
+
+body.login-page.login-loaded .login-content {
+    animation: loginRiseIn 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
 /* ---------------------------------------------------------------------------
@@ -139,6 +179,12 @@ body.login-page {
     box-shadow: var(--login-card-shadow);
     overflow: hidden;
     transition: box-shadow var(--login-transition-smooth), transform var(--login-transition-smooth);
+    opacity: 0;
+    transform: scale(0.97);
+}
+
+body.login-page.login-loaded .login-card {
+    animation: loginScaleIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) 0.08s forwards;
 }
 
 .login-card:hover {
@@ -152,6 +198,12 @@ body.login-page {
 .login-header {
     text-align: center;
     padding: 34px 36px 22px;
+    opacity: 0;
+    transform: translateY(12px);
+}
+
+body.login-page.login-loaded .login-header {
+    animation: loginRiseIn 0.45s ease-out 0.14s forwards;
 }
 
 .login-logo-wrap {
@@ -197,6 +249,12 @@ body.login-page {
    --------------------------------------------------------------------------- */
 .login-form {
     padding: 6px 36px 34px;
+    opacity: 0;
+    transform: translateY(12px);
+}
+
+body.login-page.login-loaded .login-form {
+    animation: loginRiseIn 0.45s ease-out 0.2s forwards;
 }
 
 .form-group {
@@ -466,6 +524,7 @@ html[data-theme="dark"] .login-page .footer-text {
     margin-bottom: 22px;
     border-radius: var(--login-radius-input);
     font-size: 14px;
+    animation: loginFadeIn 0.2s ease-out;
 }
 
 .alert-success {
@@ -550,5 +609,22 @@ html[data-theme="dark"] .login-page .footer-text {
 
     .footer-text {
         font-size: 11px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .login-page *,
+    .login-page *::before,
+    .login-page *::after {
+        animation: none !important;
+        transition: none !important;
+    }
+
+    .login-content,
+    .login-card,
+    .login-header,
+    .login-form {
+        opacity: 1 !important;
+        transform: none !important;
     }
 }

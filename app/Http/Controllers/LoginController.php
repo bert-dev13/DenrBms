@@ -17,7 +17,7 @@ class LoginController extends Controller
      */
     public function showLoginForm()
     {
-        return view('login');
+        return view('pages.login');
     }
 
     /**
@@ -171,7 +171,7 @@ class LoginController extends Controller
     {
         $user = Auth::user();
         
-        return view('dashboard', [
+        return view('pages.dashboard', [
             'user' => $user,
             'recentActivity' => $this->getRecentActivity($user),
             'systemStats' => $this->getSystemStats(),

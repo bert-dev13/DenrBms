@@ -279,5 +279,10 @@ class Login {
 
 // Initialize the login component when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
+    if (document.body && document.body.classList.contains('login-page')) {
+        requestAnimationFrame(() => {
+            document.body.classList.add('login-loaded');
+        });
+    }
     new Login();
 });

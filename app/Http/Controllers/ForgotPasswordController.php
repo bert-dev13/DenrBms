@@ -13,7 +13,7 @@ class ForgotPasswordController extends Controller
      */
     public function showForgotPasswordForm()
     {
-        return view('auth.forgot-password');
+        return view('pages.auth.forgot_password');
     }
 
     /**

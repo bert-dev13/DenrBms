@@ -1,4 +1,4 @@
-import { initSearchBar } from './search-bar.js';
+import { initSearchBar } from '../shared/search_bar.js';
 
 class ProtectedAreaSitesModalSystem {
     constructor() {
@@ -238,9 +238,21 @@ class ProtectedAreaSitesModalSystem {
 
     renderProtectedAreaOptions(selectedId = null) {
         if (!Array.isArray(window.protectedAreas)) return '';
-        return window.protectedAreas.map((area) => {
+        const seen = new Set();
+        const uniqueAreas = window.protectedAreas.filter((area) => {
+            const key = `${String(area?.code ?? '').trim().toLowerCase()}|${String(area?.name ?? '').trim().toLowerCase()}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+
+        return uniqueAreas.map((area) => {
             const selected = String(area.id) === String(selectedId) ? 'selected' : '';
-            return `<option value="${area.id}" ${selected}>${this.escape(area.name)} (${this.escape(area.code)})</option>`;
+            const name = String(area?.name ?? '').trim();
+            const code = String(area?.code ?? '').trim();
+            const hasCodeInName = code && name.toLowerCase().includes(`(${code.toLowerCase()})`);
+            const displayLabel = hasCodeInName || !code ? name : `${name} (${code})`;
+            return `<option value="${area.id}" ${selected}>${this.escape(displayLabel)}</option>`;
         }).join('');
     }
 

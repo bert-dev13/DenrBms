@@ -38,10 +38,10 @@
     <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
 
     <!-- Styles -->
-    @vite(['resources/css/app.css', 'resources/css/icons.css', 'resources/css/Login.css'])
+    @vite(['resources/css/shared/app.css', 'resources/css/shared/icons.css', 'resources/css/pages/login.css'])
     
     <!-- Scripts -->
-    @vite(['resources/js/bootstrap.js', 'resources/js/icons.js', 'resources/js/Login.js'])
+    @vite(['resources/js/shared/bootstrap.js', 'resources/js/shared/icons.js', 'resources/js/pages/login.js'])
 </head>
 <body class="antialiased login-page">
     

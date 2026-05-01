@@ -52,6 +52,26 @@ class SidebarManager {
         });
     }
 
+    setupMobileToggle() {
+        const mobileToggle = document.querySelector('.mobile-menu-toggle');
+        const overlay = document.getElementById('sidebar-overlay');
+
+        if (mobileToggle) {
+            mobileToggle.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.toggleSidebar();
+            });
+        }
+
+        if (overlay) {
+            overlay.addEventListener('click', () => {
+                if (this.isMobile && this.sidebarOpen) {
+                    this.closeSidebar();
+                }
+            });
+        }
+    }
+
     checkViewport() {
         this.isMobile = window.innerWidth < this.breakpoints.tablet;
         if (this.isMobile) {

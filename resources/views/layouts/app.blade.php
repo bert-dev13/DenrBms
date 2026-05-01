@@ -83,10 +83,10 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
     <!-- Custom Styles -->
-    @vite(['resources/css/app.css', 'resources/css/icons.css', 'resources/css/sidebar.css', 'resources/css/theme.css', 'resources/css/topbar.css'])
+    @vite(['resources/css/shared/app.css', 'resources/css/shared/icons.css', 'resources/css/shared/sidebar.css', 'resources/css/shared/theme.css', 'resources/css/shared/topbar.css'])
     
     <!-- Scripts -->
-    @vite(['resources/js/app.js', 'resources/js/bootstrap.js', 'resources/js/icons.js', 'resources/js/sidebar.js', 'resources/js/theme.js'])
+    @vite(['resources/js/shared/app.js', 'resources/js/shared/bootstrap.js', 'resources/js/shared/icons.js', 'resources/js/shared/sidebar.js', 'resources/js/shared/theme.js'])
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     @yield('head')
@@ -95,7 +95,7 @@
     @include('layouts.sidebar')
 
     <!-- Top bar: fixed sibling of main (outside main to avoid scroll/stacking quirks) -->
-    @include('components.topbar')
+    @include('components.top_bar')
 
     <!-- Main content: offset by sidebar (desktop) and topbar via .main-content-wrapper -->
     <main class="main-content-wrapper min-h-screen">

@@ -315,3 +315,49 @@
     transform: translateY(-2px);
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
+
+/* Protected Area Sites filters: single-row layout on desktop */
+#protected-area-sites-filter-form .pas-filter-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+#protected-area-sites-filter-form .filter-panel__title {
+    margin: 0;
+    white-space: nowrap;
+    padding-bottom: 0.25rem;
+}
+
+#protected-area-sites-filter-form .pas-filter-field {
+    min-width: 300px;
+    margin: 0;
+}
+
+#protected-area-sites-filter-form .pas-filter-field .filter-panel__label {
+    margin-bottom: 0.375rem;
+}
+
+#protected-area-sites-filter-form .pas-filter-actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+@media (max-width: 768px) {
+    #protected-area-sites-filter-form .pas-filter-row {
+        align-items: stretch;
+    }
+
+    #protected-area-sites-filter-form .pas-filter-field {
+        min-width: 100%;
+    }
+
+    #protected-area-sites-filter-form .pas-filter-actions {
+        margin-left: 0;
+        width: 100%;
+        justify-content: flex-start;
+    }
+}
