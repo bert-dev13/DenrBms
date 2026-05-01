@@ -6,6 +6,7 @@
 @props([
     'id' => 'table-search',
     'clearId' => 'search-clear',
+    'searchBtnId' => null,
     'name' => 'search',
     'placeholder' => 'Search...',
     'value' => '',
@@ -13,9 +14,14 @@
 ])
 <div class="action-bar__search-wrap {{ $wrapClass }}" data-search-wrap>
     <div class="action-bar__search">
-        <span class="action-bar__search-icon" aria-hidden="true">
+        <button
+            type="button"
+            @if($searchBtnId) id="{{ $searchBtnId }}" @endif
+            class="action-bar__search-icon-btn"
+            aria-label="Search"
+        >
             <i data-lucide="search" class="lucide-icon"></i>
-        </span>
+        </button>
         <input
             type="text"
             id="{{ $id }}"

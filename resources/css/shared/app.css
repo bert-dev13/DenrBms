@@ -1510,6 +1510,9 @@ input, select, textarea {
 .action-bar__search-wrap {
     flex: 1;
     min-width: 180px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .action-bar__search {
@@ -1520,6 +1523,11 @@ input, select, textarea {
     max-width: 320px;
 }
 
+.action-bar__search--with-submit {
+    max-width: none;
+    flex: 1;
+}
+
 .action-bar__search-icon {
     position: absolute;
     left: 0.75rem;
@@ -1528,6 +1536,38 @@ input, select, textarea {
     justify-content: center;
     pointer-events: none;
     color: var(--text-tertiary, #6b7280);
+}
+
+.action-bar__search-icon-btn {
+    position: absolute;
+    left: 0.375rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    padding: 0;
+    color: var(--text-tertiary, #6b7280);
+    background: transparent;
+    border: none;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.action-bar__search-icon-btn:hover {
+    color: var(--text-primary, #374151);
+    background-color: var(--hover-bg, #f3f4f6);
+}
+
+.action-bar__search-icon-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.25);
+}
+
+.action-bar__search-icon-btn .lucide-icon {
+    width: 1rem;
+    height: 1rem;
 }
 
 .action-bar__search-icon .lucide-icon {
@@ -1546,6 +1586,35 @@ input, select, textarea {
     border: 1px solid var(--border-primary, #e5e7eb);
     border-radius: 0.5rem;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.action-bar__search-submit-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    height: 2.5rem;
+    padding: 0 0.875rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-secondary, #374151);
+    background-color: var(--card-bg, #ffffff);
+    border: 1px solid var(--border-primary, #e5e7eb);
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    white-space: nowrap;
+}
+
+.action-bar__search-submit-btn:hover {
+    background-color: var(--hover-bg, #f3f4f6);
+    border-color: var(--border-secondary, #d1d5db);
+    color: var(--text-primary, #111827);
+}
+
+.action-bar__search-submit-btn .lucide-icon {
+    width: 1rem;
+    height: 1rem;
 }
 
 .action-bar__search-input::placeholder {
@@ -1769,10 +1838,15 @@ input, select, textarea {
 
     .action-bar__search-wrap {
         min-width: 0;
+        width: 100%;
     }
 
     .action-bar__search {
         max-width: none;
+    }
+
+    .action-bar__search-submit-btn {
+        width: 100%;
     }
 
     .action-bar__actions {

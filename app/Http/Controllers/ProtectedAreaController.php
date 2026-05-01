@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ProtectedArea;
 use App\Models\SiteName;
 use App\Services\DynamicTableService;
+use App\Support\SearchHelper;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
@@ -83,11 +84,14 @@ class ProtectedAreaController extends Controller
 
         // Apply search filter if provided (trim, case-insensitive)
         if ($request->filled('search')) {
-            $searchTerm = strtolower(trim((string) $request->search));
-            $filteredAreas = $filteredAreas->filter(function ($area) use ($searchTerm) {
-                return strpos(strtolower($area->name ?? ''), $searchTerm) !== false
-                    || strpos(strtolower($area->code ?? ''), $searchTerm) !== false;
-            })->values();
+            $filteredAreas = SearchHelper::filterCollection(
+                $filteredAreas,
+                (string) $request->search,
+                [
+                    static fn ($area) => (string) ($area->name ?? ''),
+                    static fn ($area) => (string) ($area->code ?? ''),
+                ]
+            );
         }
 
         // Manual pagination for the filtered collection
@@ -379,12 +383,14 @@ class ProtectedAreaController extends Controller
 
         // Apply search filter if provided (trim, case-insensitive)
         if ($request->filled('search')) {
-            $searchTerm = strtolower(trim((string) $request->search));
-            $filteredSites = $filteredSites->filter(function ($site) use ($searchTerm) {
-                $nameMatch = strpos(strtolower($site->name ?? ''), $searchTerm) !== false;
-                $areaMatch = $site->protectedArea && strpos(strtolower($site->protectedArea->name ?? ''), $searchTerm) !== false;
-                return $nameMatch || $areaMatch;
-            })->values();
+            $filteredSites = SearchHelper::filterCollection(
+                $filteredSites,
+                (string) $request->search,
+                [
+                    static fn ($site) => (string) ($site->name ?? ''),
+                    static fn ($site) => (string) ($site->protectedArea->name ?? ''),
+                ]
+            );
         }
         
         // Manual pagination for the filtered collection
@@ -1061,11 +1067,14 @@ class ProtectedAreaController extends Controller
 
         // Apply search filter if provided (trim, case-insensitive)
         if ($request->filled('search')) {
-            $searchTerm = strtolower(trim((string) $request->search));
-            $filteredAreas = $filteredAreas->filter(function ($area) use ($searchTerm) {
-                return strpos(strtolower($area->name ?? ''), $searchTerm) !== false
-                    || strpos(strtolower($area->code ?? ''), $searchTerm) !== false;
-            })->values();
+            $filteredAreas = SearchHelper::filterCollection(
+                $filteredAreas,
+                (string) $request->search,
+                [
+                    static fn ($area) => (string) ($area->name ?? ''),
+                    static fn ($area) => (string) ($area->code ?? ''),
+                ]
+            );
         } else {
             $filteredAreas = $filteredAreas->values();
         }
@@ -1262,12 +1271,14 @@ class ProtectedAreaController extends Controller
 
         // Apply search filter if provided (trim, case-insensitive)
         if ($request->filled('search')) {
-            $searchTerm = strtolower(trim((string) $request->search));
-            $filteredSites = $filteredSites->filter(function ($site) use ($searchTerm) {
-                $nameMatch = strpos(strtolower($site->name ?? ''), $searchTerm) !== false;
-                $areaMatch = $site->protectedArea && strpos(strtolower($site->protectedArea->name ?? ''), $searchTerm) !== false;
-                return $nameMatch || $areaMatch;
-            })->values();
+            $filteredSites = SearchHelper::filterCollection(
+                $filteredSites,
+                (string) $request->search,
+                [
+                    static fn ($site) => (string) ($site->name ?? ''),
+                    static fn ($site) => (string) ($site->protectedArea->name ?? ''),
+                ]
+            );
         } else {
             $filteredSites = $filteredSites->values();
         }

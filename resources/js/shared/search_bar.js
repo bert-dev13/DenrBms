@@ -5,8 +5,10 @@
  * @param {Object} options
  * @param {string} options.inputId - ID of the search input
  * @param {string} options.clearBtnId - ID of the clear button
+ * @param {string} [options.searchBtnId] - ID of the search submit button/icon
  * @param {string} [options.formSelector='form[method="GET"]'] - Form to read params from for URL build
  * @param {number} [options.debounceMs=400] - Debounce delay before submitting
+ * @param {boolean} [options.submitOnly=false] - If true, only the search button triggers submit
  * @param {function(string)} [options.onSearch] - Called with trimmed query; return false to prevent default (build URL and navigate). If not provided, default behavior is: build URL from form + search, navigate.
  * @param {function()} [options.onClear] - Called when clear is clicked (after clearing input). Optional.
  */
@@ -14,14 +16,17 @@ export function initSearchBar(options) {
     const {
         inputId,
         clearBtnId,
+        searchBtnId,
         formSelector = 'form[method="GET"]',
         debounceMs = 400,
+        submitOnly = false,
         onSearch,
         onClear,
     } = options;
 
     const input = document.getElementById(inputId);
     const clearBtn = document.getElementById(clearBtnId);
+    const searchBtn = searchBtnId ? document.getElementById(searchBtnId) : null;
     if (!input) return;
 
     const wrap = input.closest('.action-bar__search');
@@ -86,6 +91,7 @@ export function initSearchBar(options) {
     input.addEventListener('input', function () {
         clearTimeout(debounceTimer);
         updateClearVisibility();
+        if (submitOnly) return;
         const query = getTrimmedQuery();
         debounceTimer = setTimeout(() => {
             if (isSubmitting) return;
@@ -94,8 +100,20 @@ export function initSearchBar(options) {
     });
 
     input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            if (submitOnly) return;
+            clearTimeout(debounceTimer);
+            if (!isSubmitting) performSearch(getTrimmedQuery());
+            return;
+        }
         if (e.key === 'Escape') {
             e.preventDefault();
+            if (submitOnly) {
+                input.value = '';
+                updateClearVisibility();
+                return;
+            }
             clearSearch();
         }
     });
@@ -103,6 +121,13 @@ export function initSearchBar(options) {
     if (clearBtn) {
         clearBtn.addEventListener('click', function () {
             clearSearch();
+        });
+    }
+
+    if (searchBtn) {
+        searchBtn.addEventListener('click', function () {
+            clearTimeout(debounceTimer);
+            if (!isSubmitting) performSearch(getTrimmedQuery());
         });
     }
 

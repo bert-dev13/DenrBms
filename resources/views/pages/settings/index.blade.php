@@ -10,6 +10,16 @@
 @section('content')
 <div class="settings-page">
     <div class="settings-container">
+        <header class="settings-hero">
+            <div class="settings-hero__icon" aria-hidden="true">
+                <i data-lucide="settings" class="lucide-icon"></i>
+            </div>
+            <div class="settings-hero__content">
+                <h1 class="settings-hero__title">Account Settings</h1>
+                <p class="settings-hero__subtitle">Manage your profile information and keep your account secure.</p>
+            </div>
+        </header>
+
         @if (session('success'))
         <div id="settings-success-toast" class="settings-toast settings-toast--success" role="alert">
             <i data-lucide="check-circle" class="lucide-icon settings-toast__icon"></i>
@@ -19,7 +29,15 @@
 
         <!-- Profile Information -->
         <section class="settings-section" aria-labelledby="profile-heading">
-            <h2 id="profile-heading" class="settings-section__title">Profile Information</h2>
+            <div class="settings-section__header">
+                <div class="settings-section__header-icon" aria-hidden="true">
+                    <i data-lucide="users" class="lucide-icon"></i>
+                </div>
+                <div>
+                    <h2 id="profile-heading" class="settings-section__title">Profile Information</h2>
+                    <p class="settings-section__desc">Update your basic account details shown in the system.</p>
+                </div>
+            </div>
 
             @if ($errors->has('name') || $errors->has('email'))
             <div class="settings-alert settings-alert--error" role="alert">
@@ -35,19 +53,28 @@
             <form action="{{ route('settings.profile.update') }}" method="POST" class="settings-form" id="settings-profile-form">
                 @csrf
                 <div class="settings-row">
-                    <label for="name" class="settings-row__label">Full Name</label>
+                    <label for="name" class="settings-row__label">
+                        <i data-lucide="users" class="lucide-icon"></i>
+                        <span>Full Name</span>
+                    </label>
                     <div class="settings-row__control">
                         <input type="text" id="name" name="name" value="{{ old('name', $user->name) }}" class="settings-input" required autocomplete="name">
                     </div>
                 </div>
                 <div class="settings-row">
-                    <label for="email" class="settings-row__label">Email Address</label>
+                    <label for="email" class="settings-row__label">
+                        <i data-lucide="mail" class="lucide-icon"></i>
+                        <span>Email Address</span>
+                    </label>
                     <div class="settings-row__control">
                         <input type="email" id="email" name="email" value="{{ old('email', $user->email) }}" class="settings-input" required autocomplete="email">
                     </div>
                 </div>
                 <div class="settings-row">
-                    <span class="settings-row__label">Role</span>
+                    <span class="settings-row__label">
+                        <i data-lucide="lock" class="lucide-icon"></i>
+                        <span>Role</span>
+                    </span>
                     <div class="settings-row__control">
                         <span class="settings-role-badge" aria-label="Your role">{{ ucfirst($user->role ?? 'User') }}</span>
                     </div>
@@ -66,8 +93,16 @@
 
         <!-- Account Security -->
         <section class="settings-section" aria-labelledby="security-heading">
-            <h2 id="security-heading" class="settings-section__title">Account Security</h2>
-            <h3 class="settings-section__subtitle">Change Password</h3>
+            <div class="settings-section__header">
+                <div class="settings-section__header-icon settings-section__header-icon--security" aria-hidden="true">
+                    <i data-lucide="lock" class="lucide-icon"></i>
+                </div>
+                <div>
+                    <h2 id="security-heading" class="settings-section__title">Account Security</h2>
+                    <h3 class="settings-section__subtitle">Change Password</h3>
+                    <p class="settings-section__desc">Use a strong password and update it regularly for better security.</p>
+                </div>
+            </div>
 
             @if ($errors->has('current_password') || $errors->has('password') || $errors->has('password_confirmation'))
             <div class="settings-alert settings-alert--error" role="alert">
@@ -83,7 +118,10 @@
             <form action="{{ route('settings.password.update') }}" method="POST" class="settings-form" id="settings-password-form">
                 @csrf
                 <div class="settings-row">
-                    <label for="current_password" class="settings-row__label">Current Password</label>
+                    <label for="current_password" class="settings-row__label">
+                        <i data-lucide="lock" class="lucide-icon"></i>
+                        <span>Current Password</span>
+                    </label>
                     <div class="settings-row__control">
                         <div class="settings-password-wrap">
                             <input type="password" id="current_password" name="current_password" class="settings-input settings-input--password" autocomplete="current-password">
@@ -95,7 +133,10 @@
                     </div>
                 </div>
                 <div class="settings-row">
-                    <label for="password" class="settings-row__label">New Password</label>
+                    <label for="password" class="settings-row__label">
+                        <i data-lucide="lock" class="lucide-icon"></i>
+                        <span>New Password</span>
+                    </label>
                     <div class="settings-row__control">
                         <div class="settings-password-wrap">
                             <input type="password" id="password" name="password" class="settings-input settings-input--password" autocomplete="new-password">
@@ -108,7 +149,10 @@
                     </div>
                 </div>
                 <div class="settings-row">
-                    <label for="password_confirmation" class="settings-row__label">Confirm New Password</label>
+                    <label for="password_confirmation" class="settings-row__label">
+                        <i data-lucide="check-circle" class="lucide-icon"></i>
+                        <span>Confirm New Password</span>
+                    </label>
                     <div class="settings-row__control">
                         <div class="settings-password-wrap">
                             <input type="password" id="password_confirmation" name="password_confirmation" class="settings-input settings-input--password" autocomplete="new-password">

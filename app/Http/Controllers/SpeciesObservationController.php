@@ -27,6 +27,7 @@ use App\Models\TumauiniObservation;
 use App\Models\WangagObservation;
 use App\Helpers\PatrolYearHelper;
 use App\Services\DynamicTableService;
+use App\Support\SearchHelper;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -328,29 +329,22 @@ class SpeciesObservationController extends Controller
         
         // Apply search filter if provided
         if ($request->filled('search')) {
-            $searchTerm = $request->search;
-            $query->where(function($q) use ($searchTerm, $tableName) {
-                if (Schema::hasColumn($tableName, 'common_name')) {
-                    $q->where('common_name', 'like', '%' . $searchTerm . '%');
+            SearchHelper::applySafeColumnSearch(
+                $query,
+                $tableName,
+                (string) $request->search,
+                ['common_name', 'scientific_name', 'station_code', 'transaction_code'],
+                function ($q, string $searchTerm) use ($tableName) {
+                    if (Schema::hasColumn($tableName, 'protected_area_id')) {
+                        $q->orWhereExists(function($subQuery) use ($searchTerm, $tableName) {
+                            $subQuery->select(DB::raw(1))
+                                ->from('protected_areas')
+                                ->whereRaw('protected_areas.id = ' . $tableName . '.protected_area_id')
+                                ->where('protected_areas.name', 'like', '%' . $searchTerm . '%');
+                        });
+                    }
                 }
-                if (Schema::hasColumn($tableName, 'scientific_name')) {
-                    $q->orWhere('scientific_name', 'like', '%' . $searchTerm . '%');
-                }
-                if (Schema::hasColumn($tableName, 'station_code')) {
-                    $q->orWhere('station_code', 'like', '%' . $searchTerm . '%');
-                }
-                if (Schema::hasColumn($tableName, 'transaction_code')) {
-                    $q->orWhere('transaction_code', 'like', '%' . $searchTerm . '%');
-                }
-                if (Schema::hasColumn($tableName, 'protected_area_id')) {
-                    $q->orWhereExists(function($subQuery) use ($searchTerm, $tableName) {
-                        $subQuery->select(DB::raw(1))
-                            ->from('protected_areas')
-                            ->whereRaw('protected_areas.id = ' . $tableName . '.protected_area_id')
-                            ->where('protected_areas.name', 'like', '%' . $searchTerm . '%');
-                    });
-                }
-            });
+            );
         }
         
         // Apply other filters if they exist
@@ -467,29 +461,22 @@ class SpeciesObservationController extends Controller
         
         // Apply search filter if provided
         if ($request->filled('search')) {
-            $searchTerm = $request->search;
-            $query->where(function($q) use ($searchTerm, $hasColumn, $tableName) {
-                if ($hasColumn('common_name')) {
-                    $q->where('common_name', 'like', '%' . $searchTerm . '%');
+            SearchHelper::applySafeColumnSearch(
+                $query,
+                $tableName,
+                (string) $request->search,
+                ['common_name', 'scientific_name', 'station_code', 'transaction_code'],
+                function ($q, string $searchTerm) use ($hasColumn, $tableName) {
+                    if ($hasColumn('protected_area_id')) {
+                        $q->orWhereExists(function($subQuery) use ($searchTerm, $tableName) {
+                            $subQuery->select(DB::raw(1))
+                                ->from('protected_areas')
+                                ->whereRaw('protected_areas.id = ' . $tableName . '.protected_area_id')
+                                ->where('protected_areas.name', 'like', '%' . $searchTerm . '%');
+                        });
+                    }
                 }
-                if ($hasColumn('scientific_name')) {
-                    $q->orWhere('scientific_name', 'like', '%' . $searchTerm . '%');
-                }
-                if ($hasColumn('station_code')) {
-                    $q->orWhere('station_code', 'like', '%' . $searchTerm . '%');
-                }
-                if ($hasColumn('transaction_code')) {
-                    $q->orWhere('transaction_code', 'like', '%' . $searchTerm . '%');
-                }
-                if ($hasColumn('protected_area_id')) {
-                    $q->orWhereExists(function($subQuery) use ($searchTerm, $tableName) {
-                        $subQuery->select(DB::raw(1))
-                            ->from('protected_areas')
-                            ->whereRaw('protected_areas.id = ' . $tableName . '.protected_area_id')
-                            ->where('protected_areas.name', 'like', '%' . $searchTerm . '%');
-                    });
-                }
-            });
+            );
         }
         
         // Apply other filters if they exist (but NOT site_name filter)
@@ -552,29 +539,22 @@ class SpeciesObservationController extends Controller
         
         // Apply search filter if provided
         if ($request->filled('search')) {
-            $searchTerm = $request->search;
-            $query->where(function($q) use ($searchTerm, $hasColumn, $tableName) {
-                if ($hasColumn('common_name')) {
-                    $q->where('common_name', 'like', '%' . $searchTerm . '%');
+            SearchHelper::applySafeColumnSearch(
+                $query,
+                $tableName,
+                (string) $request->search,
+                ['common_name', 'scientific_name', 'station_code', 'transaction_code'],
+                function ($q, string $searchTerm) use ($hasColumn, $tableName) {
+                    if ($hasColumn('protected_area_id')) {
+                        $q->orWhereExists(function($subQuery) use ($searchTerm, $tableName) {
+                            $subQuery->select(DB::raw(1))
+                                ->from('protected_areas')
+                                ->whereRaw('protected_areas.id = ' . $tableName . '.protected_area_id')
+                                ->where('protected_areas.name', 'like', '%' . $searchTerm . '%');
+                        });
+                    }
                 }
-                if ($hasColumn('scientific_name')) {
-                    $q->orWhere('scientific_name', 'like', '%' . $searchTerm . '%');
-                }
-                if ($hasColumn('station_code')) {
-                    $q->orWhere('station_code', 'like', '%' . $searchTerm . '%');
-                }
-                if ($hasColumn('transaction_code')) {
-                    $q->orWhere('transaction_code', 'like', '%' . $searchTerm . '%');
-                }
-                if ($hasColumn('protected_area_id')) {
-                    $q->orWhereExists(function($subQuery) use ($searchTerm, $tableName) {
-                        $subQuery->select(DB::raw(1))
-                            ->from('protected_areas')
-                            ->whereRaw('protected_areas.id = ' . $tableName . '.protected_area_id')
-                            ->where('protected_areas.name', 'like', '%' . $searchTerm . '%');
-                    });
-                }
-            });
+            );
         }
         
         // Apply other filters if they exist

@@ -101,7 +101,7 @@
                     <div class="action-bar">
                         <!-- Search -->
                         <div class="action-bar__search-wrap">
-                            <div class="action-bar__search">
+                            <div class="action-bar__search action-bar__search--with-submit">
                                 <span class="action-bar__search-icon" aria-hidden="true">
                                     <i data-lucide="search" class="lucide-icon"></i>
                                 </span>
@@ -122,6 +122,10 @@
                                     <i data-lucide="x" class="lucide-icon"></i>
                                 </button>
                             </div>
+                            <button type="button" id="protected-area-search-submit" class="action-bar__search-submit-btn" aria-label="Search protected areas">
+                                <i data-lucide="search" class="lucide-icon"></i>
+                                <span>Search</span>
+                            </button>
                         </div>
                         <!-- Export & Add -->
                         <div class="action-bar__actions">

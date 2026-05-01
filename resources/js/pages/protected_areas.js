@@ -57,8 +57,10 @@ document.addEventListener('DOMContentLoaded', () => {
     initSearchBar({
         inputId: 'protected-area-search',
         clearBtnId: 'protected-area-search-clear',
+        searchBtnId: 'protected-area-search-submit',
         formSelector: '#protected-areas-filter-form',
         debounceMs: 400,
+        submitOnly: true,
     });
 
     // Preserve search when user clicks Apply on the filter form

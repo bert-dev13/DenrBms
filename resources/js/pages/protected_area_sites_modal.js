@@ -427,8 +427,10 @@ document.addEventListener('DOMContentLoaded', () => {
     initSearchBar({
         inputId: 'protected-area-sites-search',
         clearBtnId: 'protected-area-sites-search-clear',
+        searchBtnId: 'protected-area-sites-search-submit',
         formSelector: '#protected-area-sites-filter-form',
-        debounceMs: 400
+        debounceMs: 400,
+        submitOnly: true
     });
 
     const filterForm = document.getElementById('protected-area-sites-filter-form');

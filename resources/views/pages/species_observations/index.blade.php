@@ -96,7 +96,7 @@
 
             <!-- Filters Section -->
             <div class="filter-panel">
-                <form method="GET" action="{{ route('species-observations.index') }}">
+                <form method="GET" action="{{ route('species-observations.index') }}" id="species-observations-filter-form">
                     <div class="filter-panel__header">
                         <h2 class="filter-panel__title">Filters</h2>
                         <div class="filter-panel__actions">
@@ -197,7 +197,7 @@
                     <div class="action-bar">
                         <!-- Search -->
                         <div class="action-bar__search-wrap">
-                            <div class="action-bar__search">
+                            <div class="action-bar__search action-bar__search--with-submit">
                                 <span class="action-bar__search-icon" aria-hidden="true">
                                     <i data-lucide="search" class="lucide-icon"></i>
                                 </span>
@@ -223,6 +223,16 @@
                                     <i data-lucide="x" class="lucide-icon"></i>
                                 </button>
                             </div>
+                            <button
+                                type="button"
+                                id="species-observations-search-submit"
+                                class="action-bar__search-submit-btn"
+                                aria-label="Search observations"
+                                onclick="performServerSearch(document.getElementById('species-observations-search')?.value?.trim() || '')"
+                            >
+                                <i data-lucide="search" class="lucide-icon"></i>
+                                <span>Search</span>
+                            </button>
                         </div>
                         <!-- Export & Add -->
                         <div class="action-bar__actions">
@@ -645,7 +655,6 @@
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
             initializeDropdownState();
-            initializeSearch();
             
             // Auto-dismiss error message after 5 seconds
             const errorMessage = document.getElementById('error-message');
@@ -680,73 +689,6 @@
                     errorMessage.remove();
                 }, 300);
             }
-        }
-
-        // Search functionality
-        let searchTimeout;
-        
-        function initializeSearch() {
-            const searchInput = document.getElementById('species-observations-search');
-            const searchClear = document.getElementById('species-observations-search-clear');
-            
-            searchInput.addEventListener('input', function() {
-                clearTimeout(searchTimeout);
-                const query = this.value.trim();
-                
-                // Show/hide clear button
-                if (query) {
-                    searchClear.classList.remove('hidden');
-                } else {
-                    searchClear.classList.add('hidden');
-                }
-                
-                // Debounce search
-                searchTimeout = setTimeout(() => {
-                    performServerSearch(query);
-                }, 500);
-            });
-            
-            searchInput.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape') {
-                    clearSearch();
-                }
-            });
-        }
-        
-        function performServerSearch(query) {
-            console.log('=== PERFORMING SEARCH ===');
-            console.log('Search query:', query);
-            
-            // Get current form parameters
-            const form = document.querySelector('form[method="GET"]');
-            const formData = new FormData(form);
-            const params = new URLSearchParams(formData);
-            
-            console.log('Current form params:', Object.fromEntries(params));
-            
-            // Add or update search parameter
-            if (query) {
-                params.set('search', query);
-                params.delete('page');
-            } else {
-                params.delete('search');
-            }
-            
-            console.log('Updated params:', Object.fromEntries(params));
-            
-            // Navigate to new URL
-            const newUrl = window.location.pathname + '?' + params.toString();
-            console.log('Navigating to:', newUrl);
-            window.location.href = newUrl;
-        }
-        
-        function clearSearch() {
-            const searchInput = document.getElementById('species-observations-search');
-            const searchClear = document.getElementById('species-observations-search-clear');
-            
-            searchInput.value = '';
-            searchClear.classList.add('hidden');
-            performServerSearch('');
         }
 
         // Clear all filters

@@ -116,7 +116,7 @@ window.protectedAreas = protectedAreasDataElement
                     <div class="action-bar">
                         <!-- Search -->
                         <div class="action-bar__search-wrap">
-                            <div class="action-bar__search">
+                            <div class="action-bar__search action-bar__search--with-submit">
                                 <span class="action-bar__search-icon" aria-hidden="true">
                                     <i data-lucide="search" class="lucide-icon"></i>
                                 </span>
@@ -137,6 +137,10 @@ window.protectedAreas = protectedAreasDataElement
                                     <i data-lucide="x" class="lucide-icon"></i>
                                 </button>
                             </div>
+                            <button type="button" id="protected-area-sites-search-submit" class="action-bar__search-submit-btn" aria-label="Search protected area sites">
+                                <i data-lucide="search" class="lucide-icon"></i>
+                                <span>Search</span>
+                            </button>
                         </div>
                         <!-- Export & Add -->
                         <div class="action-bar__actions">
