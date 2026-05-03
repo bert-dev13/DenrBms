@@ -26,6 +26,8 @@ export default defineConfig({
                 /* Analytics */
                 'resources/css/pages/analytics.css',
                 'resources/js/pages/analytics.js',
+                'resources/css/pages/analytics-species.css',
+                'resources/js/pages/analytics-species.js',
 
                 /* Species Observation */
                 'resources/css/pages/species_observations.css',

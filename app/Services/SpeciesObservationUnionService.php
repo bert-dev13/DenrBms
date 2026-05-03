@@ -180,6 +180,7 @@ class SpeciesObservationUnionService
 
         $query = DB::table($tableName)->select(
             $selectOrNull('id'),
+            $selectOrNull('species_id'),
             $selectOrNull('protected_area_id'),
             $selectOrNull('transaction_code'),
             $selectOrNull('station_code'),
@@ -297,6 +298,7 @@ class SpeciesObservationUnionService
 
         $query = $modelClass::select(
             $selectOrNull('id'),
+            $selectOrNull('species_id'),
             $selectOrNull('protected_area_id'),
             $selectOrNull('transaction_code'),
             $selectOrNull('station_code'),
@@ -367,6 +369,7 @@ class SpeciesObservationUnionService
 
         $query = $modelClass::select(
             $selectOrNull('id'),
+            $selectOrNull('species_id'),
             $selectOrNull('protected_area_id'),
             $selectOrNull('transaction_code'),
             $selectOrNull('station_code'),

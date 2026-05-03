@@ -1,0 +1,137 @@
+.analytics-filter-panel {
+    margin-bottom: 1rem;
+}
+
+.analytics-filter-subtitle {
+    margin: 0.2rem 0 0;
+    color: var(--text-secondary, #6b7280);
+    font-size: 0.825rem;
+}
+
+.filter-panel__grid--single {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+@media (min-width: 768px) {
+    .filter-panel__grid--single {
+        grid-template-columns: minmax(280px, 420px);
+    }
+}
+
+.filter-panel__grid--cols-4 {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+@media (min-width: 768px) {
+    .filter-panel__grid--cols-4 {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+.species-trend-card {
+    background: var(--card-bg, #ffffff);
+    border: 1px solid var(--border-primary, #e5e7eb);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.species-trend-card__header {
+    margin-bottom: 0.75rem;
+}
+
+.species-trend-card__title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary, #111827);
+}
+
+.species-trend-card__subtitle {
+    margin: 0.25rem 0 0;
+    color: var(--text-secondary, #6b7280);
+    font-size: 0.825rem;
+}
+
+.species-trend-card__controls {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 0.8rem;
+    flex-wrap: wrap;
+}
+
+.species-trend-card__control {
+    min-width: 280px;
+    max-width: 460px;
+    width: 100%;
+}
+
+.species-trend-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 0.38rem 0.75rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    border: 1px solid transparent;
+}
+
+.species-trend-badge--up {
+    color: #166534;
+    background: #dcfce7;
+    border-color: #86efac;
+}
+
+.species-trend-badge--down {
+    color: #991b1b;
+    background: #fee2e2;
+    border-color: #fca5a5;
+}
+
+.species-trend-badge--neutral {
+    color: #374151;
+    background: #f3f4f6;
+    border-color: #d1d5db;
+}
+
+.species-trend-card__chart-wrap {
+    position: relative;
+    height: 350px;
+}
+
+.species-trend-card__chart-wrap--compact {
+    height: 300px;
+}
+
+.species-trend-card__chart-wrap canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.species-trend-card__empty {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary, #6b7280);
+    font-size: 0.875rem;
+}
+
+.species-trend-card__empty.hidden {
+    display: none;
+}
+
+.species-chart-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+@media (min-width: 1200px) {
+    .species-chart-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}

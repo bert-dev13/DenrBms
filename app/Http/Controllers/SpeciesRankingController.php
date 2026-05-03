@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Data\ObservationFactFilter;
 use App\Helpers\PatrolYearHelper;
 use App\Models\ProtectedArea;
+use App\Services\SpeciesCanonicalResolver;
 use App\Services\SpeciesObservationFactService;
 use App\Support\ObservationRowValue;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -17,6 +18,7 @@ class SpeciesRankingController extends Controller
 {
     public function __construct(
         private SpeciesObservationFactService $observationFactService,
+        private SpeciesCanonicalResolver $speciesCanonicalResolver,
     ) {}
 
     public function index(Request $request)
@@ -160,6 +162,7 @@ class SpeciesRankingController extends Controller
 
         $rankOrder = $this->normalizeRankOrder($request);
         $ranked = $this->rankSpeciesFromObservationRows($allResults, $rankOrder);
+        $summaryStats['total_species'] = $ranked->count();
         foreach ($ranked as $i => $row) {
             $row->rank = $i + 1;
         }
@@ -235,19 +238,19 @@ class SpeciesRankingController extends Controller
         foreach ($allResults as $row) {
             $sci = trim((string) (ObservationRowValue::field($row, 'scientific_name') ?? ''));
             $com = trim((string) (ObservationRowValue::field($row, 'common_name') ?? ''));
-
-            if ($sci === '' && $com === '') {
-                $key = "\0unspecified";
-            } elseif ($sci !== '') {
-                $key = 's:'.mb_strtolower($sci);
-            } else {
-                $key = 'c:'.mb_strtolower($com);
-            }
+            $speciesId = ObservationRowValue::field($row, 'species_id');
+            $resolvedSpecies = $this->speciesCanonicalResolver->resolve(
+                $sci,
+                $com,
+                is_numeric($speciesId) ? (int) $speciesId : null
+            );
+            $key = $resolvedSpecies['key'];
 
             if (! isset($groups[$key])) {
                 $groups[$key] = [
-                    'common_name' => $com,
-                    'scientific_name' => $sci,
+                    'common_name' => (string) $resolvedSpecies['common_name'],
+                    'scientific_name' => (string) $resolvedSpecies['scientific_name'],
+                    'species_id' => $resolvedSpecies['species_id'],
                     'observation_records' => 0,
                     'recorded_count_sum' => 0,
                 ];
@@ -256,11 +259,11 @@ class SpeciesRankingController extends Controller
             $groups[$key]['observation_records']++;
             $groups[$key]['recorded_count_sum'] += ObservationRowValue::recordedCount($row);
 
-            if ($groups[$key]['common_name'] === '' && $com !== '') {
-                $groups[$key]['common_name'] = $com;
+            if ($groups[$key]['common_name'] === '' && $resolvedSpecies['common_name'] !== '') {
+                $groups[$key]['common_name'] = (string) $resolvedSpecies['common_name'];
             }
-            if ($groups[$key]['scientific_name'] === '' && $sci !== '') {
-                $groups[$key]['scientific_name'] = $sci;
+            if ($groups[$key]['scientific_name'] === '' && $resolvedSpecies['scientific_name'] !== '') {
+                $groups[$key]['scientific_name'] = (string) $resolvedSpecies['scientific_name'];
             }
         }
 
@@ -284,6 +287,7 @@ class SpeciesRankingController extends Controller
 
         return collect($items)
             ->map(static fn (array $g) => (object) [
+                'species_id' => $g['species_id'],
                 'common_name' => $g['common_name'],
                 'scientific_name' => $g['scientific_name'],
                 'observation_records' => (int) $g['observation_records'],

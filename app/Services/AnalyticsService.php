@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Data\ObservationFactFilter;
+use App\Models\ProtectedArea;
 use App\Models\SiteName;
 use App\Models\Species;
 use App\Support\ObservationRowValue;
@@ -12,6 +13,7 @@ final class AnalyticsService
 {
     public function __construct(
         private SpeciesObservationFactService $observationFactService,
+        private SpeciesCanonicalResolver $speciesCanonicalResolver,
     ) {}
 
     /**
@@ -110,16 +112,22 @@ final class AnalyticsService
 
             $scientificName = trim((string) (ObservationRowValue::field($row, 'scientific_name') ?? ''));
             $commonName = trim((string) (ObservationRowValue::field($row, 'common_name') ?? ''));
-            $speciesKey = $scientificName !== '' ? mb_strtolower($scientificName) : mb_strtolower($commonName);
-
-            if ($speciesKey === '') {
-                $speciesKey = 'unspecified-species';
-            }
+            $speciesId = ObservationRowValue::field($row, 'species_id');
+            $resolvedSpecies = $this->speciesCanonicalResolver->resolve(
+                $scientificName,
+                $commonName,
+                is_numeric($speciesId) ? (int) $speciesId : null
+            );
+            $speciesKey = (string) $resolvedSpecies['key'];
+            $canonicalCommonName = (string) $resolvedSpecies['common_name'];
+            $canonicalScientificName = (string) $resolvedSpecies['scientific_name'];
+            /** @var \App\Models\Species|null $matchedSpecies */
+            $matchedSpecies = $resolvedSpecies['species'];
 
             if (! isset($topSpecies[$speciesKey])) {
                 $topSpecies[$speciesKey] = [
-                    'common_name' => $commonName !== '' ? $commonName : 'Unspecified',
-                    'scientific_name' => $scientificName,
+                    'common_name' => $canonicalCommonName,
+                    'scientific_name' => $canonicalScientificName,
                     'observation_count' => 0,
                     'recorded_count_sum' => 0,
                     'period_counts' => [],
@@ -131,37 +139,41 @@ final class AnalyticsService
                 $topSpecies[$speciesKey]['period_counts'][$periodKey] = ($topSpecies[$speciesKey]['period_counts'][$periodKey] ?? 0) + 1;
             }
 
-            if ($scientificName !== '') {
+            if ($speciesKey !== 'raw:unspecified') {
                 if ($year > 0) {
-                    $yearlyTimeseries[$year]['species_set'][mb_strtolower($scientificName)] = true;
+                    $yearlyTimeseries[$year]['species_set'][$speciesKey] = true;
                 }
                 if ($periodKey !== null) {
-                    $timeseries[$periodKey]['species_set'][mb_strtolower($scientificName)] = true;
-                    $speciesPeriodMatrix[$periodKey][mb_strtolower($scientificName)] = true;
+                    $timeseries[$periodKey]['species_set'][$speciesKey] = true;
+                    $speciesPeriodMatrix[$periodKey][$speciesKey] = true;
                 }
 
                 $scientificKey = mb_strtolower($scientificName);
-                if (($speciesLookup[$scientificKey]['is_endemic'] ?? false) === true) {
+                $isEndemic = $matchedSpecies?->is_endemic ?? ($speciesLookup[$scientificKey]['is_endemic'] ?? false);
+                $isMigratory = $matchedSpecies?->is_migratory ?? ($speciesLookup[$scientificKey]['is_migratory'] ?? false);
+                $resolvedStatus = $matchedSpecies?->conservation_status ?? ($speciesLookup[$scientificKey]['conservation_status'] ?? '');
+
+                if ($isEndemic === true) {
                     $summaryStats['endemic_observations']++;
                 }
-                if (($speciesLookup[$scientificKey]['is_migratory'] ?? false) === true) {
+                if ($isMigratory === true) {
                     $summaryStats['migratory_observations']++;
                 }
-                $statusKey = $this->normalizeConservationStatus((string) ($speciesLookup[$scientificKey]['conservation_status'] ?? ''));
+                $statusKey = $this->normalizeConservationStatus((string) $resolvedStatus);
                 if ($statusKey !== null) {
                     $conservationStatusBreakdown[$statusKey]['observation_count']++;
                     if (in_array($statusKey, ['critically_endangered', 'endangered', 'vulnerable'], true)) {
                         if (! isset($threatenedSpecies[$speciesKey])) {
                             $threatenedSpecies[$speciesKey] = [
-                                'common_name' => $commonName !== '' ? $commonName : 'Unspecified',
-                                'scientific_name' => $scientificName,
+                                'common_name' => $canonicalCommonName,
+                                'scientific_name' => $canonicalScientificName,
                                 'threatened_observation_count' => 0,
                             ];
                         }
                         $threatenedSpecies[$speciesKey]['threatened_observation_count']++;
                     }
                 }
-                $topAreas[$areaKey]['species_set'][$scientificKey] = true;
+                $topAreas[$areaKey]['species_set'][$speciesKey] = true;
             } else {
                 $missingScientificNameCount++;
                 if (count($missingScientificRows) < 10) {
@@ -271,6 +283,7 @@ final class AnalyticsService
         usort($threatenedSpecies, static function (array $a, array $b): int {
             return ((int) ($b['threatened_observation_count'] ?? 0)) <=> ((int) ($a['threatened_observation_count'] ?? 0));
         });
+        $summaryStats['total_species'] = count(array_filter(array_keys($topSpecies), static fn (string $k): bool => $k !== 'raw:unspecified'));
 
         return [
             'summary' => $summaryStats,
@@ -292,6 +305,272 @@ final class AnalyticsService
                 'unknown_station_rows' => $unknownStationRows,
                 'missing_scientific_rows' => $missingScientificRows,
             ],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function buildSpeciesAnalyticsDataset(Request $request): array
+    {
+        $filter = ObservationFactFilter::fromSpeciesObservationStyleRequest($request);
+        $facts = $this->observationFactService->getFactsWithSummary($filter, $request);
+        $rows = $facts['rows'];
+
+        $yearlySpeciesSet = [];
+        $yearlyTotalObservations = [];
+        $yearlyTotalRecordedCounts = [];
+        $speciesTotals = [];
+        $speciesYearlyCounts = [];
+        $speciesYearlyObservationCounts = [];
+        $speciesAreaYearlyCounts = [];
+        $speciesLabels = [];
+        $allYearsSet = [];
+        foreach ($rows as $row) {
+            $year = (int) (ObservationRowValue::field($row, 'patrol_year') ?? 0);
+            if ($year <= 0) {
+                continue;
+            }
+            $allYearsSet[$year] = true;
+            $recordedCount = ObservationRowValue::recordedCount($row);
+            $yearlyTotalObservations[$year] = ($yearlyTotalObservations[$year] ?? 0) + 1;
+            $yearlyTotalRecordedCounts[$year] = ($yearlyTotalRecordedCounts[$year] ?? 0) + $recordedCount;
+
+            $scientificName = trim((string) (ObservationRowValue::field($row, 'scientific_name') ?? ''));
+            $commonName = trim((string) (ObservationRowValue::field($row, 'common_name') ?? ''));
+            $speciesId = ObservationRowValue::field($row, 'species_id');
+            $resolvedSpecies = $this->speciesCanonicalResolver->resolve(
+                $scientificName,
+                $commonName,
+                is_numeric($speciesId) ? (int) $speciesId : null
+            );
+            $speciesKey = (string) $resolvedSpecies['key'];
+            if ($speciesKey === 'raw:unspecified') {
+                continue;
+            }
+
+            $yearlySpeciesSet[$year][$speciesKey] = true;
+            $speciesTotals[$speciesKey] = ($speciesTotals[$speciesKey] ?? 0) + $recordedCount;
+            $speciesYearlyCounts[$speciesKey][$year] = ($speciesYearlyCounts[$speciesKey][$year] ?? 0) + $recordedCount;
+            $speciesYearlyObservationCounts[$speciesKey][$year] = ($speciesYearlyObservationCounts[$speciesKey][$year] ?? 0) + 1;
+            $protectedAreaName = trim((string) (ObservationRowValue::field($row, 'protected_area_name') ?? ''));
+            $areaKey = $protectedAreaName !== '' ? $protectedAreaName : 'Unspecified Protected Area';
+            $speciesAreaYearlyCounts[$speciesKey][$areaKey][$year] = ($speciesAreaYearlyCounts[$speciesKey][$areaKey][$year] ?? 0) + $recordedCount;
+            if (! isset($speciesLabels[$speciesKey])) {
+                $label = (string) $resolvedSpecies['common_name'];
+                $speciesLabels[$speciesKey] = $label !== '' ? $label : 'Unspecified';
+            }
+        }
+
+        ksort($yearlySpeciesSet);
+        $yearlyTrend = [];
+        foreach ($yearlySpeciesSet as $year => $speciesSet) {
+            $yearlyTrend[] = [
+                'year' => (int) $year,
+                'distinct_species_count' => count($speciesSet),
+            ];
+        }
+        ksort($yearlyTotalObservations);
+        ksort($yearlyTotalRecordedCounts);
+        $yearlyTotalCounts = [];
+        foreach ($yearlyTotalObservations as $year => $totalCount) {
+            $yearlyTotalCounts[] = [
+                'year' => (int) $year,
+                'total_observations' => (int) $totalCount,
+                'total_recorded_count' => (int) ($yearlyTotalRecordedCounts[$year] ?? 0),
+            ];
+        }
+
+        arsort($speciesTotals);
+        $topSpeciesKeys = array_slice(array_keys($speciesTotals), 0, 20);
+        $topSpeciesOptions = [];
+        $speciesTrends = [];
+        $allYears = array_keys($allYearsSet);
+        sort($allYears);
+        foreach ($topSpeciesKeys as $speciesKey) {
+            $yearlyCounts = $speciesYearlyCounts[$speciesKey] ?? [];
+            ksort($yearlyCounts);
+            $trendRows = [];
+            foreach ($allYears as $year) {
+                $trendRows[] = [
+                    'year' => (int) $year,
+                    'recorded_count_sum' => (int) ($yearlyCounts[$year] ?? 0),
+                ];
+            }
+
+            $topSpeciesOptions[] = [
+                'species_key' => $speciesKey,
+                'label' => $speciesLabels[$speciesKey] ?? 'Unspecified',
+                'total_recorded_count' => (int) ($speciesTotals[$speciesKey] ?? 0),
+            ];
+            $speciesTrends[$speciesKey] = $trendRows;
+        }
+
+        // Trend rankings (Top Increasing/Decreasing) should follow active filters.
+        $trendRows = $rows;
+
+        $growthYearSet = [];
+        $growthSpeciesYearlyRecordedCounts = [];
+        $growthSpeciesLabels = [];
+        foreach ($trendRows as $row) {
+            $year = (int) (ObservationRowValue::field($row, 'patrol_year') ?? 0);
+            if ($year <= 0) {
+                continue;
+            }
+
+            $scientificName = trim((string) (ObservationRowValue::field($row, 'scientific_name') ?? ''));
+            $commonName = trim((string) (ObservationRowValue::field($row, 'common_name') ?? ''));
+            $speciesId = ObservationRowValue::field($row, 'species_id');
+            $resolvedSpecies = $this->speciesCanonicalResolver->resolve(
+                $scientificName,
+                $commonName,
+                is_numeric($speciesId) ? (int) $speciesId : null
+            );
+            $speciesKey = (string) $resolvedSpecies['key'];
+            if ($speciesKey === 'raw:unspecified') {
+                continue;
+            }
+
+            $recordedCount = ObservationRowValue::recordedCount($row);
+            $growthYearSet[$year] = true;
+            $growthSpeciesYearlyRecordedCounts[$speciesKey][$year] = ($growthSpeciesYearlyRecordedCounts[$speciesKey][$year] ?? 0) + $recordedCount;
+            if (! isset($growthSpeciesLabels[$speciesKey])) {
+                $label = (string) $resolvedSpecies['common_name'];
+                $growthSpeciesLabels[$speciesKey] = $label !== '' ? $label : ($speciesLabels[$speciesKey] ?? 'Unspecified');
+            }
+        }
+
+        $speciesGrowthRows = [];
+        foreach ($growthSpeciesYearlyRecordedCounts as $speciesKey => $yearlyRecordedCounts) {
+            ksort($yearlyRecordedCounts);
+            $speciesYears = array_keys($yearlyRecordedCounts);
+            if (count($speciesYears) < 2) {
+                continue;
+            }
+
+            $speciesEarliestYear = (int) $speciesYears[0];
+            $speciesLatestYear = (int) $speciesYears[count($speciesYears) - 1];
+            $earliestValue = (int) ($yearlyRecordedCounts[$speciesEarliestYear] ?? 0);
+            $latestValue = (int) ($yearlyRecordedCounts[$speciesLatestYear] ?? 0);
+            $delta = $latestValue - $earliestValue;
+            $speciesGrowthRows[] = [
+                'species_key' => $speciesKey,
+                'label' => $growthSpeciesLabels[$speciesKey] ?? ($speciesLabels[$speciesKey] ?? 'Unspecified'),
+                'delta' => $delta,
+                'delta_abs' => abs($delta),
+                'earliest_year' => $speciesEarliestYear,
+                'latest_year' => $speciesLatestYear,
+                'latest_value' => $latestValue,
+                'total_recorded_count' => (int) array_sum($yearlyRecordedCounts),
+            ];
+        }
+
+        $topIncreasingSpecies = array_values(array_filter($speciesGrowthRows, static fn (array $item): bool => (int) $item['delta'] > 0));
+        usort($topIncreasingSpecies, static function (array $a, array $b): int {
+            if (((int) $b['delta']) !== ((int) $a['delta'])) {
+                return ((int) $b['delta']) <=> ((int) $a['delta']);
+            }
+            if (((int) $b['latest_value']) !== ((int) $a['latest_value'])) {
+                return ((int) $b['latest_value']) <=> ((int) $a['latest_value']);
+            }
+            return ((int) $b['total_recorded_count']) <=> ((int) $a['total_recorded_count']);
+        });
+        $topIncreasingSpecies = array_slice($topIncreasingSpecies, 0, 10);
+
+        $topDecreasingSpecies = array_values(array_filter($speciesGrowthRows, static fn (array $item): bool => (int) $item['delta'] < 0));
+        usort($topDecreasingSpecies, static function (array $a, array $b): int {
+            if (((int) $a['delta']) !== ((int) $b['delta'])) {
+                return ((int) $a['delta']) <=> ((int) $b['delta']);
+            }
+            if (((int) $b['latest_value']) !== ((int) $a['latest_value'])) {
+                return ((int) $b['latest_value']) <=> ((int) $a['latest_value']);
+            }
+            return ((int) $b['total_recorded_count']) <=> ((int) $a['total_recorded_count']);
+        });
+        $topDecreasingSpecies = array_map(static function (array $item): array {
+            $delta = (int) $item['delta'];
+            $item['decline_abs'] = abs($delta);
+            $item['delta_abs'] = $item['decline_abs'];
+            return $item;
+        }, array_slice($topDecreasingSpecies, 0, 10));
+
+        $requestedSpeciesKey = mb_strtolower(trim((string) $request->input('species_key', '')));
+        $selectedSpeciesKey = $requestedSpeciesKey !== '' && isset($speciesTrends[$requestedSpeciesKey])
+            ? $requestedSpeciesKey
+            : ($topSpeciesKeys[0] ?? null);
+        $selectedSpeciesTrend = $selectedSpeciesKey !== null ? ($speciesTrends[$selectedSpeciesKey] ?? []) : [];
+        $selectedDirection = 'no_data';
+        if (count($selectedSpeciesTrend) >= 2) {
+            $last = (int) ($selectedSpeciesTrend[count($selectedSpeciesTrend) - 1]['recorded_count_sum'] ?? 0);
+            $previous = (int) ($selectedSpeciesTrend[count($selectedSpeciesTrend) - 2]['recorded_count_sum'] ?? 0);
+            $selectedDirection = $last > $previous ? 'increasing' : ($last < $previous ? 'decreasing' : 'flat');
+        } elseif (count($selectedSpeciesTrend) === 1) {
+            $selectedDirection = 'flat';
+        }
+
+        $requestedAreaSpeciesKey = mb_strtolower(trim((string) $request->input('pa_species_key', '')));
+        $selectedAreaSpeciesKey = $requestedAreaSpeciesKey !== '' && isset($speciesAreaYearlyCounts[$requestedAreaSpeciesKey])
+            ? $requestedAreaSpeciesKey
+            : $selectedSpeciesKey;
+
+        sort($allYears);
+        $speciesAreaTrendsByKey = [];
+        foreach ($speciesAreaYearlyCounts as $speciesKey => $areaRows) {
+            $seriesRows = [];
+            ksort($areaRows);
+            foreach ($areaRows as $areaLabel => $yearlyCounts) {
+                $points = [];
+                foreach ($allYears as $year) {
+                    $points[] = [
+                        'year' => (int) $year,
+                        'recorded_count_sum' => (int) ($yearlyCounts[$year] ?? 0),
+                    ];
+                }
+                $seriesRows[] = [
+                    'area_label' => (string) $areaLabel,
+                    'points' => $points,
+                ];
+            }
+            $speciesAreaTrendsByKey[$speciesKey] = $seriesRows;
+        }
+
+        $selectedAreaSpeciesTrends = [];
+        if ($selectedAreaSpeciesKey !== null && isset($speciesAreaTrendsByKey[$selectedAreaSpeciesKey])) {
+            $selectedAreaSpeciesTrends = $speciesAreaTrendsByKey[$selectedAreaSpeciesKey];
+        }
+
+        $selectedProtectedAreaId = $request->filled('protected_area_id')
+            ? (int) $request->integer('protected_area_id')
+            : null;
+        $selectedProtectedAreaName = null;
+        if ($selectedProtectedAreaId !== null && $selectedProtectedAreaId > 0) {
+            $selectedProtectedAreaName = ProtectedArea::query()
+                ->whereKey($selectedProtectedAreaId)
+                ->value('name');
+        }
+
+        return [
+            'yearly_species_trend' => $yearlyTrend,
+            'filters' => [
+                'protected_area_id' => $selectedProtectedAreaId,
+                'protected_area_name' => $selectedProtectedAreaName,
+            ],
+            'meta' => [
+                'total_years' => count($yearlyTrend),
+                'latest_year' => count($yearlyTrend) > 0 ? $yearlyTrend[count($yearlyTrend) - 1]['year'] : null,
+            ],
+            'top_species_options' => $topSpeciesOptions,
+            'species_trends' => $speciesTrends,
+            'selected_species_key' => $selectedSpeciesKey,
+            'selected_species_label' => $selectedSpeciesKey !== null ? ($speciesLabels[$selectedSpeciesKey] ?? 'Unspecified') : null,
+            'selected_species_direction' => $selectedDirection,
+            'top_increasing_species' => $topIncreasingSpecies,
+            'top_decreasing_species' => $topDecreasingSpecies,
+            'yearly_total_counts' => $yearlyTotalCounts,
+            'selected_area_species_key' => $selectedAreaSpeciesKey,
+            'selected_area_species_label' => $selectedAreaSpeciesKey !== null ? ($speciesLabels[$selectedAreaSpeciesKey] ?? 'Unspecified') : null,
+            'selected_area_species_trends' => $selectedAreaSpeciesTrends,
+            'species_area_trends_by_key' => $speciesAreaTrendsByKey,
         ];
     }
 

@@ -302,6 +302,61 @@
     color: #6b7280;
 }
 
+/* Dark mode coverage */
+[data-theme="dark"] .protected-area-filters,
+[data-theme="dark"] .stat-card,
+[data-theme="dark"] .responsive-table {
+    background-color: var(--card-bg);
+}
+
+[data-theme="dark"] .responsive-table th {
+    background-color: var(--bg-tertiary);
+    color: var(--text-secondary);
+    border-bottom-color: var(--border-primary);
+}
+
+[data-theme="dark"] .responsive-table td {
+    color: var(--text-primary);
+    border-bottom-color: var(--border-primary);
+}
+
+[data-theme="dark"] .stat-card h3,
+[data-theme="dark"] .stat-card .stat-label {
+    color: var(--text-tertiary);
+}
+
+[data-theme="dark"] .stat-card .stat-value {
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .search-input {
+    background-color: var(--input-bg);
+    color: var(--text-primary);
+    border-color: var(--border-primary);
+}
+
+[data-theme="dark"] .search-clear {
+    color: var(--text-tertiary);
+}
+
+[data-theme="dark"] .search-clear:hover {
+    color: var(--text-secondary);
+    background-color: var(--hover-bg);
+}
+
+[data-theme="dark"] #protected-area-search-clear {
+    color: var(--text-tertiary);
+}
+
+[data-theme="dark"] #protected-area-search-clear:hover {
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .status-badge.no-data {
+    background-color: rgba(148, 163, 184, 0.2);
+    color: #cbd5e1;
+}
+
 /* Protected Areas filters: one-row layout on desktop */
 #protected-areas-filter-form .pa-filter-row {
     display: flex;

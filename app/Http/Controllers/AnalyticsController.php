@@ -29,6 +29,21 @@ class AnalyticsController extends Controller
         ]);
     }
 
+    public function species(Request $request)
+    {
+        $dataset = $this->analyticsService->buildSpeciesAnalyticsDataset($request);
+
+        return view('pages.analytics.species', [
+            'dataset' => $dataset,
+            'filterOptions' => [
+                'protectedAreas' => ProtectedArea::orderBy('name')->get(),
+                'bioGroups' => ['fauna' => 'Fauna', 'flora' => 'Flora'],
+                'years' => PatrolYearHelper::getYears(),
+                'semesters' => [1 => '1st', 2 => '2nd'],
+            ],
+        ]);
+    }
+
     public function exportExcel(Request $request): StreamedResponse
     {
         $dataset = $this->analyticsService->buildAnalyticsDataset($request);

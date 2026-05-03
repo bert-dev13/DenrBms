@@ -873,7 +873,7 @@
 
 .quick-actions-toolbar {
     display: grid;
-    grid-template-columns: repeat(4, minmax(190px, 1fr));
+    grid-template-columns: repeat(5, minmax(190px, 1fr));
     align-items: stretch;
     gap: 1rem;
     min-width: max-content;
@@ -921,6 +921,10 @@
 
 .quick-action-btn:nth-child(4) {
     animation-delay: 0.12s;
+}
+
+.quick-action-btn:nth-child(5) {
+    animation-delay: 0.16s;
 }
 
 .quick-action-btn__icon-wrap {
@@ -1037,6 +1041,16 @@
     --qa-hover-bg: rgba(234, 88, 12, 0.09);
 }
 
+.quick-action-btn--analytics {
+    --qa-accent: #0284c7;
+    --qa-hover-bg: rgba(2, 132, 199, 0.09);
+}
+
+.quick-action-btn--settings {
+    --qa-accent: #7c3aed;
+    --qa-hover-bg: rgba(124, 58, 237, 0.09);
+}
+
 [data-theme="dark"] .quick-actions-widget {
     background: linear-gradient(150deg, rgba(15, 23, 42, 0.82) 0%, rgba(30, 41, 59, 0.72) 100%);
     border-color: rgba(148, 163, 184, 0.28);
@@ -1098,7 +1112,7 @@
 
 @media (max-width: 920px) {
     .quick-actions-toolbar {
-        grid-template-columns: repeat(4, minmax(185px, 1fr));
+        grid-template-columns: repeat(5, minmax(185px, 1fr));
     }
 }
 

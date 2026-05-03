@@ -38,9 +38,13 @@
         </a>
         <div class="sidebar__nav-group">
             <div class="sidebar__nav-group-label">Analytics</div>
-            <a href="{{ route('analytics.index') }}" class="sidebar__nav-item sidebar__nav-item--sub {{ request()->routeIs('analytics.*') ? 'sidebar__nav-item--active' : '' }}" data-tooltip="Analytics Overview">
+            <a href="{{ route('analytics.index') }}" class="sidebar__nav-item sidebar__nav-item--sub {{ request()->routeIs('analytics.index') || request()->routeIs('analytics.export.*') ? 'sidebar__nav-item--active' : '' }}" data-tooltip="Analytics Overview">
                 <i data-lucide="line-chart" class="lucide-icon sidebar__nav-icon" stroke-width="1.75"></i>
                 <span class="sidebar__nav-label">Overview</span>
+            </a>
+            <a href="{{ route('analytics.species.index') }}" class="sidebar__nav-item sidebar__nav-item--sub {{ request()->routeIs('analytics.species.*') ? 'sidebar__nav-item--active' : '' }}" data-tooltip="Species Analytics">
+                <i data-lucide="leaf" class="lucide-icon sidebar__nav-icon" stroke-width="1.75"></i>
+                <span class="sidebar__nav-label">Species Trend</span>
             </a>
         </div>
         <div class="sidebar__nav-group">

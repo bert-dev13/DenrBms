@@ -8,6 +8,7 @@ use App\Models\Site;
 use App\Models\SiteName;
 use App\Models\Species;
 use App\Services\EndemicSpeciesObservationMatcher;
+use App\Services\SpeciesCanonicalResolver;
 use App\Services\SpeciesObservationFactService;
 use App\Support\ObservationRowValue;
 use App\Support\ObservationSiteLabel;
@@ -23,6 +24,7 @@ class EndemicSpeciesReportController extends Controller
     public function __construct(
         private SpeciesObservationFactService $observationFactService,
         private EndemicSpeciesObservationMatcher $endemicMatcher,
+        private SpeciesCanonicalResolver $speciesCanonicalResolver,
     ) {}
 
     public function exportPdf(Request $request): Response|\Illuminate\Http\RedirectResponse
@@ -237,6 +239,7 @@ class EndemicSpeciesReportController extends Controller
 
         $siteId = $request->integer('site_id');
         $selectedSite = $siteId > 0 ? SiteName::query()->find($siteId) : null;
+        $groupBySite = $selectedSite !== null;
         if ($siteId > 0 && ! $selectedSite) {
             return collect();
         }
@@ -252,6 +255,7 @@ class EndemicSpeciesReportController extends Controller
         $maps = $this->endemicMatcher->buildLookupMaps($endemicSpecies);
         $byScientific = $maps['byScientific'];
         $byCommon = $maps['byCommon'];
+        $endemicSpeciesById = $endemicSpecies->keyBy('id');
 
         $filter = ObservationFactFilter::fromEndemicReportRequest($request);
         $observationRows = $this->observationFactService->getFactRows($filter, $request);
@@ -260,7 +264,19 @@ class EndemicSpeciesReportController extends Controller
         $grouped = [];
 
         foreach ($observationRows as $row) {
-            $species = $this->endemicMatcher->resolveSpecies($row, $byScientific, $byCommon);
+            $species = null;
+            $resolved = $this->speciesCanonicalResolver->resolve(
+                trim((string) ($row->scientific_name ?? '')),
+                trim((string) ($row->common_name ?? '')),
+                is_numeric($row->species_id ?? null) ? (int) $row->species_id : null
+            );
+            $resolvedSpecies = $resolved['species'] ?? null;
+            if ($resolvedSpecies !== null && $endemicSpeciesById->has((int) $resolvedSpecies->id)) {
+                $species = $endemicSpeciesById->get((int) $resolvedSpecies->id);
+            }
+            if ($species === null) {
+                $species = $this->endemicMatcher->resolveSpecies($row, $byScientific, $byCommon);
+            }
             if ($species === null) {
                 continue;
             }
@@ -270,9 +286,13 @@ class EndemicSpeciesReportController extends Controller
             }
 
             $tableName = (string) ($row->table_name ?? '');
-            $siteLabel = ObservationSiteLabel::label($selectedSite, (string) ($row->station_code ?? ''), $tableName);
+            $siteLabel = $groupBySite
+                ? ObservationSiteLabel::label($selectedSite, (string) ($row->station_code ?? ''), $tableName)
+                : 'All Sites';
             $paId = (int) ($row->protected_area_id ?? 0);
-            $key = $paId.'|'.$siteLabel.'|'.$species->id;
+            $key = $groupBySite
+                ? $paId.'|'.$siteLabel.'|'.$species->id
+                : $paId.'|'.$species->id;
 
             if (! isset($grouped[$key])) {
                 $grouped[$key] = [

@@ -356,3 +356,61 @@ body.pas-modal-open {
         transition: none !important;
     }
 }
+
+/* Dark mode coverage */
+[data-theme="dark"] .pas-modal,
+[data-theme="dark"] .pas-modal-body,
+[data-theme="dark"] .pas-delete-body {
+    background: var(--card-bg);
+    border-color: var(--border-primary);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .pas-modal-header,
+[data-theme="dark"] .pas-modal-footer {
+    background: rgba(22, 163, 74, 0.18);
+    border-color: rgba(74, 222, 128, 0.35);
+}
+
+[data-theme="dark"] .pas-modal-footer-neutral {
+    background: var(--card-bg);
+    border-top-color: var(--border-primary);
+}
+
+[data-theme="dark"] .pas-modal-header-icon {
+    background: rgba(34, 197, 94, 0.22);
+    border-color: rgba(74, 222, 128, 0.45);
+    color: #86efac;
+}
+
+[data-theme="dark"] .pas-modal-title,
+[data-theme="dark"] .pas-delete-title,
+[data-theme="dark"] .pas-delete-name {
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .pas-modal-subtitle,
+[data-theme="dark"] .pas-section-title,
+[data-theme="dark"] .pas-delete-note,
+[data-theme="dark"] .pas-field > span {
+    color: var(--text-tertiary);
+}
+
+[data-theme="dark"] .pas-input {
+    background: var(--input-bg);
+    color: var(--text-primary);
+    border-color: var(--border-primary);
+}
+
+[data-theme="dark"] .pas-input[readonly] {
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .pas-modal-close,
+[data-theme="dark"] .pas-btn-secondary,
+[data-theme="dark"] .pas-btn-primary {
+    background: var(--bg-secondary);
+    border-color: var(--border-primary);
+    color: var(--text-secondary);
+}

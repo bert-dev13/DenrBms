@@ -30,6 +30,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/api/dashboard/yearly-monitoring', [DashboardController::class, 'getYearlyMonitoringData'])->name('dashboard.yearly-monitoring');
     Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics.index');
+    Route::get('/analytics/species', [AnalyticsController::class, 'species'])->name('analytics.species.index');
     Route::get('/analytics/export/excel', [AnalyticsController::class, 'exportExcel'])->name('analytics.export.excel');
 });
 

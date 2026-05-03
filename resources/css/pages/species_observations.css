@@ -78,3 +78,27 @@
     background-color: #3b82f6;
     color: white;
 }
+
+/* Dark mode coverage */
+[data-theme="dark"] .observation-row:hover {
+    background-color: var(--hover-bg);
+}
+
+[data-theme="dark"] .observation-filters,
+[data-theme="dark"] .stat-card {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-primary);
+    box-shadow: var(--shadow-sm);
+}
+
+[data-theme="dark"] .stat-card h3 {
+    color: var(--text-tertiary);
+}
+
+[data-theme="dark"] .stat-card .stat-value {
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .stat-card .stat-label {
+    color: var(--text-tertiary);
+}

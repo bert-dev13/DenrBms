@@ -262,6 +262,49 @@
     color: #374151;
 }
 
+/* Dark mode coverage */
+[data-theme="dark"] .modal-content {
+    background: var(--card-bg);
+    border: 1px solid var(--border-primary);
+}
+
+[data-theme="dark"] .modal-header {
+    border-bottom-color: var(--border-primary);
+}
+
+[data-theme="dark"] .modal-footer {
+    background-color: var(--bg-secondary);
+    border-top-color: var(--border-primary);
+}
+
+[data-theme="dark"] .responsive-table th {
+    color: var(--text-secondary);
+    border-bottom-color: var(--border-primary);
+    background-color: var(--bg-tertiary);
+}
+
+[data-theme="dark"] .responsive-table td {
+    color: var(--text-primary);
+    border-bottom-color: var(--border-primary);
+}
+
+[data-theme="dark"] .responsive-table tbody tr:hover {
+    background-color: var(--hover-bg);
+}
+
+[data-theme="dark"] .site-search-clear {
+    color: var(--text-tertiary);
+}
+
+[data-theme="dark"] .site-search-clear:hover {
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .status-badge-unassigned {
+    background-color: rgba(148, 163, 184, 0.2);
+    color: #cbd5e1;
+}
+
 /* Mobile Responsive Adjustments */
 @media (max-width: 640px) {
     .responsive-table-container {
