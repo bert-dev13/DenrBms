@@ -18,6 +18,7 @@ import {
   LayoutDashboard,
   ClipboardList,
   MapPin,
+  Map,
   FileText,
   BarChart3,
   FileBarChart,
@@ -31,6 +32,7 @@ import {
   TrendingDown,
   Loader2,
   Leaf,
+  Bird,
   CheckCircle,
   CircleX,
   ChevronDown,
@@ -45,6 +47,7 @@ import {
   CalendarDays,
   Activity,
   LineChart,
+  Trophy,
 } from 'lucide';
 
 const ICONS = {
@@ -61,6 +64,7 @@ const ICONS = {
   LayoutDashboard,
   ClipboardList,
   MapPin,
+  Map,
   FileText,
   BarChart3,
   FileBarChart,
@@ -74,6 +78,7 @@ const ICONS = {
   TrendingDown,
   Loader2,
   Leaf,
+  Bird,
   CheckCircle,
   CircleX,
   ChevronDown,
@@ -88,6 +93,7 @@ const ICONS = {
   CalendarDays,
   Activity,
   LineChart,
+  Trophy,
 };
 
 const defaultAttrs = {

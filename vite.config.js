@@ -23,6 +23,9 @@ export default defineConfig({
                 /* Dashboard */
                 'resources/css/pages/dashboard.css',
                 'resources/js/pages/dashboard.js',
+                /* Analytics */
+                'resources/css/pages/analytics.css',
+                'resources/js/pages/analytics.js',
 
                 /* Species Observation */
                 'resources/css/pages/species_observations.css',
@@ -34,6 +37,13 @@ export default defineConfig({
                 'resources/css/pages/protected_area_modal.css',
                 'resources/js/pages/protected_area_modal.js',
                 'resources/js/pages/protected_areas.js',
+                /* Reports */
+                'resources/css/pages/endemic_species_report.css',
+                'resources/css/pages/migratory_species_report.css',
+                'resources/js/pages/endemic_species_report.js',
+                'resources/js/pages/migratory_species_report.js',
+                'resources/css/pages/species_ranking.css',
+                'resources/js/pages/species_ranking.js',
                 /* Protected Area Sites */
                 'resources/css/pages/protected_area_sites.css',
                 'resources/css/pages/protected_area_sites_modal.css',

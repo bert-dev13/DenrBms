@@ -1,0 +1,48 @@
+.migratory-report {
+    display: grid;
+    gap: 1rem;
+}
+
+#migratory-filter-form .migratory-filter-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+#migratory-filter-form .migratory-filter-field {
+    min-width: 240px;
+    margin: 0;
+}
+
+#migratory-filter-form .migratory-filter-actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.migratory-table {
+    min-width: 920px;
+}
+
+.migratory-col-count {
+    width: 140px;
+    text-align: center;
+}
+
+@media (max-width: 860px) {
+    #migratory-filter-form .migratory-filter-row {
+        align-items: stretch;
+    }
+
+    #migratory-filter-form .migratory-filter-field {
+        min-width: 100%;
+    }
+
+    #migratory-filter-form .migratory-filter-actions {
+        margin-left: 0;
+        width: 100%;
+        justify-content: flex-start;
+    }
+}

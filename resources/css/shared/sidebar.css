@@ -197,6 +197,29 @@ body.sidebar-collapsed {
     text-overflow: ellipsis;
 }
 
+.sidebar__nav-group {
+    margin-top: 0.35rem;
+    padding-top: 0.35rem;
+    border-top: 1px solid rgba(21, 128, 61, 0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 0.28rem;
+}
+
+.sidebar__nav-group-label {
+    font-size: 0.64rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(22, 101, 52, 0.55);
+    padding: 0.2rem 0.7rem 0.1rem;
+}
+
+.sidebar__nav-item--sub {
+    padding-left: 1.15rem;
+    font-size: 0.8rem;
+}
+
 .sidebar__footer {
     flex-shrink: 0;
     padding: 0.75rem 0.6rem 0.85rem;

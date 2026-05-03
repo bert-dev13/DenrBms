@@ -1,12 +1,16 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\LoginController;
-use App\Http\Controllers\ForgotPasswordController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\SpeciesObservationController;
+use App\Http\Controllers\AnalyticsController;
+use App\Http\Controllers\EndemicSpeciesReportController;
+use App\Http\Controllers\ForgotPasswordController;
+use App\Http\Controllers\LoginController;
+use App\Http\Controllers\MigratorySpeciesReportController;
 use App\Http\Controllers\ProtectedAreaController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\SpeciesObservationController;
+use App\Http\Controllers\SpeciesRankingController;
+use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -25,6 +29,8 @@ Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLink
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/api/dashboard/yearly-monitoring', [DashboardController::class, 'getYearlyMonitoringData'])->name('dashboard.yearly-monitoring');
+    Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics.index');
+    Route::get('/analytics/export/excel', [AnalyticsController::class, 'exportExcel'])->name('analytics.export.excel');
 });
 
 // Species observations routes (protected)
@@ -32,7 +38,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/species-observations/data/{id}', [SpeciesObservationController::class, 'getObservationData'])->name('species-observations.data');
     Route::get('/api/species-observations/edit-data/{id}', [SpeciesObservationController::class, 'getObservationForEdit'])->name('species-observations.edit-data');
     Route::get('/api/species-observations/site-names/{protectedAreaId}', [SpeciesObservationController::class, 'getSiteNames'])->name('species-observations.site-names');
-    
+
     Route::get('/species-observations', [SpeciesObservationController::class, 'index'])->name('species-observations.index');
     Route::post('/species-observations', [SpeciesObservationController::class, 'store'])->name('species-observations.store');
     Route::get('/species-observations/{speciesObservation}', [SpeciesObservationController::class, 'show'])->name('species-observations.show');
@@ -53,7 +59,7 @@ Route::middleware('auth')->group(function () {
     Route::put('/protected-areas/{protectedArea}', [ProtectedAreaController::class, 'update'])->name('protected-areas.update');
     Route::delete('/protected-areas/{protectedArea}', [ProtectedAreaController::class, 'destroy'])->name('protected-areas.destroy');
     Route::get('/api/protected-areas/{id}', [ProtectedAreaController::class, 'getProtectedAreaData'])->name('protected-areas.data');
-    
+
     // Protected area sites routes
     Route::post('/protected-area-sites', [ProtectedAreaController::class, 'storeSite'])->name('protected-area-sites.store');
     Route::get('/protected-area-sites/{siteName}', [ProtectedAreaController::class, 'showSite'])->name('protected-area-sites.show');
@@ -61,6 +67,30 @@ Route::middleware('auth')->group(function () {
     Route::put('/protected-area-sites/{siteName}', [ProtectedAreaController::class, 'updateSite'])->name('protected-area-sites.update');
     Route::delete('/protected-area-sites/{siteName}', [ProtectedAreaController::class, 'destroySite'])->name('protected-area-sites.destroy');
     Route::get('/api/protected-area-sites/{id}', [ProtectedAreaController::class, 'getSiteData'])->name('protected-area-sites.data');
+});
+
+// Reports (protected)
+Route::middleware('auth')->group(function () {
+    Route::get('/reports/endemic-species', [EndemicSpeciesReportController::class, 'index'])
+        ->name('reports.endemic-species');
+    Route::get('/reports/endemic-species/export/pdf', [EndemicSpeciesReportController::class, 'exportPdf'])
+        ->name('reports.endemic-species.export.pdf');
+    Route::get('/reports/endemic-species/export/excel', [EndemicSpeciesReportController::class, 'exportExcel'])
+        ->name('reports.endemic-species.export.excel');
+    Route::get('/reports/endemic-species/export/print', [EndemicSpeciesReportController::class, 'print'])
+        ->name('reports.endemic-species.export.print');
+
+    Route::get('/reports/migratory-species', [MigratorySpeciesReportController::class, 'index'])
+        ->name('reports.migratory-species');
+
+    Route::get('/reports/species-ranking', [SpeciesRankingController::class, 'index'])
+        ->name('reports.species-ranking');
+    Route::get('/reports/species-ranking/export/print', [SpeciesRankingController::class, 'exportPrint'])
+        ->name('reports.species-ranking.export.print');
+    Route::get('/reports/species-ranking/export/excel', [SpeciesRankingController::class, 'exportExcel'])
+        ->name('reports.species-ranking.export.excel');
+    Route::get('/reports/species-ranking/export/pdf', [SpeciesRankingController::class, 'exportPdf'])
+        ->name('reports.species-ranking.export.pdf');
 });
 
 // Settings routes (protected)

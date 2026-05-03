@@ -24,6 +24,10 @@
             <i data-lucide="layout-dashboard" class="lucide-icon sidebar__nav-icon" stroke-width="1.75"></i>
             <span class="sidebar__nav-label">Dashboard</span>
         </a>
+        <a href="{{ route('analytics.index') }}" class="sidebar__nav-item {{ request()->routeIs('analytics.*') ? 'sidebar__nav-item--active' : '' }}" data-tooltip="Analytics">
+            <i data-lucide="line-chart" class="lucide-icon sidebar__nav-icon" stroke-width="1.75"></i>
+            <span class="sidebar__nav-label">Analytics</span>
+        </a>
         <a href="{{ route('species-observations.index') }}" class="sidebar__nav-item {{ request()->routeIs('species-observations.*') ? 'sidebar__nav-item--active' : '' }}" data-tooltip="Species Observations">
             <i data-lucide="clipboard-list" class="lucide-icon sidebar__nav-icon" stroke-width="1.75"></i>
             <span class="sidebar__nav-label">Species Observations</span>
@@ -36,6 +40,21 @@
             <i data-lucide="map" class="lucide-icon sidebar__nav-icon" stroke-width="1.75"></i>
             <span class="sidebar__nav-label">PA Sites</span>
         </a>
+        <div class="sidebar__nav-group">
+            <div class="sidebar__nav-group-label">Reports</div>
+            <a href="{{ route('reports.endemic-species') }}" class="sidebar__nav-item sidebar__nav-item--sub {{ request()->routeIs('reports.endemic-species*') ? 'sidebar__nav-item--active' : '' }}" data-tooltip="Endemic Species Report">
+                <i data-lucide="leaf" class="lucide-icon sidebar__nav-icon" stroke-width="1.75"></i>
+                <span class="sidebar__nav-label">Endemic Species Report</span>
+            </a>
+            <a href="{{ route('reports.migratory-species') }}" class="sidebar__nav-item sidebar__nav-item--sub {{ request()->routeIs('reports.migratory-species*') ? 'sidebar__nav-item--active' : '' }}" data-tooltip="Migratory Species Report">
+                <i data-lucide="bird" class="lucide-icon sidebar__nav-icon" stroke-width="1.75"></i>
+                <span class="sidebar__nav-label">Migratory Species Report</span>
+            </a>
+            <a href="{{ route('reports.species-ranking') }}" class="sidebar__nav-item sidebar__nav-item--sub {{ request()->routeIs('reports.species-ranking*') ? 'sidebar__nav-item--active' : '' }}" data-tooltip="Species Rankings Report">
+                <i data-lucide="trophy" class="lucide-icon sidebar__nav-icon" stroke-width="1.75"></i>
+                <span class="sidebar__nav-label">Species Rankings</span>
+            </a>
+        </div>
     </nav>
 
     {{-- Footer: profile + utilities --}}

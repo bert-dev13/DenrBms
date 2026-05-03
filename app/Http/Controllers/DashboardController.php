@@ -98,14 +98,17 @@ class DashboardController extends Controller
                 $data = DB::table($table)
                     ->select('patrol_year', DB::raw('COUNT(*) as observations'))
                     ->whereNotNull('patrol_year')
+                    ->where('patrol_year', '>', 0)
                     ->groupBy('patrol_year')
                     ->orderBy('patrol_year')
                     ->get();
 
                 $speciesByYear = DB::table($table)
-                    ->select('patrol_year', 'scientific_name')
+                    ->select('patrol_year', DB::raw('LOWER(TRIM(scientific_name)) as scientific_name'))
                     ->whereNotNull('patrol_year')
+                    ->where('patrol_year', '>', 0)
                     ->whereNotNull('scientific_name')
+                    ->whereRaw("TRIM(scientific_name) <> ''")
                     ->distinct()
                     ->get()
                     ->groupBy('patrol_year');

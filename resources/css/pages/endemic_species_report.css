@@ -1,0 +1,105 @@
+.endemic-report-page {
+    display: grid;
+    gap: 1rem;
+}
+
+#endemic-report-filter-form .endemic-filter-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+#endemic-report-filter-form .filter-panel__title {
+    margin: 0;
+    white-space: nowrap;
+    padding-bottom: 0.25rem;
+}
+
+#endemic-report-filter-form .endemic-filter-field {
+    min-width: 240px;
+    margin: 0;
+}
+
+#endemic-report-filter-form .endemic-filter-actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.endemic-export-btn {
+    text-decoration: none;
+}
+
+.endemic-report-table {
+    min-width: 940px;
+}
+
+.endemic-col-count {
+    text-align: center;
+    width: 120px;
+}
+
+.status-chip {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 9999px;
+    padding: 0.3rem 0.65rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+}
+
+.status-chip--critical {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.status-chip--endangered {
+    background: #ffedd5;
+    color: #9a3412;
+}
+
+.status-chip--vulnerable {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.status-chip--near-threatened {
+    background: #dbeafe;
+    color: #1e3a8a;
+}
+
+.status-chip--least-concern {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.status-chip--unknown {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+@media (max-width: 1024px) {
+    #endemic-report-filter-form .endemic-filter-field {
+        min-width: 220px;
+    }
+}
+
+@media (max-width: 768px) {
+    #endemic-report-filter-form .endemic-filter-row {
+        align-items: stretch;
+    }
+
+    #endemic-report-filter-form .endemic-filter-field {
+        min-width: 100%;
+    }
+
+    #endemic-report-filter-form .endemic-filter-actions {
+        margin-left: 0;
+        width: 100%;
+        justify-content: flex-start;
+    }
+}

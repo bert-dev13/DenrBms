@@ -24,6 +24,19 @@ class ProtectedAreaController extends Controller
         $count = 0;
         $siteTableName = $this->createSafeSiteTableName($site->name, $site->id);
 
+        // Count canonical observation links stored in normalized table.
+        // This table enforces FK restrictions during site deletion, so it must
+        // be reflected in the UI observation count to avoid mismatch.
+        if (Schema::hasTable('species_observations') && Schema::hasColumn('species_observations', 'site_id')) {
+            try {
+                $count += DB::table('species_observations')
+                    ->where('site_id', $site->id)
+                    ->count();
+            } catch (\Exception $e) {
+                Log::error("Error counting canonical observations for site {$site->id}: " . $e->getMessage());
+            }
+        }
+
         if (Schema::hasTable($siteTableName)) {
             try {
                 $count += DB::table($siteTableName)->count();
@@ -990,6 +1003,44 @@ class ProtectedAreaController extends Controller
             
             return redirect()->route('protected-area-sites.index')
                 ->with('success', 'Site deleted successfully.');
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Handle FK constraints (e.g., species_observations.site_id references site_names.id)
+            if ($e->getCode() == 23000 || str_contains(strtolower($e->getMessage()), 'foreign key constraint')) {
+                $relatedObservations = 0;
+                if (Schema::hasTable('species_observations') && Schema::hasColumn('species_observations', 'site_id')) {
+                    try {
+                        $relatedObservations = DB::table('species_observations')
+                            ->where('site_id', $siteName->id)
+                            ->count();
+                    } catch (\Exception $inner) {
+                        Log::warning('Unable to count related species observations before delete error: ' . $inner->getMessage());
+                    }
+                }
+
+                $message = $relatedObservations > 0
+                    ? "Cannot delete this site because it has {$relatedObservations} related species observation(s). Please delete those records first."
+                    : 'Cannot delete this site because it is referenced by related records. Please remove dependent records first.';
+
+                if (request()->expectsJson() || request()->wantsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'error' => $message
+                    ], 422);
+                }
+
+                return back()->with('error', $message);
+            }
+
+            Log::error('Database error deleting site: ' . $e->getMessage());
+
+            if (request()->expectsJson() || request()->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Failed to delete site.'
+                ], 500);
+            }
+
+            return back()->with('error', 'Failed to delete site.');
         } catch (\Exception $e) {
             Log::error('Error deleting site: ' . $e->getMessage());
             
