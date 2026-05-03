@@ -81,33 +81,60 @@
         </form>
     </div>
 
-    <section class="analytics-yearly-trends">
-        <div class="analytics-yearly-trends__header">
-            <h2 class="analytics-yearly-trends__title">Yearly Monitoring Trends</h2>
-            <p class="analytics-yearly-trends__subtitle">Observation and species tracked trend by year</p>
+    <section class="analytics-main-trend">
+        <div class="analytics-main-trend__header">
+            <h2 class="analytics-main-trend__title">Observation and Species Trend</h2>
+            <p class="analytics-main-trend__subtitle">Line chart across year or semester periods</p>
         </div>
 
-        <div class="analytics-yearly-trends__chart-wrap">
+        <div class="analytics-main-trend__chart-wrap">
             <canvas id="analytics-yearly-monitoring-chart"></canvas>
-            <div id="analytics-yearly-chart-empty" class="analytics-yearly-trends__empty hidden">
-                No yearly monitoring data available for selected filters.
-            </div>
-        </div>
-
-        <div class="analytics-yearly-trends__stats">
-            <div class="analytics-yearly-stat">
-                <span>Total Years Tracked</span>
-                <strong id="analytics-total-years">—</strong>
-            </div>
-            <div class="analytics-yearly-stat">
-                <span>Peak Year Observations</span>
-                <strong id="analytics-peak-year-observations">—</strong>
-            </div>
-            <div class="analytics-yearly-stat">
-                <span>Trend Direction</span>
-                <strong id="analytics-yearly-direction">—</strong>
+            <div id="analytics-yearly-chart-empty" class="analytics-main-trend__empty hidden">
+                No trend data available for selected filters.
             </div>
         </div>
     </section>
 
+    <section class="analytics-grid">
+        <article class="analytics-grid-card">
+            <div class="analytics-grid-card__header">
+                <h3>Top Species</h3>
+                <p>Species with highest recorded counts.</p>
+            </div>
+            <div class="analytics-grid-card__chart-wrap">
+                <canvas id="analytics-top-species-chart"></canvas>
+                <div id="analytics-top-species-empty" class="analytics-grid-card__empty hidden">No species data available.</div>
+            </div>
+        </article>
+        <article class="analytics-grid-card">
+            <div class="analytics-grid-card__header">
+                <h3>Threatened Species</h3>
+                <p>Ranked by CR + EN + VU observations.</p>
+            </div>
+            <div class="analytics-grid-card__chart-wrap">
+                <canvas id="analytics-top-threatened-species-chart"></canvas>
+                <div id="analytics-top-threatened-species-empty" class="analytics-grid-card__empty hidden">No threatened species data available.</div>
+            </div>
+        </article>
+        <article class="analytics-grid-card">
+            <div class="analytics-grid-card__header">
+                <h3>Bio Group Composition</h3>
+                <p>How balanced the ecosystem groups are.</p>
+            </div>
+            <div class="analytics-grid-card__chart-wrap analytics-grid-card__chart-wrap--doughnut">
+                <canvas id="analytics-bio-group-chart"></canvas>
+                <div id="analytics-bio-group-empty" class="analytics-grid-card__empty hidden">No bio group data available.</div>
+            </div>
+        </article>
+        <article class="analytics-grid-card">
+            <div class="analytics-grid-card__header">
+                <h3>Endangered vs Non-Endangered Ratio</h3>
+                <p>Conservation status distribution across observations.</p>
+            </div>
+            <div class="analytics-grid-card__chart-wrap analytics-grid-card__chart-wrap--doughnut">
+                <canvas id="analytics-conservation-status-chart"></canvas>
+                <div id="analytics-conservation-status-empty" class="analytics-grid-card__empty hidden">No conservation status data available.</div>
+            </div>
+        </article>
+    </section>
 @endsection

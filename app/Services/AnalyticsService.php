@@ -47,7 +47,14 @@ final class AnalyticsService
         $yearlyTimeseries = [];
         $topAreas = [];
         $topSpecies = [];
+        $threatenedSpecies = [];
         $bioGroupBreakdown = [];
+        $conservationStatusBreakdown = [
+            'critically_endangered' => ['label' => 'Critically Endangered', 'observation_count' => 0],
+            'endangered' => ['label' => 'Endangered', 'observation_count' => 0],
+            'vulnerable' => ['label' => 'Vulnerable', 'observation_count' => 0],
+            'least_concern' => ['label' => 'Least Concern', 'observation_count' => 0],
+        ];
         $speciesPeriodMatrix = [];
 
         $missingScientificNameCount = 0;
@@ -139,6 +146,20 @@ final class AnalyticsService
                 }
                 if (($speciesLookup[$scientificKey]['is_migratory'] ?? false) === true) {
                     $summaryStats['migratory_observations']++;
+                }
+                $statusKey = $this->normalizeConservationStatus((string) ($speciesLookup[$scientificKey]['conservation_status'] ?? ''));
+                if ($statusKey !== null) {
+                    $conservationStatusBreakdown[$statusKey]['observation_count']++;
+                    if (in_array($statusKey, ['critically_endangered', 'endangered', 'vulnerable'], true)) {
+                        if (! isset($threatenedSpecies[$speciesKey])) {
+                            $threatenedSpecies[$speciesKey] = [
+                                'common_name' => $commonName !== '' ? $commonName : 'Unspecified',
+                                'scientific_name' => $scientificName,
+                                'threatened_observation_count' => 0,
+                            ];
+                        }
+                        $threatenedSpecies[$speciesKey]['threatened_observation_count']++;
+                    }
                 }
                 $topAreas[$areaKey]['species_set'][$scientificKey] = true;
             } else {
@@ -247,6 +268,9 @@ final class AnalyticsService
         $spatial = $this->buildSpatialInsights($areaRows);
 
         $speciesIntelligence = $this->buildSpeciesIntelligence($topSpecies, $speciesLookup);
+        usort($threatenedSpecies, static function (array $a, array $b): int {
+            return ((int) ($b['threatened_observation_count'] ?? 0)) <=> ((int) ($a['threatened_observation_count'] ?? 0));
+        });
 
         return [
             'summary' => $summaryStats,
@@ -257,8 +281,10 @@ final class AnalyticsService
             'top_areas' => array_slice($spatial['ranked_areas'], 0, 10),
             'spatial_insights' => $spatial,
             'top_species' => array_slice(array_values($topSpecies), 0, 10),
+            'top_threatened_species' => array_slice(array_values($threatenedSpecies), 0, 10),
             'species_intelligence' => $speciesIntelligence,
             'bio_group_breakdown' => array_values($bioGroupBreakdown),
+            'conservation_status_breakdown' => array_values($conservationStatusBreakdown),
             'insight_alerts' => $insights,
             'quality' => [
                 'missing_scientific_name_count' => $missingScientificNameCount,
@@ -488,5 +514,34 @@ final class AnalyticsService
             return 'Unknown';
         }
         return ucwords(str_replace('_', ' ', $status));
+    }
+
+    private function normalizeConservationStatus(string $status): ?string
+    {
+        $normalized = strtolower(trim($status));
+        if ($normalized === '') {
+            return null;
+        }
+
+        // Make status matching resilient to formats like:
+        // "Critically Endangered (CR)", "EN - Endangered", "Least Concern/LC".
+        $compact = str_replace(['-', '_', '/', '(', ')', '[', ']', ','], ' ', $normalized);
+        $compact = preg_replace('/\s+/', ' ', $compact) ?? $compact;
+        $compact = trim($compact);
+
+        if (str_contains($compact, 'critically endangered') || preg_match('/\bcr\b/', $compact) === 1) {
+            return 'critically_endangered';
+        }
+        if (str_contains($compact, 'endangered') || preg_match('/\ben\b/', $compact) === 1) {
+            return 'endangered';
+        }
+        if (str_contains($compact, 'vulnerable') || preg_match('/\bvu\b/', $compact) === 1) {
+            return 'vulnerable';
+        }
+        if (str_contains($compact, 'least concern') || preg_match('/\blc\b/', $compact) === 1) {
+            return 'least_concern';
+        }
+
+        return null;
     }
 }

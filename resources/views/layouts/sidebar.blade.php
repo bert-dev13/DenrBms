@@ -24,10 +24,6 @@
             <i data-lucide="layout-dashboard" class="lucide-icon sidebar__nav-icon" stroke-width="1.75"></i>
             <span class="sidebar__nav-label">Dashboard</span>
         </a>
-        <a href="{{ route('analytics.index') }}" class="sidebar__nav-item {{ request()->routeIs('analytics.*') ? 'sidebar__nav-item--active' : '' }}" data-tooltip="Analytics">
-            <i data-lucide="line-chart" class="lucide-icon sidebar__nav-icon" stroke-width="1.75"></i>
-            <span class="sidebar__nav-label">Analytics</span>
-        </a>
         <a href="{{ route('species-observations.index') }}" class="sidebar__nav-item {{ request()->routeIs('species-observations.*') ? 'sidebar__nav-item--active' : '' }}" data-tooltip="Species Observations">
             <i data-lucide="clipboard-list" class="lucide-icon sidebar__nav-icon" stroke-width="1.75"></i>
             <span class="sidebar__nav-label">Species Observations</span>
@@ -40,6 +36,13 @@
             <i data-lucide="map" class="lucide-icon sidebar__nav-icon" stroke-width="1.75"></i>
             <span class="sidebar__nav-label">PA Sites</span>
         </a>
+        <div class="sidebar__nav-group">
+            <div class="sidebar__nav-group-label">Analytics</div>
+            <a href="{{ route('analytics.index') }}" class="sidebar__nav-item sidebar__nav-item--sub {{ request()->routeIs('analytics.*') ? 'sidebar__nav-item--active' : '' }}" data-tooltip="Analytics Overview">
+                <i data-lucide="line-chart" class="lucide-icon sidebar__nav-icon" stroke-width="1.75"></i>
+                <span class="sidebar__nav-label">Overview</span>
+            </a>
+        </div>
         <div class="sidebar__nav-group">
             <div class="sidebar__nav-group-label">Reports</div>
             <a href="{{ route('reports.endemic-species') }}" class="sidebar__nav-item sidebar__nav-item--sub {{ request()->routeIs('reports.endemic-species*') ? 'sidebar__nav-item--active' : '' }}" data-tooltip="Endemic Species Report">
