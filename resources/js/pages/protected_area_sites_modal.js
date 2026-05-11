@@ -223,12 +223,13 @@ class ProtectedAreaSitesModalSystem {
     renderDelete(site) {
         return `
             <section class="pas-modal pas-modal-delete" role="dialog" aria-modal="true" aria-labelledby="pas-delete-title">
+                ${this.renderHeader('delete')}
                 <div class="pas-delete-body">
                     <h2 id="pas-delete-title" class="pas-delete-title">Delete site?</h2>
                     <p class="pas-delete-name">${this.escape(site?.name || 'Selected site')}</p>
                     <p class="pas-delete-note">This action cannot be undone.</p>
                 </div>
-                <div class="pas-modal-footer pas-modal-footer-neutral">
+                <div class="pas-modal-footer">
                     <button type="button" class="pas-btn pas-btn-secondary" data-pas-close>Cancel</button>
                     <button type="button" class="pas-btn pas-btn-danger" data-pas-delete>Delete</button>
                 </div>

@@ -6,6 +6,7 @@
 @section('head')
 @vite(['resources/css/pages/protected_area_sites.css', 'resources/css/pages/species_observation_modal.css', 'resources/css/pages/protected_area_sites_modal.css', 'resources/js/pages/protected_area_sites_modal.js'])
 @php
+    $isAdmin = (\App\Support\UserAccess::isAdmin(auth()->user()));
     $protectedAreasForJs = \App\Models\ProtectedArea::orderBy('name')
         ->get(['id', 'name', 'code'])
         ->unique(function ($area) {
@@ -165,10 +166,12 @@ window.protectedAreas = protectedAreasDataElement
                                     </button>
                                 </div>
                             </div>
-                            <button type="button" onclick="openAddProtectedAreaSitesModal()" class="action-bar__add-btn">
-                                <i data-lucide="plus" class="lucide-icon"></i>
-                                <span>Add Protected Area Site</span>
-                            </button>
+                            @if($isAdmin)
+                                <button type="button" onclick="openAddProtectedAreaSitesModal()" class="action-bar__add-btn">
+                                    <i data-lucide="plus" class="lucide-icon"></i>
+                                    <span>Add Protected Area Site</span>
+                                </button>
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -229,22 +232,24 @@ window.protectedAreas = protectedAreasDataElement
                                            onclick="openViewProtectedAreaSitesModal(Number(this.dataset.siteId))">
                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="species-observation-action-icon" aria-hidden="true"><path d="M21 17v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2"/><path d="M21 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v2"/><circle cx="12" cy="12" r="1"/><path d="M18.944 12.33a1 1 0 0 0 0-.66 7.5 7.5 0 0 0-13.888 0 1 1 0 0 0 0 .66 7.5 7.5 0 0 0 13.888 0"/></svg>
                                         </button>
-                                        <!-- Edit Button -->
-                                        <button type="button"
-                                           class="species-observation-action-btn edit"
-                                           title="Edit Site"
-                                           data-site-id="{{ $site->id }}"
-                                           onclick="openEditProtectedAreaSitesModal(Number(this.dataset.siteId))">
-                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="species-observation-action-icon" aria-hidden="true"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></svg>
-                                        </button>
-                                        <!-- Delete Button -->
-                                        <button type="button"
-                                           class="species-observation-action-btn delete"
-                                           title="Delete Site"
-                                           data-site-id="{{ $site->id }}"
-                                           onclick="openDeleteProtectedAreaSitesModal(Number(this.dataset.siteId))">
-                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="species-observation-action-icon" aria-hidden="true"><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                                        </button>
+                                        @if($isAdmin)
+                                            <!-- Edit Button -->
+                                            <button type="button"
+                                               class="species-observation-action-btn edit"
+                                               title="Edit Site"
+                                               data-site-id="{{ $site->id }}"
+                                               onclick="openEditProtectedAreaSitesModal(Number(this.dataset.siteId))">
+                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="species-observation-action-icon" aria-hidden="true"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></svg>
+                                            </button>
+                                            <!-- Delete Button -->
+                                            <button type="button"
+                                               class="species-observation-action-btn delete"
+                                               title="Delete Site"
+                                               data-site-id="{{ $site->id }}"
+                                               onclick="openDeleteProtectedAreaSitesModal(Number(this.dataset.siteId))">
+                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="species-observation-action-icon" aria-hidden="true"><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                            </button>
+                                        @endif
                                         </div>
                                     </td>
                                 </tr>

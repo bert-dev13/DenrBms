@@ -44,15 +44,24 @@
     @vite(['resources/js/shared/bootstrap.js', 'resources/js/shared/icons.js', 'resources/js/pages/login.js'])
 </head>
 <body class="antialiased login-page">
+    @php
+        $loginBackgroundImage = file_exists(public_path('images/background-denr.webp'))
+            ? "url('".asset('images/background-denr.webp')."')"
+            : 'linear-gradient(135deg, #064e3b 0%, #047857 50%, #0f766e 100%)';
+    @endphp
     
-    <div class="login-container" role="main" style="--login-bg-image: url('{{ asset('images/background-denr.webp') }}');">
+    <div class="login-container" role="main" style="--login-bg-image: {{ $loginBackgroundImage }};">
         <div class="login-overlay" aria-hidden="true"></div>
         <div class="login-content">
             <div class="login-card">
                 <!-- Branding -->
                 <header class="login-header">
                     <div class="login-logo-wrap" aria-hidden="true">
-                        <img src="{{ asset('images/denr-logo.png') }}" alt="" class="login-logo" width="72" height="72" />
+                        @if (file_exists(public_path('images/denr-logo.png')))
+                            <img src="{{ asset('images/denr-logo.png') }}" alt="" class="login-logo" width="72" height="72" />
+                        @else
+                            <span class="login-logo d-inline-flex align-items-center justify-content-center fw-bold">DENR</span>
+                        @endif
                     </div>
                     <p class="login-kicker">DENR BMS</p>
                     <h1 class="login-title">Biodiversity Management System</h1>

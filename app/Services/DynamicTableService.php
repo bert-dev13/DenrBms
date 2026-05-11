@@ -3,10 +3,34 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
 class DynamicTableService
 {
+    /**
+     * Return base table names using SQL supported by the active database driver.
+     *
+     * @return array<int, string>
+     */
+    public static function listTables(): array
+    {
+        $driver = DB::connection()->getDriverName();
+
+        $rows = match ($driver) {
+            'mysql', 'mariadb' => DB::select('SHOW TABLES'),
+            'pgsql' => DB::select("select tablename as name from pg_catalog.pg_tables where schemaname = current_schema()"),
+            'sqlite' => DB::select("select name from sqlite_master where type = 'table' and name not like 'sqlite_%'"),
+            'sqlsrv' => DB::select("select TABLE_NAME as name from INFORMATION_SCHEMA.TABLES where TABLE_TYPE = 'BASE TABLE'"),
+            default => [],
+        };
+
+        return array_values(array_filter(array_map(
+            fn ($row): ?string => array_values((array) $row)[0] ?? null,
+            $rows
+        )));
+    }
+
     /**
      * Get all observation tables (static + dynamic + site-specific)
      */
@@ -70,11 +94,9 @@ class DynamicTableService
         try {
             // Get all tables that end with _tbl but are not in the static list
             // Exclude _site_tbl tables as they are handled separately
-            $allTables = DB::select('SHOW TABLES');
             $tableNames = [];
             
-            foreach ($allTables as $table) {
-                $tableName = array_values((array)$table)[0];
+            foreach (self::listTables() as $tableName) {
                 if (str_ends_with($tableName, '_tbl') && !str_ends_with($tableName, '_site_tbl')) {
                     $tableNames[] = $tableName;
                 }
@@ -93,11 +115,9 @@ class DynamicTableService
     {
         try {
             // Get all tables that end with _site_tbl
-            $allTables = DB::select('SHOW TABLES');
             $tableNames = [];
             
-            foreach ($allTables as $table) {
-                $tableName = array_values((array)$table)[0];
+            foreach (self::listTables() as $tableName) {
                 if (str_ends_with($tableName, '_site_tbl')) {
                     $tableNames[] = $tableName;
                 }
@@ -120,7 +140,7 @@ class DynamicTableService
             'FSNP' => 'fuyot_tbl',
             'QPL' => 'quirino_tbl',
             'PIPLS' => 'palaui_tbl',
-            'BWFR' => 'buaa_tbl',
+            'BWFR' => 'baua_tbl',
             'WWFR' => 'wangag_tbl',
             'MPL' => 'magapit_tbl',
             'MADUPAPA' => 'madupapa_tbl',
@@ -221,14 +241,14 @@ class DynamicTableService
             
             if (Schema::hasTable($tableName)) {
                 Schema::dropIfExists($tableName);
-                \Log::info("Successfully dropped observation table: {$tableName}");
+                Log::info("Successfully dropped observation table: {$tableName}");
                 return true;
             } else {
-                \Log::info("Observation table {$tableName} does not exist, skipping drop.");
+                Log::info("Observation table {$tableName} does not exist, skipping drop.");
                 return false;
             }
         } catch (\Exception $e) {
-            \Log::error("Failed to drop observation table for {$code}: " . $e->getMessage());
+            Log::error("Failed to drop observation table for {$code}: ".$e->getMessage());
             return false;
         }
     }

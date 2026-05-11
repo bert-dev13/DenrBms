@@ -96,7 +96,7 @@
     </section>
 
     <section class="analytics-grid">
-        <article class="analytics-grid-card">
+        <article class="analytics-grid-card analytics-grid-card--top-species-primary">
             <div class="analytics-grid-card__header">
                 <h3>Top Species</h3>
                 <p>Species with highest recorded counts.</p>
@@ -106,14 +106,14 @@
                 <div id="analytics-top-species-empty" class="analytics-grid-card__empty hidden">No species data available.</div>
             </div>
         </article>
-        <article class="analytics-grid-card">
+        <article class="analytics-grid-card analytics-grid-card--top-species-obs">
             <div class="analytics-grid-card__header">
-                <h3>Threatened Species</h3>
-                <p>Ranked by CR + EN + VU observations.</p>
+                <h3>Top Species Observation</h3>
+                <p>Matches Species Activity ranking; bars = observation count.</p>
             </div>
             <div class="analytics-grid-card__chart-wrap">
-                <canvas id="analytics-top-threatened-species-chart"></canvas>
-                <div id="analytics-top-threatened-species-empty" class="analytics-grid-card__empty hidden">No threatened species data available.</div>
+                <canvas id="analytics-top-species-obs-chart"></canvas>
+                <div id="analytics-top-species-obs-empty" class="analytics-grid-card__empty hidden">No species observation data available.</div>
             </div>
         </article>
         <article class="analytics-grid-card">
@@ -128,12 +128,14 @@
         </article>
         <article class="analytics-grid-card">
             <div class="analytics-grid-card__header">
-                <h3>Endangered vs Non-Endangered Ratio</h3>
-                <p>Conservation status distribution across observations.</p>
+                <h3>Top 10 Species Observation Share</h3>
+                <p>Recorded-count share for the ten highest-count species.</p>
             </div>
-            <div class="analytics-grid-card__chart-wrap analytics-grid-card__chart-wrap--doughnut">
-                <canvas id="analytics-conservation-status-chart"></canvas>
-                <div id="analytics-conservation-status-empty" class="analytics-grid-card__empty hidden">No conservation status data available.</div>
+            <div class="analytics-grid-card__chart-wrap analytics-grid-card__chart-wrap--doughnut analytics-grid-card__chart-wrap--species-distribution">
+                <div class="analytics-species-distribution-inner">
+                    <canvas id="analytics-species-distribution-chart"></canvas>
+                </div>
+                <div id="analytics-species-distribution-empty" class="analytics-grid-card__empty hidden">No species observation data available.</div>
             </div>
         </article>
     </section>

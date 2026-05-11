@@ -8,12 +8,14 @@ use App\Models\SiteName;
 use App\Models\Species;
 use App\Support\ObservationRowValue;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 
 final class AnalyticsService
 {
     public function __construct(
         private SpeciesObservationFactService $observationFactService,
         private SpeciesCanonicalResolver $speciesCanonicalResolver,
+        private SpeciesObservationActivityRankingService $speciesActivityRanking,
     ) {}
 
     /**
@@ -49,14 +51,7 @@ final class AnalyticsService
         $yearlyTimeseries = [];
         $topAreas = [];
         $topSpecies = [];
-        $threatenedSpecies = [];
         $bioGroupBreakdown = [];
-        $conservationStatusBreakdown = [
-            'critically_endangered' => ['label' => 'Critically Endangered', 'observation_count' => 0],
-            'endangered' => ['label' => 'Endangered', 'observation_count' => 0],
-            'vulnerable' => ['label' => 'Vulnerable', 'observation_count' => 0],
-            'least_concern' => ['label' => 'Least Concern', 'observation_count' => 0],
-        ];
         $speciesPeriodMatrix = [];
 
         $missingScientificNameCount = 0;
@@ -148,30 +143,15 @@ final class AnalyticsService
                     $speciesPeriodMatrix[$periodKey][$speciesKey] = true;
                 }
 
-                $scientificKey = mb_strtolower($scientificName);
+                $scientificKey = mb_strtolower($canonicalScientificName !== '' ? $canonicalScientificName : $scientificName);
                 $isEndemic = $matchedSpecies?->is_endemic ?? ($speciesLookup[$scientificKey]['is_endemic'] ?? false);
                 $isMigratory = $matchedSpecies?->is_migratory ?? ($speciesLookup[$scientificKey]['is_migratory'] ?? false);
-                $resolvedStatus = $matchedSpecies?->conservation_status ?? ($speciesLookup[$scientificKey]['conservation_status'] ?? '');
 
                 if ($isEndemic === true) {
                     $summaryStats['endemic_observations']++;
                 }
                 if ($isMigratory === true) {
                     $summaryStats['migratory_observations']++;
-                }
-                $statusKey = $this->normalizeConservationStatus((string) $resolvedStatus);
-                if ($statusKey !== null) {
-                    $conservationStatusBreakdown[$statusKey]['observation_count']++;
-                    if (in_array($statusKey, ['critically_endangered', 'endangered', 'vulnerable'], true)) {
-                        if (! isset($threatenedSpecies[$speciesKey])) {
-                            $threatenedSpecies[$speciesKey] = [
-                                'common_name' => $canonicalCommonName,
-                                'scientific_name' => $canonicalScientificName,
-                                'threatened_observation_count' => 0,
-                            ];
-                        }
-                        $threatenedSpecies[$speciesKey]['threatened_observation_count']++;
-                    }
                 }
                 $topAreas[$areaKey]['species_set'][$speciesKey] = true;
             } else {
@@ -280,9 +260,27 @@ final class AnalyticsService
         $spatial = $this->buildSpatialInsights($areaRows);
 
         $speciesIntelligence = $this->buildSpeciesIntelligence($topSpecies, $speciesLookup);
-        usort($threatenedSpecies, static function (array $a, array $b): int {
-            return ((int) ($b['threatened_observation_count'] ?? 0)) <=> ((int) ($a['threatened_observation_count'] ?? 0));
-        });
+
+        $activityRankedByFrequency = $this->speciesActivityRanking->rankForSpeciesActivity($rows, 'desc');
+        $summaryStats['total_species_observed'] = $activityRankedByFrequency->count();
+        $topSpeciesObservation = [];
+        foreach ($activityRankedByFrequency->take(8) as $index => $obsRow) {
+            $topSpeciesObservation[] = [
+                'rank' => (int) $index + 1,
+                'species_name' => (string) ($obsRow->species_name ?? ''),
+                'scientific_name' => (string) ($obsRow->scientific_name ?? ''),
+                'recorded_count_sum' => (int) ($obsRow->recorded_count_sum ?? 0),
+                'observation_records' => (int) ($obsRow->observation_frequency ?? 0),
+                'protected_area_count' => (int) ($obsRow->protected_area_count ?? 0),
+            ];
+        }
+
+        $speciesObservationDistribution = $this->buildSpeciesObservationDistribution(
+            $rows,
+            (int) ($summaryStats['total_observations'] ?? 0),
+            (int) ($summaryStats['total_recorded_count'] ?? 0)
+        );
+
         $summaryStats['total_species'] = count(array_filter(array_keys($topSpecies), static fn (string $k): bool => $k !== 'raw:unspecified'));
 
         return [
@@ -294,10 +292,10 @@ final class AnalyticsService
             'top_areas' => array_slice($spatial['ranked_areas'], 0, 10),
             'spatial_insights' => $spatial,
             'top_species' => array_slice(array_values($topSpecies), 0, 10),
-            'top_threatened_species' => array_slice(array_values($threatenedSpecies), 0, 10),
+            'top_species_observation' => $topSpeciesObservation,
             'species_intelligence' => $speciesIntelligence,
             'bio_group_breakdown' => array_values($bioGroupBreakdown),
-            'conservation_status_breakdown' => array_values($conservationStatusBreakdown),
+            'species_observation_distribution' => $speciesObservationDistribution,
             'insight_alerts' => $insights,
             'quality' => [
                 'missing_scientific_name_count' => $missingScientificNameCount,
@@ -786,6 +784,60 @@ final class AnalyticsService
         return array_slice($alerts, 0, 5);
     }
 
+    /**
+     * Top 10 species by Σ (same aggregation as Species Activity). Percent shares are relative to the combined Σ of those top 10 only (no Others slice).
+     *
+     * @return array{slices: list<array<string, float|int|string>>, grand_total_recorded_count: int, total_observation_rows: int, total_recorded_count: int}
+     */
+    private function buildSpeciesObservationDistribution(Collection $rows, int $totalObservationRows, int $totalRecordedCount): array
+    {
+        $ranked = $this->speciesActivityRanking->rankByRecordedSumThenObservationCount($rows);
+        if ($ranked->isEmpty()) {
+            return [
+                'slices' => [],
+                'grand_total_recorded_count' => 0,
+                'total_observation_rows' => $totalObservationRows,
+                'total_recorded_count' => $totalRecordedCount,
+            ];
+        }
+
+        $head = $ranked->take(10);
+        $headSigma = (int) $head->sum(static fn ($row): int => (int) ($row->recorded_count_sum ?? 0));
+        if ($headSigma <= 0) {
+            return [
+                'slices' => [],
+                'grand_total_recorded_count' => 0,
+                'total_observation_rows' => $totalObservationRows,
+                'total_recorded_count' => $totalRecordedCount,
+            ];
+        }
+
+        $slices = [];
+        foreach ($head as $r) {
+            $sum = (int) ($r->recorded_count_sum ?? 0);
+            $name = trim((string) ($r->species_name ?? ''));
+            if ($name === '') {
+                $name = trim((string) ($r->scientific_name ?? ''));
+            }
+            if ($name === '') {
+                $name = 'Unspecified';
+            }
+            $slices[] = [
+                'species_name' => $name,
+                'recorded_count_sum' => $sum,
+                'observation_records' => (int) ($r->observation_frequency ?? 0),
+                'percent_share' => round(($sum / $headSigma) * 100, 4),
+            ];
+        }
+
+        return [
+            'slices' => $slices,
+            'grand_total_recorded_count' => $headSigma,
+            'total_observation_rows' => $totalObservationRows,
+            'total_recorded_count' => $totalRecordedCount,
+        ];
+    }
+
     private function humanizeStatus(string $status): string
     {
         $status = trim($status);
@@ -793,34 +845,5 @@ final class AnalyticsService
             return 'Unknown';
         }
         return ucwords(str_replace('_', ' ', $status));
-    }
-
-    private function normalizeConservationStatus(string $status): ?string
-    {
-        $normalized = strtolower(trim($status));
-        if ($normalized === '') {
-            return null;
-        }
-
-        // Make status matching resilient to formats like:
-        // "Critically Endangered (CR)", "EN - Endangered", "Least Concern/LC".
-        $compact = str_replace(['-', '_', '/', '(', ')', '[', ']', ','], ' ', $normalized);
-        $compact = preg_replace('/\s+/', ' ', $compact) ?? $compact;
-        $compact = trim($compact);
-
-        if (str_contains($compact, 'critically endangered') || preg_match('/\bcr\b/', $compact) === 1) {
-            return 'critically_endangered';
-        }
-        if (str_contains($compact, 'endangered') || preg_match('/\ben\b/', $compact) === 1) {
-            return 'endangered';
-        }
-        if (str_contains($compact, 'vulnerable') || preg_match('/\bvu\b/', $compact) === 1) {
-            return 'vulnerable';
-        }
-        if (str_contains($compact, 'least concern') || preg_match('/\blc\b/', $compact) === 1) {
-            return 'least_concern';
-        }
-
-        return null;
     }
 }

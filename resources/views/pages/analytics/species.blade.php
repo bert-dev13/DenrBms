@@ -97,14 +97,25 @@
 
         <div class="species-trend-card__controls">
             <div class="species-trend-card__control">
-                <label class="filter-panel__label" for="species-trend-selector">Species (Top 20)</label>
-                <select id="species-trend-selector" class="filter-panel__select">
+                <div class="species-trend-select-shell">
+                    <select
+                        id="species-trend-selector"
+                        class="filter-panel__select species-trend-select"
+                        aria-label="Species from top 20 by recorded count"
+                        title="Open list to choose another species from the top 20"
+                    >
                     @foreach (($dataset['top_species_options'] ?? []) as $species)
                         <option value="{{ $species['species_key'] }}" {{ ($dataset['selected_species_key'] ?? null) === $species['species_key'] ? 'selected' : '' }}>
-                            {{ $species['label'] }} ({{ number_format($species['total_recorded_count']) }})
+                            {{ $loop->iteration }}. {{ $species['label'] }} ({{ number_format($species['total_recorded_count']) }})
                         </option>
                     @endforeach
-                </select>
+                    </select>
+                    <span class="species-trend-select-shell__chevron" aria-hidden="true">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" focusable="false">
+                            <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </span>
+                </div>
             </div>
             <div id="species-trend-direction" class="species-trend-badge species-trend-badge--neutral">
                 Trend: {{ ucfirst(str_replace('_', ' ', (string) ($dataset['selected_species_direction'] ?? 'no_data'))) }}
@@ -122,7 +133,7 @@
     <section class="species-chart-grid">
         <article class="species-trend-card">
             <div class="species-trend-card__header">
-                <h2 class="species-trend-card__title">Top 10 Increasing Species</h2>
+                <h2 class="species-trend-card__title">Increasing Species</h2>
                 <p class="species-trend-card__subtitle">Highest growth from earliest to latest observed year.</p>
             </div>
             <div class="species-trend-card__chart-wrap species-trend-card__chart-wrap--compact">
@@ -135,7 +146,7 @@
 
         <article class="species-trend-card">
             <div class="species-trend-card__header">
-                <h2 class="species-trend-card__title">Top 10 Decreasing Species</h2>
+                <h2 class="species-trend-card__title">Decreasing Species</h2>
                 <p class="species-trend-card__subtitle">Largest declines from earliest to latest observed year.</p>
             </div>
             <div class="species-trend-card__chart-wrap species-trend-card__chart-wrap--compact">

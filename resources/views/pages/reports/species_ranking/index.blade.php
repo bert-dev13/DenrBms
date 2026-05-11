@@ -198,8 +198,8 @@
                                     <th class="species-ranking-col-rank">Rank</th>
                                     <th>Common Name</th>
                                     <th>Scientific Name</th>
-                                    <th class="species-ranking-col-num">Recorded Count (Σ)</th>
                                     <th class="species-ranking-col-num">Observation Records</th>
+                                    <th class="species-ranking-col-num">Recorded Count (Σ)</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -216,12 +216,12 @@
                                         </td>
                                         <td class="species-ranking-col-num">
                                             <span class="inline-flex items-center px-2 py-1 text-sm font-medium bg-gray-100 text-gray-800 rounded-full">
-                                                {{ number_format($row->recorded_count_sum) }}
+                                                {{ number_format($row->observation_records) }}
                                             </span>
                                         </td>
                                         <td class="species-ranking-col-num">
                                             <span class="inline-flex items-center px-2 py-1 text-sm font-medium bg-gray-100 text-gray-800 rounded-full">
-                                                {{ number_format($row->observation_records) }}
+                                                {{ number_format($row->recorded_count_sum) }}
                                             </span>
                                         </td>
                                     </tr>

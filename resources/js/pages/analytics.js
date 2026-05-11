@@ -6,9 +6,9 @@ function clearAnalyticsFilters() {
 
 let analyticsYearlyChart = null;
 let analyticsTopSpeciesChart = null;
-let analyticsTopThreatenedSpeciesChart = null;
+let analyticsTopSpeciesObsChart = null;
 let analyticsBioGroupChart = null;
-let analyticsConservationStatusChart = null;
+let analyticsSpeciesDistributionChart = null;
 
 function debounce(fn, delay = 450) {
     let timeout = null;
@@ -152,7 +152,16 @@ function renderYearlyMonitoringChart(payload) {
     });
 }
 
-function createHorizontalBarChart(canvasId, emptyId, labels, values, color, valueLabel, emptyText = 'No data available.') {
+function createHorizontalBarChart(
+    canvasId,
+    emptyId,
+    labels,
+    values,
+    color,
+    valueLabel,
+    emptyText = 'No data available.',
+    tooltipExtraLines = null
+) {
     const canvas = document.getElementById(canvasId);
     const emptyState = document.getElementById(emptyId);
     if (!canvas || typeof Chart === 'undefined') return null;
@@ -199,7 +208,13 @@ function createHorizontalBarChart(canvasId, emptyId, labels, values, color, valu
                             return fullLabels[tooltipItems[0].dataIndex] || '';
                         },
                         label(context) {
-                            return `${valueLabel}: ${formatFullNumber(context.raw)}`;
+                            const main = `${valueLabel}: ${formatFullNumber(context.raw)}`;
+                            if (typeof tooltipExtraLines === 'function') {
+                                const extra = tooltipExtraLines(context.dataIndex);
+                                if (Array.isArray(extra) && extra.length) return [main, ...extra];
+                                if (typeof extra === 'string' && extra) return [main, extra];
+                            }
+                            return main;
                         },
                     },
                 },
@@ -246,21 +261,25 @@ function renderTopSpeciesChart(payload) {
     );
 }
 
-function renderTopThreatenedSpeciesChart(payload) {
-    if (analyticsTopThreatenedSpeciesChart) {
-        analyticsTopThreatenedSpeciesChart.destroy();
-        analyticsTopThreatenedSpeciesChart = null;
+function renderTopSpeciesObservationChart(payload) {
+    if (analyticsTopSpeciesObsChart) {
+        analyticsTopSpeciesObsChart.destroy();
+        analyticsTopSpeciesObsChart = null;
     }
 
-    const rows = Array.isArray(payload?.top_threatened_species) ? payload.top_threatened_species.slice(0, 10) : [];
-    analyticsTopThreatenedSpeciesChart = createHorizontalBarChart(
-        'analytics-top-threatened-species-chart',
-        'analytics-top-threatened-species-empty',
-        rows.map((row) => String(row.common_name || row.scientific_name || 'Unspecified')),
-        rows.map((row) => Number(row.threatened_observation_count || 0)),
-        'rgba(185, 28, 28, 0.78)',
-        'Threatened Observations',
-        'No threatened species data available.'
+    const rows = Array.isArray(payload?.top_species_observation) ? payload.top_species_observation.slice(0, 8) : [];
+    analyticsTopSpeciesObsChart = createHorizontalBarChart(
+        'analytics-top-species-obs-chart',
+        'analytics-top-species-obs-empty',
+        rows.map((row) => String(row.species_name || row.scientific_name || 'Unspecified')),
+        rows.map((row) => Number(row.observation_records || 0)),
+        'rgba(5, 122, 85, 0.78)',
+        'Observation frequency',
+        'No species observation data available.',
+        (index) => [
+            `Total Recorded Count (Σ): ${formatFullNumber(rows[index]?.recorded_count_sum || 0)}`,
+            `Protected areas: ${formatFullNumber(rows[index]?.protected_area_count || 0)}`,
+        ]
     );
 }
 
@@ -306,36 +325,61 @@ function renderBioGroupChart(payload) {
     });
 }
 
-function renderConservationStatusChart(payload) {
-    const canvas = document.getElementById('analytics-conservation-status-chart');
-    const emptyState = document.getElementById('analytics-conservation-status-empty');
-    if (analyticsConservationStatusChart) {
-        analyticsConservationStatusChart.destroy();
-        analyticsConservationStatusChart = null;
+const SPECIES_DISTRIBUTION_COLORS = [
+    'rgba(37, 99, 235, 0.9)',
+    'rgba(5, 122, 85, 0.9)',
+    'rgba(124, 58, 237, 0.88)',
+    'rgba(217, 119, 6, 0.9)',
+    'rgba(219, 39, 119, 0.88)',
+    'rgba(14, 165, 233, 0.9)',
+    'rgba(100, 116, 139, 0.88)',
+    'rgba(234, 88, 12, 0.88)',
+    'rgba(71, 85, 105, 0.78)',
+    'rgba(22, 163, 74, 0.88)',
+];
+
+function renderSpeciesObservationDistributionChart(payload) {
+    const canvas = document.getElementById('analytics-species-distribution-chart');
+    const emptyState = document.getElementById('analytics-species-distribution-empty');
+
+    if (analyticsSpeciesDistributionChart) {
+        analyticsSpeciesDistributionChart.destroy();
+        analyticsSpeciesDistributionChart = null;
     }
     if (!canvas || typeof Chart === 'undefined') return;
 
-    const rows = Array.isArray(payload?.conservation_status_breakdown) ? payload.conservation_status_breakdown : [];
-    const hasAnyData = rows.some((row) => Number(row.observation_count || 0) > 0);
-    if (!rows.length || !hasAnyData) {
-        if (emptyState) emptyState.classList.remove('hidden');
+    const dist = payload?.species_observation_distribution;
+    const sliceMeta = Array.isArray(dist?.slices) ? dist.slices : [];
+    const topTenSigmaCombined = Number(dist?.grand_total_recorded_count || 0);
+
+    if (!sliceMeta.length || topTenSigmaCombined <= 0) {
+        if (emptyState) {
+            emptyState.textContent = 'No species observation data available.';
+            emptyState.classList.remove('hidden');
+        }
         return;
     }
 
     if (emptyState) emptyState.classList.add('hidden');
-    analyticsConservationStatusChart = new Chart(canvas, {
+
+    const labels = sliceMeta.map((s) => {
+        const name = String(s.species_name || 'Unspecified');
+        const pct = s.percent_share != null ? Number(s.percent_share).toFixed(1) : '0.0';
+        return `${truncateLabel(name, 24)} (${pct}%)`;
+    });
+    const values = sliceMeta.map((s) => Number(s.recorded_count_sum || 0));
+    const colors = sliceMeta.map((_, i) => SPECIES_DISTRIBUTION_COLORS[i % SPECIES_DISTRIBUTION_COLORS.length]);
+
+    analyticsSpeciesDistributionChart = new Chart(canvas, {
         type: 'doughnut',
         data: {
-            labels: rows.map((row) => String(row.label || 'Unknown')),
+            labels,
             datasets: [
                 {
-                    data: rows.map((row) => Number(row.observation_count || 0)),
-                    backgroundColor: [
-                        'rgba(185, 28, 28, 0.9)',
-                        'rgba(239, 68, 68, 0.85)',
-                        'rgba(245, 158, 11, 0.85)',
-                        'rgba(34, 197, 94, 0.85)',
-                    ],
+                    data: values,
+                    backgroundColor: colors,
+                    borderWidth: 1,
+                    borderColor: '#ffffff',
                 },
             ],
         },
@@ -343,12 +387,36 @@ function renderConservationStatusChart(payload) {
             responsive: true,
             maintainAspectRatio: false,
             animation: false,
+            cutout: '58%',
             plugins: {
-                legend: { position: 'bottom' },
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        boxWidth: 12,
+                        padding: 8,
+                        font: { size: 10 },
+                    },
+                },
                 tooltip: {
+                    displayColors: false,
                     callbacks: {
-                        label(context) {
-                            return `${context.label}: ${formatFullNumber(context.raw)}`;
+                        title(items) {
+                            const i = items[0]?.dataIndex ?? 0;
+                            return String(sliceMeta[i]?.species_name || '');
+                        },
+                        label(item) {
+                            const i = item.dataIndex;
+                            const m = sliceMeta[i];
+                            const sum = Number(m?.recorded_count_sum ?? item.raw ?? 0);
+                            const obs = Number(
+                                m?.observation_records != null
+                                    ? m.observation_records
+                                    : (m?.observation_frequency ?? 0),
+                            );
+                            return [
+                                `Observations: ${formatFullNumber(obs)}`,
+                                `Recorded count: ${formatFullNumber(sum)}`,
+                            ];
                         },
                     },
                 },
@@ -382,9 +450,9 @@ function initAnalyticsPage() {
     const payload = window.analyticsPayload || {};
     renderYearlyMonitoringChart(payload);
     renderTopSpeciesChart(payload);
-    renderTopThreatenedSpeciesChart(payload);
+    renderTopSpeciesObservationChart(payload);
     renderBioGroupChart(payload);
-    renderConservationStatusChart(payload);
+    renderSpeciesObservationDistributionChart(payload);
 }
 
 window.clearAnalyticsFilters = clearAnalyticsFilters;
@@ -393,7 +461,7 @@ document.addEventListener('DOMContentLoaded', initAnalyticsPage);
 window.addEventListener('beforeunload', () => {
     if (analyticsYearlyChart) analyticsYearlyChart.destroy();
     if (analyticsTopSpeciesChart) analyticsTopSpeciesChart.destroy();
-    if (analyticsTopThreatenedSpeciesChart) analyticsTopThreatenedSpeciesChart.destroy();
+    if (analyticsTopSpeciesObsChart) analyticsTopSpeciesObsChart.destroy();
     if (analyticsBioGroupChart) analyticsBioGroupChart.destroy();
-    if (analyticsConservationStatusChart) analyticsConservationStatusChart.destroy();
+    if (analyticsSpeciesDistributionChart) analyticsSpeciesDistributionChart.destroy();
 });

@@ -76,13 +76,13 @@
         <article class="summary-card summary-card--users">
             <div class="summary-card__head">
                 <div class="summary-card__icon" aria-hidden="true"><i data-lucide="users" class="lucide-icon"></i></div>
-                <p class="summary-card__label">Active Users</p>
+                <p class="summary-card__label">{{ $stats['active_users_label'] ?? 'Active Users' }}</p>
             </div>
             <p class="summary-card__value" id="active-users" data-countup="{{ (int) $stats['active_users'] }}">0</p>
             <div class="summary-card__divider"></div>
             <p class="summary-card__meta summary-card__meta--neutral">
                 <i data-lucide="clock-3" class="lucide-icon"></i>
-                <span>Active within the last 7 days</span>
+                <span>{{ $stats['active_users_subtitle'] ?? 'Active within the last 7 days' }}</span>
             </p>
         </article>
     </div>

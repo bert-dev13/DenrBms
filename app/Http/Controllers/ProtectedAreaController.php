@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ProtectedArea;
 use App\Models\SiteName;
 use App\Services\DynamicTableService;
+use App\Support\UserAccess;
 use App\Support\SearchHelper;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -16,6 +17,27 @@ use Illuminate\Pagination\LengthAwarePaginator;
 
 class ProtectedAreaController extends Controller
 {
+    private function assignedProtectedAreaId(): ?int
+    {
+        return UserAccess::assignedProtectedAreaId(Auth::user());
+    }
+
+    private function ensureCanManageProtectedArea(?int $protectedAreaId = null): void
+    {
+        if (! UserAccess::isAdmin(Auth::user())) {
+            abort(403, 'You are only allowed to view protected areas and sites.');
+        }
+
+        $assigned = $this->assignedProtectedAreaId();
+        if ($assigned === null) {
+            return;
+        }
+
+        if ($protectedAreaId !== null && $protectedAreaId !== $assigned) {
+            abort(403, 'You can only manage your assigned protected area.');
+        }
+    }
+
     /**
      * Count observations for a site from both site-specific tables and station-coded tables.
      */
@@ -78,9 +100,13 @@ class ProtectedAreaController extends Controller
         $statusFilter = $request->input('status'); // active, no_data, or null
         $sort = $request->input('sort', 'name');   // name or code
 
+        $assignedProtectedAreaId = $this->assignedProtectedAreaId();
+
         // Base query for all protected areas (we'll filter in collection so we can use
         // the computed species_observations_count attribute)
-        $allProtectedAreas = ProtectedArea::withTotalObservationsCount()
+        $allProtectedAreas = ProtectedArea::query()
+            ->when($assignedProtectedAreaId !== null, fn ($query) => $query->where('id', $assignedProtectedAreaId))
+            ->withTotalObservationsCount()
             ->orderBy($sort === 'code' ? 'code' : 'name')
             ->get();
 
@@ -140,7 +166,9 @@ class ProtectedAreaController extends Controller
         $speciesDiversity = DynamicTableService::getUniqueSpeciesCount();
 
         // Calculate active areas using all protected areas, not just paginated ones
-        $allProtectedAreas = ProtectedArea::all();
+        $allProtectedAreas = ProtectedArea::query()
+            ->when($assignedProtectedAreaId !== null, fn ($query) => $query->where('id', $assignedProtectedAreaId))
+            ->get();
         $activeAreasCount = 0;
         foreach ($allProtectedAreas as $area) {
             if ($area->getTotalObservationsCount() > 0) {
@@ -149,11 +177,15 @@ class ProtectedAreaController extends Controller
         }
 
         $stats = [
-            'total_areas' => ProtectedArea::count(),
+            'total_areas' => ProtectedArea::query()
+                ->when($assignedProtectedAreaId !== null, fn ($query) => $query->where('id', $assignedProtectedAreaId))
+                ->count(),
             'active_areas' => $activeAreasCount,
             'total_observations' => $totalObservations,
             'species_diversity' => $speciesDiversity,
-            'total_sites' => SiteName::count(),
+            'total_sites' => SiteName::query()
+                ->when($assignedProtectedAreaId !== null, fn ($query) => $query->where('protected_area_id', $assignedProtectedAreaId))
+                ->count(),
         ];
 
         return view('pages.protected_areas.index', compact('protectedAreas', 'stats', 'statusFilter', 'sort'));
@@ -164,6 +196,7 @@ class ProtectedAreaController extends Controller
      */
     public function store(Request $request)
     {
+        $this->ensureCanManageProtectedArea();
         // Log request details for debugging
         Log::info('ProtectedArea store called', [
             'method' => $request->method(),
@@ -346,8 +379,11 @@ class ProtectedAreaController extends Controller
         $statusFilter = $request->input('status'); // active, no_data, or null
         $sort = $request->input('sort', 'name');   // name or code
         
+        $assignedProtectedAreaId = $this->assignedProtectedAreaId();
+
         // Base query for all sites with their protected areas
-        $query = SiteName::with('protectedArea');
+        $query = SiteName::with('protectedArea')
+            ->when($assignedProtectedAreaId !== null, fn ($builder) => $builder->where('protected_area_id', $assignedProtectedAreaId));
         $sortDirection = 'asc';
         
         // Apply sorting
@@ -437,8 +473,12 @@ class ProtectedAreaController extends Controller
         $speciesDiversity = DynamicTableService::getUniqueSpeciesCount();
 
         $stats = [
-            'total_areas' => ProtectedArea::count(),
-            'total_sites' => SiteName::count(),
+            'total_areas' => ProtectedArea::query()
+                ->when($assignedProtectedAreaId !== null, fn ($query) => $query->where('id', $assignedProtectedAreaId))
+                ->count(),
+            'total_sites' => SiteName::query()
+                ->when($assignedProtectedAreaId !== null, fn ($query) => $query->where('protected_area_id', $assignedProtectedAreaId))
+                ->count(),
             'total_observations' => $totalObservations,
             'species_diversity' => $speciesDiversity,
         ];
@@ -451,6 +491,7 @@ class ProtectedAreaController extends Controller
      */
     public function show(ProtectedArea $protectedArea)
     {
+        $this->ensureCanManageProtectedArea($protectedArea->id);
         $protectedArea->loadCount('speciesObservations');
         return view('pages.protected_areas.show', compact('protectedArea'));
     }
@@ -462,6 +503,7 @@ class ProtectedAreaController extends Controller
     {
         try {
             $protectedArea = ProtectedArea::findOrFail($id);
+            $this->ensureCanManageProtectedArea((int) $protectedArea->id);
             
             // Get observation count
             $observationCount = $protectedArea->getTotalObservationsCount();
@@ -492,6 +534,7 @@ class ProtectedAreaController extends Controller
      */
     public function edit(ProtectedArea $protectedArea)
     {
+        $this->ensureCanManageProtectedArea($protectedArea->id);
         return view('pages.protected_areas.edit', compact('protectedArea'));
     }
 
@@ -500,6 +543,7 @@ class ProtectedAreaController extends Controller
      */
     public function update(Request $request, ProtectedArea $protectedArea)
     {
+        $this->ensureCanManageProtectedArea($protectedArea->id);
         // Log request details for debugging
         Log::info('ProtectedArea update called', [
             'method' => $request->method(),
@@ -573,6 +617,7 @@ class ProtectedAreaController extends Controller
      */
     public function destroy(ProtectedArea $protectedArea)
     {
+        $this->ensureCanManageProtectedArea($protectedArea->id);
         try {
             // Get observation count for response
             $observationCount = $protectedArea->getTotalObservationsCount();
@@ -640,6 +685,7 @@ class ProtectedAreaController extends Controller
      */
     public function showSite(SiteName $siteName)
     {
+        $this->ensureCanManageProtectedArea($siteName->protected_area_id ? (int) $siteName->protected_area_id : null);
         $siteName->load('protectedArea');
         return view('pages.protected_area_sites.show', compact('siteName'));
     }
@@ -651,6 +697,7 @@ class ProtectedAreaController extends Controller
     {
         try {
             $siteName = SiteName::with('protectedArea')->findOrFail($id);
+            $this->ensureCanManageProtectedArea($siteName->protected_area_id ? (int) $siteName->protected_area_id : null);
             
             return response()->json([
                 'success' => true,
@@ -681,7 +728,12 @@ class ProtectedAreaController extends Controller
      */
     public function editSite(SiteName $siteName)
     {
-        $protectedAreas = ProtectedArea::orderBy('name')->get();
+        $this->ensureCanManageProtectedArea($siteName->protected_area_id ? (int) $siteName->protected_area_id : null);
+        $assignedProtectedAreaId = $this->assignedProtectedAreaId();
+        $protectedAreas = ProtectedArea::query()
+            ->when($assignedProtectedAreaId !== null, fn ($query) => $query->where('id', $assignedProtectedAreaId))
+            ->orderBy('name')
+            ->get();
         return view('pages.protected_area_sites.edit', compact('siteName', 'protectedAreas'));
     }
 
@@ -690,6 +742,7 @@ class ProtectedAreaController extends Controller
      */
     public function updateSite(Request $request, SiteName $siteName)
     {
+        $this->ensureCanManageProtectedArea($siteName->protected_area_id ? (int) $siteName->protected_area_id : null);
         $validated = $request->validate([
             'name' => [
                 'required',
@@ -866,6 +919,7 @@ class ProtectedAreaController extends Controller
      */
     public function storeSite(Request $request)
     {
+        $this->ensureCanManageProtectedArea($request->integer('protected_area_id') ?: null);
         // Log request details for debugging
         Log::info('ProtectedAreaSite store called', [
             'method' => $request->method(),
@@ -983,6 +1037,7 @@ class ProtectedAreaController extends Controller
      */
     public function destroySite(SiteName $siteName)
     {
+        $this->ensureCanManageProtectedArea($siteName->protected_area_id ? (int) $siteName->protected_area_id : null);
         try {
             // Get the site table name before deletion
             $tableName = $this->createSafeSiteTableName($siteName->name, $siteName->id);
@@ -1099,9 +1154,12 @@ class ProtectedAreaController extends Controller
         // Get the same filtered data as the index method but without pagination
         $statusFilter = $request->input('status');
         $sort = $request->input('sort', 'name');
+        $assignedProtectedAreaId = $this->assignedProtectedAreaId();
 
         // Base query for all protected areas
-        $allProtectedAreas = ProtectedArea::withTotalObservationsCount()
+        $allProtectedAreas = ProtectedArea::query()
+            ->when($assignedProtectedAreaId !== null, fn ($query) => $query->where('id', $assignedProtectedAreaId))
+            ->withTotalObservationsCount()
             ->orderBy($sort === 'code' ? 'code' : 'name')
             ->get();
 
@@ -1274,9 +1332,11 @@ class ProtectedAreaController extends Controller
         // Get the same filtered data as the sites method but without pagination
         $statusFilter = $request->input('status');
         $sort = $request->input('sort', 'name');
+        $assignedProtectedAreaId = $this->assignedProtectedAreaId();
         
         // Base query for all sites with their protected areas
-        $query = SiteName::with('protectedArea');
+        $query = SiteName::with('protectedArea')
+            ->when($assignedProtectedAreaId !== null, fn ($builder) => $builder->where('protected_area_id', $assignedProtectedAreaId));
         $sortDirection = 'asc';
         
         // Apply sorting

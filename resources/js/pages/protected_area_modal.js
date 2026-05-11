@@ -249,6 +249,7 @@ class ProtectedAreaModalSystem {
     renderDelete(area) {
         return `
             <section class="pa-modal pa-modal-delete" role="dialog" aria-modal="true" aria-labelledby="pa-delete-title">
+                ${this.renderHeader('delete')}
                 <div class="pa-delete-body">
                     <h2 id="pa-delete-title" class="pa-delete-title">Delete protected area?</h2>
                     <p class="pa-delete-name">${this.escape(area?.name || 'Selected area')}</p>

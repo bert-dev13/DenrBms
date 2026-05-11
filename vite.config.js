@@ -40,10 +40,8 @@ export default defineConfig({
                 'resources/js/pages/protected_area_modal.js',
                 'resources/js/pages/protected_areas.js',
                 /* Reports */
-                'resources/css/pages/endemic_species_report.css',
-                'resources/css/pages/migratory_species_report.css',
-                'resources/js/pages/endemic_species_report.js',
-                'resources/js/pages/migratory_species_report.js',
+                'resources/css/pages/species_activity.css',
+                'resources/js/pages/species_activity.js',
                 'resources/css/pages/species_ranking.css',
                 'resources/js/pages/species_ranking.js',
                 /* Protected Area Sites */
@@ -54,6 +52,9 @@ export default defineConfig({
                 /* Settings */
                 'resources/css/pages/settings.css',
                 'resources/js/pages/settings.js',
+                /* User Management */
+                'resources/css/pages/users.css',
+                'resources/js/pages/users.js',
             ],
             refresh: true,
         }),

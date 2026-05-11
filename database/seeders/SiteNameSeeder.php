@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use App\Models\ProtectedArea;
+use Illuminate\Support\Facades\DB;
 
 class SiteNameSeeder extends Seeder
 {
@@ -44,11 +45,21 @@ class SiteNameSeeder extends Seeder
             ],
         ];
 
-        // Clear existing site names to avoid duplicates
-        \DB::table('site_names')->delete();
-
         foreach ($siteNames as $site) {
-            \DB::table('site_names')->insert([
+            $existingSite = DB::table('site_names')->where('name', $site['name'])->first();
+
+            if ($existingSite) {
+                DB::table('site_names')
+                    ->where('id', $existingSite->id)
+                    ->update([
+                        'protected_area_id' => $site['protected_area_id'],
+                        'updated_at' => now(),
+                    ]);
+
+                continue;
+            }
+
+            DB::table('site_names')->insert([
                 'name' => $site['name'],
                 'protected_area_id' => $site['protected_area_id'],
                 'created_at' => now(),

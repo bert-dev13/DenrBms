@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\DynamicTableService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -155,12 +156,13 @@ class ProtectedArea extends Model
         // IMPORTANT: Add site-specific tables count
         try {
             // Get all site-specific tables for this protected area
-            $siteTables = DB::select("SHOW TABLES LIKE '%_site_tbl'");
+            $siteTables = array_filter(
+                DynamicTableService::listTables(),
+                fn (string $tableName): bool => str_ends_with($tableName, '_site_tbl')
+            );
             $totalSiteCount = 0;
             
-            foreach ($siteTables as $table) {
-                $tableName = array_values((array)$table)[0];
-                
+            foreach ($siteTables as $tableName) {
                 // Check if this site table belongs to this protected area
                 try {
                     $count = DB::table($tableName)

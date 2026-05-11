@@ -146,12 +146,13 @@ class SpeciesObservationModalSystem {
         const safeName = String(name).replace(/</g, '&lt;').replace(/>/g, '&gt;');
         return `
             <section class="so-modal so-modal--small so-modal--delete" role="dialog" aria-modal="true">
+                ${this.renderHeader('delete')}
                 <div class="so-delete-body">
                     <h3 class="so-delete-title">Delete observation?</h3>
                     <p class="so-delete-subtitle">${safeName}</p>
                     <p class="so-delete-note">This action cannot be undone.</p>
                 </div>
-                <div class="so-delete-footer">
+                <div class="so-modal-footer">
                     <button class="so-btn so-btn-cancel" type="button" onclick="window.closeModal()">Cancel</button>
                     <button class="so-btn so-btn-danger" type="button" onclick="window.modalSystem.confirmDelete('${data.observationId}', '${(data.tableName || '').replace(/'/g, "\\'")}')">Delete</button>
                 </div>

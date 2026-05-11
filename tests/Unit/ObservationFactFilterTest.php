@@ -8,20 +8,22 @@ use Tests\TestCase;
 
 class ObservationFactFilterTest extends TestCase
 {
-    public function test_endemic_maps_site_id_to_site_name_for_union(): void
+    public function test_species_ranking_style_preserves_supported_filters(): void
     {
-        $request = Request::create('/reports/endemic-species', 'GET', [
+        $request = Request::create('/reports/species-ranking', 'GET', [
             'protected_area_id' => '5',
-            'site_id' => '42',
+            'site_name' => '42',
+            'patrol_year' => '2026',
             'search' => 'eagle',
         ]);
 
-        $filter = ObservationFactFilter::fromEndemicReportRequest($request);
+        $filter = ObservationFactFilter::fromSpeciesObservationStyleRequest($request);
 
         $this->assertEquals(
             [
                 'protected_area_id' => '5',
                 'site_name' => '42',
+                'patrol_year' => '2026',
                 'search' => 'eagle',
             ],
             $filter->unionQueryParams
@@ -45,17 +47,16 @@ class ObservationFactFilterTest extends TestCase
         ], $filter->unionQueryParams);
     }
 
-    public function test_migratory_filter_matches_endemic_site_mapping(): void
+    public function test_species_observation_style_preserves_middleware_merged_filters(): void
     {
-        $request = Request::create('/reports/migratory-species', 'GET', [
-            'site_id' => '7',
-            'protected_area_id' => '2',
-        ]);
+        $request = Request::create('/species-observations', 'GET', []);
+        $request->merge(['protected_area_id' => '7']);
 
-        $migratory = ObservationFactFilter::fromMigratoryReportRequest($request);
-        $endemic = ObservationFactFilter::fromEndemicReportRequest($request);
+        $filter = ObservationFactFilter::fromSpeciesObservationStyleRequest($request);
 
-        $this->assertEquals($endemic->unionQueryParams, $migratory->unionQueryParams);
+        $this->assertSame([
+            'protected_area_id' => '7',
+        ], $filter->unionQueryParams);
     }
 
     public function test_to_union_request_preserves_url(): void

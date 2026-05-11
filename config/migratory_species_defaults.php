@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Default migratory species registry rows for Migratory Species Report and SpeciesSeeder.
+ * Default migratory species registry rows for SpeciesSeeder.
  * Matched to observation common_name / scientific_name (after synonym normalization).
  */
 return [

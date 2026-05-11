@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Data\ObservationFactFilter;
 use App\Helpers\PatrolYearHelper;
 use App\Models\BanganObservation;
-use App\Models\BaseObservation;
 use App\Models\BauaObservation;
 use App\Models\BmsSpeciesObservation;
 use App\Models\CasecnanObservation;
@@ -27,11 +26,14 @@ use App\Models\SiteName;
 use App\Models\ToyotaObservation;
 use App\Models\TumauiniObservation;
 use App\Models\WangagObservation;
+use App\Services\DynamicTableService;
 use App\Services\SpeciesObservationFactService;
 use App\Services\SpeciesObservationUnionService;
+use App\Support\UserAccess;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
@@ -43,6 +45,19 @@ class SpeciesObservationController extends Controller
         private SpeciesObservationUnionService $observationUnion,
         private SpeciesObservationFactService $observationFactService,
     ) {}
+
+    private function assignedProtectedAreaId(): ?int
+    {
+        return UserAccess::assignedProtectedAreaId(Auth::user());
+    }
+
+    private function canAccessObservation(object $observation): bool
+    {
+        $assignedProtectedAreaId = $this->assignedProtectedAreaId();
+
+        return $assignedProtectedAreaId === null
+            || (int) ($observation->protected_area_id ?? 0) === $assignedProtectedAreaId;
+    }
 
     /**
      * Resolve available sites for a protected area using the same logic as site dropdown APIs.
@@ -178,8 +193,13 @@ class SpeciesObservationController extends Controller
      */
     private function getFilterOptions(): array
     {
+        $assignedProtectedAreaId = $this->assignedProtectedAreaId();
+
         return [
-            'protectedAreas' => ProtectedArea::orderBy('name')->get(),
+            'protectedAreas' => ProtectedArea::query()
+                ->when($assignedProtectedAreaId !== null, fn ($query) => $query->where('id', $assignedProtectedAreaId))
+                ->orderBy('name')
+                ->get(),
             'bioGroups' => ['fauna' => 'Fauna', 'flora' => 'Flora'],
             'years' => PatrolYearHelper::getYears(),
             'semesters' => [1 => '1st', 2 => '2nd'],
@@ -192,6 +212,15 @@ class SpeciesObservationController extends Controller
     public function getSiteNames(int $protectedAreaId)
     {
         $protectedArea = ProtectedArea::find($protectedAreaId);
+        $assignedProtectedAreaId = $this->assignedProtectedAreaId();
+        if ($assignedProtectedAreaId !== null && $protectedAreaId !== $assignedProtectedAreaId) {
+            return response()->json([
+                'success' => false,
+                'error' => 'You can only access your assigned protected area.',
+                'site_names' => [],
+                'sites' => [],
+            ], 403);
+        }
 
         if ($protectedArea) {
             $siteNames = $this->resolveSitesForProtectedArea($protectedArea);
@@ -226,6 +255,13 @@ class SpeciesObservationController extends Controller
             if (! $observation) {
                 Log::error('Observation not found for editing with ID: '.$id);
 
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Observation not found.',
+                ], 404);
+            }
+
+            if (! $this->canAccessObservation($observation)) {
                 return response()->json([
                     'success' => false,
                     'error' => 'Observation not found.',
@@ -383,6 +419,18 @@ class SpeciesObservationController extends Controller
                     'success' => false,
                     'message' => 'Protected area not found.',
                 ], 422);
+            }
+            if ($this->assignedProtectedAreaId() !== null && (int) $validated['protected_area_id'] !== $this->assignedProtectedAreaId()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You can only update records for your assigned protected area.',
+                ], 403);
+            }
+            if ($this->assignedProtectedAreaId() !== null && (int) $validated['protected_area_id'] !== $this->assignedProtectedAreaId()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You can only create records for your assigned protected area.',
+                ], 403);
             }
 
             $normalizedSiteId = $validated['site_name'] ?? null;
@@ -990,28 +1038,36 @@ class SpeciesObservationController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(BaseObservation $speciesObservation)
+    public function show(int $id)
     {
-        $speciesObservation->load('protectedArea');
+        $speciesObservation = $this->findObservationById($id, request()->query('table_name'));
 
-        return view('pages.species_observations.show', compact('speciesObservation'));
+        if (! $speciesObservation || ! $this->canAccessObservation($speciesObservation)) {
+            abort(404);
+        }
+
+        if (request()->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'observation' => $speciesObservation,
+            ]);
+        }
+
+        return redirect()->route('species-observations.index');
     }
 
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(BaseObservation $speciesObservation)
+    public function edit(int $id)
     {
-        $protectedAreas = ProtectedArea::orderBy('name')->get();
-        $bioGroups = ['fauna' => 'Fauna', 'flora' => 'Flora'];
-        $semesters = [1 => '1st', 2 => '2nd'];
+        $speciesObservation = $this->findObservationById($id, request()->query('table_name'));
 
-        return view('pages.species_observations.edit', compact(
-            'speciesObservation',
-            'protectedAreas',
-            'bioGroups',
-            'semesters'
-        ));
+        if (! $speciesObservation || ! $this->canAccessObservation($speciesObservation)) {
+            abort(404);
+        }
+
+        return redirect()->route('species-observations.index');
     }
 
     /**
@@ -1064,6 +1120,13 @@ class SpeciesObservationController extends Controller
                         'table_exists' => $tableName ? Schema::hasTable($tableName) : null,
                         'table_info' => $tableInfo,
                     ],
+                ], 404);
+            }
+
+            if (! $this->canAccessObservation($observation)) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Observation not found.',
                 ], 404);
             }
 
@@ -1154,6 +1217,18 @@ class SpeciesObservationController extends Controller
             if (! $observation) {
                 Log::error('Observation not found with ID: '.$id);
 
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'error' => 'Species observation not found.',
+                    ], 404);
+                }
+
+                return redirect()->route('species-observations.index')
+                    ->with('error', 'Species observation not found.');
+            }
+
+            if (! $this->canAccessObservation($observation)) {
                 if ($request->expectsJson()) {
                     return response()->json([
                         'success' => false,
@@ -1329,21 +1404,24 @@ class SpeciesObservationController extends Controller
 
         // If still not found, check all site-specific tables as last resort
         try {
-            $siteTables = DB::select("SHOW TABLES LIKE '%_site_tbl'");
-            foreach ($siteTables as $table) {
-                $tableName = array_values((array) $table)[0];
+            $siteTables = array_filter(
+                DynamicTableService::listTables(),
+                fn (string $siteTableName): bool => str_ends_with($siteTableName, '_site_tbl')
+            );
+
+            foreach ($siteTables as $siteTableName) {
                 try {
-                    $observation = DB::table($tableName)->where('id', $id)->first();
+                    $observation = DB::table($siteTableName)->where('id', $id)->first();
                     if ($observation) {
-                        Log::info('Found observation in site-specific table: '.$tableName.' with ID: '.$id);
+                        Log::info('Found observation in site-specific table: '.$siteTableName.' with ID: '.$id);
                         // Convert to object that behaves like a model
-                        $observation->table_name = $tableName;
+                        $observation->table_name = $siteTableName;
                         $observation->exists = true;
 
                         return $observation;
                     }
                 } catch (\Exception $e) {
-                    Log::error('Error searching site-specific table '.$tableName.': '.$e->getMessage());
+                    Log::error('Error searching site-specific table '.$siteTableName.': '.$e->getMessage());
 
                     continue;
                 }

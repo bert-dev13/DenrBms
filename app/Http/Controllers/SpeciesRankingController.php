@@ -8,10 +8,12 @@ use App\Models\ProtectedArea;
 use App\Services\SpeciesCanonicalResolver;
 use App\Services\SpeciesObservationFactService;
 use App\Support\ObservationRowValue;
+use App\Support\UserAccess;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SpeciesRankingController extends Controller
@@ -21,10 +23,22 @@ class SpeciesRankingController extends Controller
         private SpeciesCanonicalResolver $speciesCanonicalResolver,
     ) {}
 
+    private function assignedProtectedAreaId(): ?int
+    {
+        return UserAccess::assignedProtectedAreaId(Auth::user());
+    }
+
     public function index(Request $request)
     {
+        $assignedProtectedAreaId = $this->assignedProtectedAreaId();
+        if ($assignedProtectedAreaId !== null) {
+            $request->merge(['protected_area_id' => $assignedProtectedAreaId]);
+        }
         $filterOptions = [
-            'protectedAreas' => ProtectedArea::orderBy('name')->get(),
+            'protectedAreas' => ProtectedArea::query()
+                ->when($assignedProtectedAreaId !== null, fn ($query) => $query->where('id', $assignedProtectedAreaId))
+                ->orderBy('name')
+                ->get(),
             'bioGroups' => ['fauna' => 'Fauna', 'flora' => 'Flora'],
             'years' => PatrolYearHelper::getYears(),
             'semesters' => [1 => '1st', 2 => '2nd'],

@@ -10,7 +10,11 @@
     <div class="sidebar__header">
         <div class="sidebar__brand">
             <div class="sidebar__logo" aria-hidden="true">
-                <img src="{{ asset('images/denr-logo.png') }}" alt="" class="sidebar__logo-img">
+                @if (file_exists(public_path('images/denr-logo.png')))
+                    <img src="{{ asset('images/denr-logo.png') }}" alt="" class="sidebar__logo-img">
+                @else
+                    <span class="sidebar__logo-img d-inline-flex align-items-center justify-content-center fw-bold">D</span>
+                @endif
             </div>
             <div class="sidebar__brand-text">
                 <h1 class="sidebar__title">DENR BMS</h1>
@@ -28,14 +32,25 @@
             <i data-lucide="clipboard-list" class="lucide-icon sidebar__nav-icon" stroke-width="1.75"></i>
             <span class="sidebar__nav-label">Species Observations</span>
         </a>
-        <a href="{{ route('protected-areas.index') }}" class="sidebar__nav-item {{ request()->routeIs('protected-areas.*') ? 'sidebar__nav-item--active' : '' }}" data-tooltip="Protected Areas">
-            <i data-lucide="map-pin" class="lucide-icon sidebar__nav-icon" stroke-width="1.75"></i>
-            <span class="sidebar__nav-label">Protected Areas</span>
-        </a>
+        @if((auth()->user()->role ?? null) === 'admin')
+            <a href="{{ route('protected-areas.index') }}" class="sidebar__nav-item {{ request()->routeIs('protected-areas.*') ? 'sidebar__nav-item--active' : '' }}" data-tooltip="Protected Areas">
+                <i data-lucide="map-pin" class="lucide-icon sidebar__nav-icon" stroke-width="1.75"></i>
+                <span class="sidebar__nav-label">Protected Areas</span>
+            </a>
+        @endif
         <a href="{{ route('protected-area-sites.index') }}" class="sidebar__nav-item {{ request()->routeIs('protected-area-sites.*') ? 'sidebar__nav-item--active' : '' }}" data-tooltip="PA Sites">
             <i data-lucide="map" class="lucide-icon sidebar__nav-icon" stroke-width="1.75"></i>
             <span class="sidebar__nav-label">PA Sites</span>
         </a>
+        @if((auth()->user()->role ?? null) === 'admin')
+            <div class="sidebar__nav-group">
+                <div class="sidebar__nav-group-label">Management</div>
+                <a href="{{ route('users.index') }}" class="sidebar__nav-item sidebar__nav-item--sub {{ request()->routeIs('users.*') ? 'sidebar__nav-item--active' : '' }}" data-tooltip="User Management">
+                    <i data-lucide="users" class="lucide-icon sidebar__nav-icon" stroke-width="1.75"></i>
+                    <span class="sidebar__nav-label">User Management</span>
+                </a>
+            </div>
+        @endif
         <div class="sidebar__nav-group">
             <div class="sidebar__nav-group-label">Analytics</div>
             <a href="{{ route('analytics.index') }}" class="sidebar__nav-item sidebar__nav-item--sub {{ request()->routeIs('analytics.index') || request()->routeIs('analytics.export.*') ? 'sidebar__nav-item--active' : '' }}" data-tooltip="Analytics Overview">
@@ -49,14 +64,12 @@
         </div>
         <div class="sidebar__nav-group">
             <div class="sidebar__nav-group-label">Reports</div>
-            <a href="{{ route('reports.endemic-species') }}" class="sidebar__nav-item sidebar__nav-item--sub {{ request()->routeIs('reports.endemic-species*') ? 'sidebar__nav-item--active' : '' }}" data-tooltip="Endemic Species Report">
-                <i data-lucide="leaf" class="lucide-icon sidebar__nav-icon" stroke-width="1.75"></i>
-                <span class="sidebar__nav-label">Endemic Species Report</span>
-            </a>
-            <a href="{{ route('reports.migratory-species') }}" class="sidebar__nav-item sidebar__nav-item--sub {{ request()->routeIs('reports.migratory-species*') ? 'sidebar__nav-item--active' : '' }}" data-tooltip="Migratory Species Report">
-                <i data-lucide="bird" class="lucide-icon sidebar__nav-icon" stroke-width="1.75"></i>
-                <span class="sidebar__nav-label">Migratory Species Report</span>
-            </a>
+            @if(\App\Support\UserAccess::isPaUser(auth()->user()) || \App\Support\UserAccess::isAdmin(auth()->user()))
+                <a href="{{ route('reports.species-activity') }}" class="sidebar__nav-item sidebar__nav-item--sub {{ request()->routeIs('reports.species-activity*') ? 'sidebar__nav-item--active' : '' }}" data-tooltip="Species Activity Ranking">
+                    <i data-lucide="activity" class="lucide-icon sidebar__nav-icon" stroke-width="1.75"></i>
+                    <span class="sidebar__nav-label">Species Activity</span>
+                </a>
+            @endif
             <a href="{{ route('reports.species-ranking') }}" class="sidebar__nav-item sidebar__nav-item--sub {{ request()->routeIs('reports.species-ranking*') ? 'sidebar__nav-item--active' : '' }}" data-tooltip="Species Rankings Report">
                 <i data-lucide="trophy" class="lucide-icon sidebar__nav-icon" stroke-width="1.75"></i>
                 <span class="sidebar__nav-label">Species Rankings</span>
@@ -102,13 +115,13 @@
                     <p class="text-sm text-gray-600">Are you sure you want to logout? You will need to login again to access the system.</p>
                 </div>
                 <div class="flex gap-3">
-                    <form action="{{ route('logout') }}" method="POST" class="flex-1">
+                    <form id="logout-form" action="{{ route('logout') }}" method="POST" class="flex-1" onsubmit="return handleLogoutSubmit(event)">
                         @csrf
-                        <button type="submit" class="w-full px-4 py-2.5 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors">
+                        <button id="logout-submit-btn" type="submit" class="w-full px-4 py-2.5 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors">
                             Logout
                         </button>
                     </form>
-                    <button type="button" onclick="hideLogoutModal()" class="flex-1 px-4 py-2.5 bg-gray-200 text-gray-800 text-sm font-medium rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 transition-colors">
+                    <button id="logout-cancel-btn" type="button" onclick="hideLogoutModal()" class="flex-1 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2">
                         Cancel
                     </button>
                 </div>
@@ -118,29 +131,39 @@
 </div>
 
 <style>
-    #logout-modal.show #logout-modal-content { animation: modalSlideUp 0.3s ease-out forwards; }
-    @keyframes modalSlideUp {
-        from { opacity: 0; transform: scale(0.95) translateY(16px); }
-        to { opacity: 1; transform: scale(1) translateY(0); }
-    }
-    #logout-modal.hiding #logout-modal-content { animation: modalSlideDown 0.3s ease-out forwards; }
-    @keyframes modalSlideDown {
-        from { opacity: 1; transform: scale(1) translateY(0); }
-        to { opacity: 0; transform: scale(0.95) translateY(16px); }
-    }
     #logout-modal { position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; }
     #logout-modal-content { position: relative !important; z-index: 10001 !important; }
+    #logout-cancel-btn {
+        background-color: #e5e7eb;
+        color: #1f2937;
+        border: 1px solid #d1d5db;
+    }
+    #logout-cancel-btn:hover {
+        background-color: #d1d5db;
+    }
+    #logout-cancel-btn:focus {
+        --tw-ring-color: #9ca3af;
+    }
+    [data-theme="dark"] #logout-cancel-btn {
+        background-color: #374151;
+        color: #f9fafb;
+        border-color: #4b5563;
+    }
+    [data-theme="dark"] #logout-cancel-btn:hover {
+        background-color: #4b5563;
+    }
 </style>
 
 <script>
+    var logoutSubmitInProgress = false;
+
     function showLogoutModal() {
         var modal = document.getElementById('logout-modal');
         var content = document.getElementById('logout-modal-content');
         if (!modal || !content) return;
-        modal.classList.remove('hidden', 'hiding');
-        modal.classList.add('show');
-        modal.offsetHeight;
-        setTimeout(function() { content.classList.add('show'); }, 10);
+        modal.classList.remove('hidden');
+        content.classList.remove('opacity-0', 'scale-95');
+        content.classList.add('opacity-100', 'scale-100');
         document.body.style.overflow = 'hidden';
         if (typeof lucide !== 'undefined') lucide.createIcons();
     }
@@ -148,12 +171,10 @@
         var modal = document.getElementById('logout-modal');
         var content = document.getElementById('logout-modal-content');
         if (!modal || !content) { document.body.style.overflow = ''; return; }
-        modal.classList.add('hiding');
-        modal.classList.remove('show');
-        content.classList.remove('show');
+        content.classList.remove('opacity-100', 'scale-100');
+        content.classList.add('opacity-0', 'scale-95');
         setTimeout(function() {
             modal.classList.add('hidden');
-            modal.classList.remove('hiding');
             document.body.style.overflow = '';
         }, 300);
     }
@@ -162,5 +183,68 @@
             var m = document.getElementById('logout-modal');
             if (m && !m.classList.contains('hidden')) hideLogoutModal();
         }
+    });
+
+    async function handleLogoutSubmit(event) {
+        if (event) {
+            event.preventDefault();
+        }
+
+        if (logoutSubmitInProgress) {
+            return false;
+        }
+
+        var form = document.getElementById('logout-form');
+        var submitBtn = document.getElementById('logout-submit-btn');
+        if (!form) {
+            return false;
+        }
+
+        logoutSubmitInProgress = true;
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Logging out...';
+        }
+
+        try {
+            var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+            var csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
+            var response = await fetch(form.action, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'X-CSRF-TOKEN': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                },
+                body: new FormData(form)
+            });
+
+            // Logout endpoint may redirect (HTML) or return JSON. Either way,
+            // route users back to login after successful request.
+            if (response.ok || response.redirected) {
+                window.location.href = "{{ route('login') }}";
+                return false;
+            }
+        } catch (e) {
+            // Fall through to normal form submission as a robust fallback.
+        }
+
+        form.removeAttribute('onsubmit');
+        form.submit();
+        return false;
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        var modal = document.getElementById('logout-modal');
+        var content = document.getElementById('logout-modal-content');
+        if (modal) {
+            modal.classList.add('hidden');
+        }
+        if (content) {
+            content.classList.remove('opacity-100', 'scale-100');
+            content.classList.add('opacity-0', 'scale-95');
+        }
+        document.body.style.overflow = '';
     });
 </script>
