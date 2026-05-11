@@ -2,6 +2,23 @@
 
 use Illuminate\Support\Str;
 
+$dbUrl = env('DATABASE_URL') ?: env('DB_URL');
+$dbConnection = env('DB_CONNECTION');
+
+$connectionFromUrl = 'sqlite';
+if (is_string($dbUrl) && $dbUrl !== '') {
+    $scheme = parse_url($dbUrl, PHP_URL_SCHEME);
+    $connectionFromUrl = match ($scheme) {
+        'postgres', 'postgresql' => 'pgsql',
+        'mysql' => 'mysql',
+        default => 'sqlite',
+    };
+}
+
+$defaultConnection = (is_string($dbConnection) && $dbConnection !== '')
+    ? $dbConnection
+    : $connectionFromUrl;
+
 return [
 
     /*
@@ -14,9 +31,12 @@ return [
     | the connection which will be utilized unless another connection
     | is explicitly specified when you execute a query / statement.
     |
+    | When DB_CONNECTION is unset, the default is inferred from DATABASE_URL
+    | (e.g. Railway) so the app does not stay on sqlite while Postgres is provisioned.
+    |
     */
 
-    'default' => env('DB_CONNECTION', 'sqlite'),
+    'default' => $defaultConnection,
 
     /*
     |--------------------------------------------------------------------------
