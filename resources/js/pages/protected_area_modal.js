@@ -213,7 +213,7 @@ class ProtectedAreaModalSystem {
                         <label class="pa-field"><span>Area Code</span><input class="pa-input" readonly value="${this.escape(area?.code)}"></label>
                         <label class="pa-field"><span>Status</span><input class="pa-input" readonly value="${status}"></label>
                         <label class="pa-field pa-col-span"><span>Name</span><input class="pa-input" readonly value="${this.escape(area?.name)}"></label>
-                        <label class="pa-field"><span>Observations</span><input class="pa-input" readonly value="${area?.species_observations_count ?? 0}"></label>
+                        <label class="pa-field pa-col-span"><span>Observations</span><input class="pa-input" readonly value="${area?.species_observations_count ?? 0}"></label>
                     </div>
                 </div>
             `;
