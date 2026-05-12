@@ -34,7 +34,7 @@
                 <tr>
                     <td>{{ $user->name }}</td>
                     <td>{{ $user->email }}</td>
-                    <td>{{ '@'.$user->username }}</td>
+                    <td>{{ $user->usernameForDisplay() }}</td>
                     <td>{{ $user->role === 'admin' ? 'Administrator' : 'Protected Area User' }}</td>
                     <td>{{ $user->protectedArea?->name ?? '—' }}</td>
                     <td>{{ $user->is_active ? 'Active' : 'Inactive' }}</td>

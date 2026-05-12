@@ -72,4 +72,20 @@ class User extends Authenticatable
     {
         return $this->belongsTo(ProtectedArea::class);
     }
+
+    /**
+     * Prefix @ for handle-style usernames only; skip for email-like values or stored @ handles.
+     */
+    public function usernameForDisplay(): string
+    {
+        $u = (string) ($this->username ?? '');
+        if ($u === '') {
+            return '';
+        }
+        if (str_starts_with($u, '@') || str_contains($u, '@')) {
+            return $u;
+        }
+
+        return '@'.$u;
+    }
 }

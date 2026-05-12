@@ -90,10 +90,16 @@ function hideCreateUserModal() {
     hideModal('create-user-modal', 'create-user-modal-content');
 }
 
+function formatUsernameForDisplay(username) {
+    if (!username) return '—';
+    if (username.startsWith('@') || username.includes('@')) return username;
+    return `@${username}`;
+}
+
 function openUserViewModal(button) {
     document.getElementById('view-user-name').textContent = button.dataset.userName || '—';
     document.getElementById('view-user-email').textContent = button.dataset.userEmail || '—';
-    document.getElementById('view-user-username').textContent = button.dataset.userUsername ? `@${button.dataset.userUsername}` : '—';
+    document.getElementById('view-user-username').textContent = formatUsernameForDisplay(button.dataset.userUsername);
     document.getElementById('view-user-role').textContent = button.dataset.userRole === 'admin' ? 'Administrator' : 'Protected Area User';
     document.getElementById('view-user-protected-area').textContent = button.dataset.userProtectedArea || '—';
     document.getElementById('view-user-status').textContent = button.dataset.userStatus || '—';

@@ -164,7 +164,7 @@
                 <tbody>
                     @forelse($users as $user)
                         <tr>
-                            <td>{{ $user->name }}<br><span class="text-xs text-gray-500">{{ '@'.$user->username }}</span></td>
+                            <td>{{ $user->name }}<br><span class="text-xs text-gray-500">{{ $user->usernameForDisplay() }}</span></td>
                             <td>{{ $user->email }}</td>
                             <td>{{ $user->role === 'admin' ? 'Administrator' : 'Protected Area User' }}</td>
                             <td>{{ $user->protectedArea?->name ?? '—' }}</td>
