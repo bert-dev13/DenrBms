@@ -219,7 +219,7 @@ class ProtectedAreaModalSystem {
             `;
         }
 
-        const codeValue = type === 'edit' ? this.escape(area?.code) : this.generateDefaultCode();
+        const codeValue = type === 'edit' ? this.escape(area?.code) : '';
         const nameValue = type === 'edit' ? this.escape(area?.name) : '';
         const submitLabel = type === 'edit' ? 'Update Protected Area' : 'Save Protected Area';
         const formId = type === 'edit' ? 'pa-edit-form' : 'pa-add-form';
@@ -367,11 +367,6 @@ class ProtectedAreaModalSystem {
             n.classList.remove('show');
             window.setTimeout(() => n.remove(), 180);
         }, 2200);
-    }
-
-    generateDefaultCode() {
-        const last4 = String(Date.now()).slice(-4);
-        return `PA${last4}`;
     }
 
     escape(value) {

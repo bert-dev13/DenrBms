@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
-@section('title', 'Species Activity Ranking')
-@section('header', 'Species Activity Ranking')
+@section('title', 'Observation Rankings')
+@section('header', 'Observation Rankings')
 
 @section('head')
 <meta name="species-activity-export-print" content="{{ route('reports.species-activity.export.print') }}">
@@ -18,7 +18,7 @@
 <div class="species-obs-summary-cards mb-6">
     <div class="kpi-grid">
         <div class="kpi-card kpi-card--blue"><div class="kpi-card-icon kpi-card-icon--blue"><i data-lucide="clipboard-list" class="lucide-icon"></i></div><div class="kpi-card-body"><p class="kpi-card-label">Total Observations</p><p class="kpi-card-value">{{ number_format($summaryStats['total_observations'] ?? 0) }}</p><span class="kpi-card-meta kpi-card-meta--neutral">records in view</span></div></div>
-        <div class="kpi-card kpi-card--green"><div class="kpi-card-icon kpi-card-icon--green"><i data-lucide="bar-chart-3" class="lucide-icon"></i></div><div class="kpi-card-body"><p class="kpi-card-label">Total Recorded Count</p><p class="kpi-card-value">{{ number_format($summaryStats['total_recorded_count'] ?? 0) }}</p><span class="kpi-card-meta kpi-card-meta--neutral">total count</span></div></div>
+        <div class="kpi-card kpi-card--green"><div class="kpi-card-icon kpi-card-icon--green"><i data-lucide="bar-chart-3" class="lucide-icon"></i></div><div class="kpi-card-body"><p class="kpi-card-label">Recorded Count</p><p class="kpi-card-value">{{ number_format($summaryStats['total_recorded_count'] ?? 0) }}</p><span class="kpi-card-meta kpi-card-meta--neutral">total count</span></div></div>
         <div class="kpi-card kpi-card--purple"><div class="kpi-card-icon kpi-card-icon--purple"><i data-lucide="map-pin" class="lucide-icon"></i></div><div class="kpi-card-body"><p class="kpi-card-label">Total Protected Areas</p><p class="kpi-card-value">{{ number_format($summaryStats['total_protected_areas'] ?? 0) }}</p><span class="kpi-card-meta kpi-card-meta--neutral">unique areas</span></div></div>
         <div class="kpi-card kpi-card--orange"><div class="kpi-card-icon kpi-card-icon--orange"><i data-lucide="panda" class="lucide-icon"></i></div><div class="kpi-card-body"><p class="kpi-card-label">Total Species Recorded</p><p class="kpi-card-value">{{ number_format($summaryStats['total_species'] ?? 0) }}</p><span class="kpi-card-meta kpi-card-meta--neutral">active species</span></div></div>
     </div>
@@ -82,7 +82,7 @@
                 </select>
             </div>
             <div class="filter-panel__field">
-                <label for="rank_order" class="filter-panel__label">Rank by Observation Frequency</label>
+                <label for="rank_order" class="filter-panel__label">Rank by Observation Records</label>
                 <select name="rank_order" id="rank_order" class="filter-panel__select">
                     <option value="desc" {{ request('rank_order', 'desc') === 'desc' ? 'selected' : '' }}>Highest to lowest</option>
                     <option value="asc" {{ request('rank_order') === 'asc' ? 'selected' : '' }}>Lowest to highest</option>
@@ -94,7 +94,7 @@
 
 <div class="action-bar-card">
     <div class="action-bar-card__header">
-        <h2 class="action-bar-card__title">Species activity ranking ({{ number_format($rows->total()) }} groups)</h2>
+        <h2 class="action-bar-card__title">Observation Rankings ({{ number_format($rows->total()) }} groups)</h2>
         <div class="action-bar">
             <form method="GET" action="{{ route('reports.species-activity') }}" class="action-bar__search-wrap" id="species-activity-search-form">
                 <input type="hidden" name="protected_area_id" value="{{ request('protected_area_id') }}"><input type="hidden" name="bio_group" value="{{ request('bio_group') }}"><input type="hidden" name="patrol_year" value="{{ request('patrol_year') }}"><input type="hidden" name="patrol_semester" value="{{ request('patrol_semester') }}"><input type="hidden" name="rank_order" value="{{ request('rank_order', 'desc') }}"><input type="hidden" name="per_page" value="{{ request('per_page', '20') }}">
@@ -122,9 +122,9 @@
             </div>
         </div>
     </div>
-    <div class="data-table-wrap"><div class="responsive-table-container data-table-container"><table class="responsive-table species-activity-table"><thead><tr><th class="species-activity-col-rank">Rank</th><th>Species Name</th><th>Scientific Name</th><th class="species-activity-col-num">Total Recorded Count (Σ)</th><th class="species-activity-col-num">Protected Areas</th><th class="species-activity-col-num">Observation Frequency</th></tr></thead><tbody>
+    <div class="data-table-wrap"><div class="responsive-table-container data-table-container"><table class="responsive-table species-activity-table"><thead><tr><th class="species-activity-col-rank">Rank</th><th>Species Name</th><th>Scientific Name</th><th class="species-activity-col-num">Protected Areas</th><th class="species-activity-col-num">Recorded Count</th><th class="species-activity-col-num">Observation Records</th></tr></thead><tbody>
     @forelse($rows as $index => $row)
-        <tr class="data-table-row {{ $index % 2 === 0 ? 'data-table-row--even' : 'data-table-row--odd' }}"><td class="species-activity-col-rank"><span class="species-activity-rank-badge">{{ $row->rank }}</span></td><td><span class="data-table-cell-truncate font-medium">{{ $row->species_name ?: '—' }}</span></td><td><em class="data-table-cell-truncate">{{ $row->scientific_name ?: '—' }}</em></td><td class="species-activity-col-num">{{ number_format($row->recorded_count_sum) }}</td><td class="species-activity-col-num">{{ number_format($row->protected_area_count) }}</td><td class="species-activity-col-num">{{ number_format($row->observation_frequency) }}</td></tr>
+        <tr class="data-table-row {{ $index % 2 === 0 ? 'data-table-row--even' : 'data-table-row--odd' }}"><td class="species-activity-col-rank"><span class="species-activity-rank-badge">{{ $row->rank }}</span></td><td><span class="data-table-cell-truncate font-medium">{{ $row->species_name ?: '—' }}</span></td><td><em class="data-table-cell-truncate">{{ $row->scientific_name ?: '—' }}</em></td><td class="species-activity-col-num">{{ number_format($row->protected_area_count) }}</td><td class="species-activity-col-num">{{ number_format($row->recorded_count_sum) }}</td><td class="species-activity-col-num">{{ number_format($row->observation_frequency) }}</td></tr>
     @empty
         <tr><td colspan="6" class="data-table-empty-cell"><div class="data-table-empty-state"><i data-lucide="clipboard-list" class="lucide-icon data-table-empty-icon"></i><h3 class="data-table-empty-title">No activity records found</h3><p class="data-table-empty-text">Adjust filters or add observations from the Species Observations page.</p></div></td></tr>
     @endforelse

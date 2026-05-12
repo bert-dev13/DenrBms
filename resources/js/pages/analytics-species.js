@@ -287,7 +287,7 @@ function renderYearlyTotalChart(payload) {
                     borderRadius: 5,
                 },
                 {
-                    label: 'Total Recorded Count (Σ)',
+                    label: 'Recorded Count',
                     data: rows.map((row) => Number(row.total_recorded_count || 0)),
                     backgroundColor: '#16a34a',
                     borderRadius: 5,

@@ -109,7 +109,7 @@
         <article class="analytics-grid-card analytics-grid-card--top-species-obs">
             <div class="analytics-grid-card__header">
                 <h3>Top Species Observation</h3>
-                <p>Matches Species Activity ranking; bars = observation count.</p>
+                <p>Matches Observation Rankings; bars = observation count.</p>
             </div>
             <div class="analytics-grid-card__chart-wrap">
                 <canvas id="analytics-top-species-obs-chart"></canvas>

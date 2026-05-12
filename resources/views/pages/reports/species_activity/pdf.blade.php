@@ -2,7 +2,7 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="utf-8">
-    <title>Species Activity Ranking | DENR BMS</title>
+    <title>Observation Rankings | DENR BMS</title>
     <style>
         body { font-family: Arial, sans-serif; font-size: 10pt; }
         table { width: 100%; border-collapse: collapse; }
@@ -11,16 +11,16 @@
     </style>
 </head>
 <body>
-    <h1>Species Activity Ranking</h1>
+    <h1>Observation Rankings</h1>
     <table>
         <thead>
             <tr>
                 <th>Rank</th>
                 <th>Species Name</th>
                 <th>Scientific Name</th>
-                <th>Total Recorded Count (Σ)</th>
                 <th>Protected Areas</th>
-                <th>Observation Frequency</th>
+                <th>Recorded Count</th>
+                <th>Observation Records</th>
             </tr>
         </thead>
         <tbody>
@@ -29,8 +29,8 @@
                     <td>{{ $row->rank }}</td>
                     <td>{{ $row->species_name ?: '—' }}</td>
                     <td>{{ $row->scientific_name ?: '—' }}</td>
-                    <td class="num">{{ number_format($row->recorded_count_sum) }}</td>
                     <td class="num">{{ number_format($row->protected_area_count) }}</td>
+                    <td class="num">{{ number_format($row->recorded_count_sum) }}</td>
                     <td class="num">{{ number_format($row->observation_frequency) }}</td>
                 </tr>
             @empty

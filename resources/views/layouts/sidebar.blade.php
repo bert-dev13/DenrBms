@@ -65,9 +65,9 @@
         <div class="sidebar__nav-group">
             <div class="sidebar__nav-group-label">Reports</div>
             @if(\App\Support\UserAccess::isPaUser(auth()->user()) || \App\Support\UserAccess::isAdmin(auth()->user()))
-                <a href="{{ route('reports.species-activity') }}" class="sidebar__nav-item sidebar__nav-item--sub {{ request()->routeIs('reports.species-activity*') ? 'sidebar__nav-item--active' : '' }}" data-tooltip="Species Activity Ranking">
+                <a href="{{ route('reports.species-activity') }}" class="sidebar__nav-item sidebar__nav-item--sub {{ request()->routeIs('reports.species-activity*') ? 'sidebar__nav-item--active' : '' }}" data-tooltip="Observation Rankings">
                     <i data-lucide="activity" class="lucide-icon sidebar__nav-icon" stroke-width="1.75"></i>
-                    <span class="sidebar__nav-label">Species Activity</span>
+                    <span class="sidebar__nav-label">Observation Rankings</span>
                 </a>
             @endif
             <a href="{{ route('reports.species-ranking') }}" class="sidebar__nav-item sidebar__nav-item--sub {{ request()->routeIs('reports.species-ranking*') ? 'sidebar__nav-item--active' : '' }}" data-tooltip="Species Rankings Report">

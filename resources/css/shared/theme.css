@@ -396,7 +396,8 @@ input, select, textarea {
     color: var(--text-primary) !important;
 }
 
-.modal-header {
+/* Plain modal headers only — gradient variants live in page CSS (protected_area_sites.css etc.) */
+.modal-header:not(.modal-header-blue):not(.modal-header-green):not(.modal-header-red) {
     background-color: var(--bg-secondary) !important;
     border-bottom-color: var(--border-primary) !important;
 }

@@ -122,17 +122,17 @@ class SpeciesActivityController extends Controller
                 'Rank',
                 'Species Name',
                 'Scientific Name',
-                'Total Recorded Count (Σ)',
                 'Protected Areas',
-                'Observation Frequency',
+                'Recorded Count',
+                'Observation Records',
             ]);
             foreach ($ranked as $row) {
                 fputcsv($file, [
                     $row->rank,
                     $row->species_name ?? '',
                     $row->scientific_name ?? '',
-                    $row->recorded_count_sum,
                     $row->protected_area_count,
+                    $row->recorded_count_sum,
                     $row->observation_frequency,
                 ]);
             }

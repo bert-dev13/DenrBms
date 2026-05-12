@@ -81,7 +81,7 @@
 
 .modal-header {
     padding: 1.5rem 2rem;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid #e8eaed;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -89,11 +89,11 @@
 }
 
 .modal-header-blue {
-    background: linear-gradient(to right, #2563eb, #1d4ed8);
+    background: linear-gradient(to right, #93c5fd, #60a5fa);
 }
 
 .modal-header-green {
-    background: linear-gradient(to right, #16a34a, #15803d);
+    background: linear-gradient(to right, #86efac, #4ade80);
 }
 
 .modal-header-red {
@@ -128,6 +128,27 @@
     color: #cbd5e1;
 }
 
+/* Same lighter gradients in dark theme (theme.css no longer forces flat bg on these) */
+[data-theme="dark"] .modal-header.modal-header-blue {
+    background: linear-gradient(to right, #93c5fd, #60a5fa) !important;
+    border-bottom-color: rgba(96, 165, 250, 0.45);
+}
+
+[data-theme="dark"] .modal-header.modal-header-green {
+    background: linear-gradient(to right, #86efac, #4ade80) !important;
+    border-bottom-color: rgba(74, 222, 128, 0.45);
+}
+
+[data-theme="dark"] .modal-header.modal-header-blue .modal-title,
+[data-theme="dark"] .modal-header.modal-header-green .modal-title {
+    color: #0f172a;
+}
+
+[data-theme="dark"] .modal-header.modal-header-blue .modal-close,
+[data-theme="dark"] .modal-header.modal-header-green .modal-close {
+    color: #1e293b;
+}
+
 .modal-body {
     padding: 1.5rem;
     overflow-y: auto;
@@ -136,14 +157,39 @@
 
 .modal-footer {
     padding: 1.5rem;
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid #f0f3f5;
     display: flex;
     align-items: center;
     justify-content: flex-end;
     gap: 0.75rem;
     flex-shrink: 0;
-    background-color: #f9fafb;
+    background-color: #fcfdfd;
     border-radius: 0 0 0.75rem 0.75rem;
+}
+
+.modal-footer .btn-secondary {
+    border-color: #dc2626 !important;
+    background-color: #ffffff !important;
+    color: #b91c1c !important;
+}
+
+.modal-footer .btn-secondary:hover {
+    border-color: #b91c1b !important;
+    background-color: #fef2f2 !important;
+    color: #991b1b !important;
+}
+
+.modal-footer .btn-primary {
+    border-color: #2563eb !important;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+    color: #ffffff !important;
+    box-shadow: 0 10px 18px rgba(37, 99, 235, 0.28);
+}
+
+.modal-footer .btn-primary:hover {
+    border-color: #1d4ed8 !important;
+    background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%) !important;
+    color: #ffffff !important;
 }
 
 /* Responsive Table Styles */
@@ -300,9 +346,41 @@
     border-bottom-color: var(--border-primary);
 }
 
+/* Plain modal chrome (e.g. species observations): lifted, still reads on dark UI */
+[data-theme="dark"] .modal-header:not(.modal-header-blue):not(.modal-header-green):not(.modal-header-red) {
+    background: linear-gradient(180deg, #3f5e58 0%, #324a46 100%) !important;
+}
+
 [data-theme="dark"] .modal-footer {
-    background-color: var(--bg-secondary);
-    border-top-color: var(--border-primary);
+    background: transparent !important;
+    box-shadow: none;
+    border-top: 1px solid var(--border-primary);
+}
+
+[data-theme="dark"] .modal-footer .btn-secondary {
+    background-color: rgba(127, 29, 29, 0.28) !important;
+    border-color: #f87171 !important;
+    color: #fecaca !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="dark"] .modal-footer .btn-secondary:hover {
+    background-color: rgba(127, 29, 29, 0.42) !important;
+    border-color: #fca5a5 !important;
+    color: #fee2e2 !important;
+}
+
+[data-theme="dark"] .modal-footer .btn-primary {
+    border-color: rgba(147, 197, 253, 0.95) !important;
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+    color: #ffffff !important;
+    box-shadow: 0 10px 22px rgba(37, 99, 235, 0.42) !important;
+}
+
+[data-theme="dark"] .modal-footer .btn-primary:hover {
+    border-color: #bfdbfe !important;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+    color: #ffffff !important;
 }
 
 [data-theme="dark"] .responsive-table th {
@@ -402,8 +480,14 @@
 }
 
 #protected-area-sites-filter-form .pas-filter-field {
-    min-width: 300px;
+    flex: 1 1 440px;
+    min-width: min(440px, 100%);
     margin: 0;
+}
+
+#protected-area-sites-filter-form .pas-filter-field .filter-panel__select {
+    min-width: 0;
+    width: 100%;
 }
 
 #protected-area-sites-filter-form .pas-filter-field .filter-panel__label {

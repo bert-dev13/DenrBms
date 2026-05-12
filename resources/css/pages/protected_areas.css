@@ -372,8 +372,14 @@
 }
 
 #protected-areas-filter-form .pa-filter-field {
-    min-width: 300px;
+    flex: 1 1 440px;
+    min-width: min(440px, 100%);
     margin: 0;
+}
+
+#protected-areas-filter-form .pa-filter-field .filter-panel__select {
+    min-width: 0;
+    width: 100%;
 }
 
 #protected-areas-filter-form .pa-filter-field .filter-panel__label {

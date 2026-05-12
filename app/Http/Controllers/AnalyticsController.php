@@ -85,7 +85,7 @@ class AnalyticsController extends Controller
             fputcsv($file, ['Analytics Overview']);
             fputcsv($file, ['Metric', 'Value']);
             fputcsv($file, ['Total Observations', $dataset['summary']['total_observations'] ?? 0]);
-            fputcsv($file, ['Total Recorded Count', $dataset['summary']['total_recorded_count'] ?? 0]);
+            fputcsv($file, ['Recorded Count', $dataset['summary']['total_recorded_count'] ?? 0]);
             fputcsv($file, ['Total Protected Areas', $dataset['summary']['total_protected_areas'] ?? 0]);
             fputcsv($file, ['Total Species', $dataset['summary']['total_species'] ?? 0]);
             fputcsv($file, ['Total Species Observed', $dataset['summary']['total_species_observed'] ?? 0]);
@@ -129,21 +129,21 @@ class AnalyticsController extends Controller
             fputcsv($file, []);
 
             fputcsv($file, ['Top Species Observation']);
-            fputcsv($file, ['Rank', 'Species Name', 'Scientific Name', 'Total Recorded Count (Σ)', 'Protected Areas', 'Observation Frequency']);
+            fputcsv($file, ['Rank', 'Species Name', 'Scientific Name', 'Protected Areas', 'Recorded Count', 'Observation Records']);
             foreach ($dataset['top_species_observation'] ?? [] as $row) {
                 fputcsv($file, [
                     $row['rank'] ?? 0,
                     $row['species_name'] ?? '',
                     $row['scientific_name'] ?? '',
-                    $row['recorded_count_sum'] ?? 0,
                     $row['protected_area_count'] ?? 0,
+                    $row['recorded_count_sum'] ?? 0,
                     $row['observation_records'] ?? 0,
                 ]);
             }
             fputcsv($file, []);
 
             fputcsv($file, ['Top 10 Species by Recorded Count']);
-            fputcsv($file, ['Species', 'Observation rows', 'Total Recorded Count (Σ)', 'Percent of top 10 observation rows']);
+            fputcsv($file, ['Species', 'Observation rows', 'Recorded Count', 'Percent of top 10 observation rows']);
             $dist = $dataset['species_observation_distribution'] ?? [];
             foreach ($dist['slices'] ?? [] as $row) {
                 fputcsv($file, [
@@ -160,7 +160,7 @@ class AnalyticsController extends Controller
             fputcsv($file, []);
 
             fputcsv($file, ['Fauna vs Flora Observation Distribution']);
-            fputcsv($file, ['Category', 'Total Recorded Count (Σ)', 'Percent (Fauna + Flora Σ)']);
+            fputcsv($file, ['Category', 'Recorded Count', 'Percent (Fauna + Flora Σ)']);
             $ff = $dataset['fauna_flora_observation_distribution'] ?? [];
             foreach ($ff['slices'] ?? [] as $row) {
                 fputcsv($file, [

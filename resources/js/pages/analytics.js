@@ -277,7 +277,7 @@ function renderTopSpeciesObservationChart(payload) {
         'Observation frequency',
         'No species observation data available.',
         (index) => [
-            `Total Recorded Count (Σ): ${formatFullNumber(rows[index]?.recorded_count_sum || 0)}`,
+            `Recorded Count: ${formatFullNumber(rows[index]?.recorded_count_sum || 0)}`,
             `Protected areas: ${formatFullNumber(rows[index]?.protected_area_count || 0)}`,
         ]
     );

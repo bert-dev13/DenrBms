@@ -13,37 +13,41 @@
     justify-content: space-between;
     gap: 1rem;
     padding: 1rem 1.5rem;
-    background: transparent;
-    border-top: 1px solid rgba(148, 163, 184, 0.42);
-    border-bottom: 1px solid rgba(148, 163, 184, 0.42);
-    border-left: 2px solid rgba(21, 128, 61, 0.38);
-    border-right: 2px solid rgba(51, 65, 85, 0.24);
-    border-radius: 0;
+    border-radius: 1rem;
+    border: 1px solid rgba(21, 128, 61, 0.14);
+    background: linear-gradient(
+        155deg,
+        #ecfdf5 0%,
+        rgba(240, 253, 250, 0.92) 38%,
+        rgba(248, 250, 252, 1) 100%
+    );
+    box-shadow: 0 4px 18px rgba(15, 23, 42, 0.06);
     overflow: hidden;
     animation: summaryHeaderFadeIn 0.2s ease-out forwards;
-    transition: background-color 0.18s ease;
+    transition: box-shadow 0.18s ease;
 }
 
 .dashboard-summary__welcome::before {
     content: "";
     position: absolute;
-    left: 0;
-    top: 0;
+    left: 1rem;
+    top: 1rem;
+    bottom: 1rem;
     width: 3px;
-    height: 100%;
+    border-radius: 9999px;
     background: #15803d;
     pointer-events: none;
 }
 
 .dashboard-summary__welcome:hover {
-    background-color: rgba(148, 163, 184, 0.06);
+    box-shadow: 0 6px 22px rgba(15, 23, 42, 0.09);
 }
 
 .dashboard-summary__identity {
     min-width: 0;
     position: relative;
     z-index: 1;
-    padding-left: 0.25rem;
+    padding-left: 0.85rem;
 }
 
 .dashboard-summary__title {
@@ -202,6 +206,13 @@
 @media (max-width: 767px) {
     .dashboard-summary__welcome {
         padding: 1rem;
+        border-radius: 0.875rem;
+    }
+
+    .dashboard-summary__welcome::before {
+        left: 0.85rem;
+        top: 0.85rem;
+        bottom: 0.85rem;
     }
 
     .dashboard-summary__utility {
@@ -229,8 +240,8 @@
     display: grid;
     grid-template-columns: repeat(1, minmax(0, 1fr));
     gap: 1.5rem;
-    padding-top: 1.25rem;
-    border-top: 1px solid rgba(148, 163, 184, 0.3);
+    padding-top: 0;
+    border-top: none;
 }
 
 @media (min-width: 640px) {
@@ -363,11 +374,14 @@
 }
 
 [data-theme="dark"] .dashboard-summary__welcome {
-    background: transparent;
-    border-top-color: rgba(148, 163, 184, 0.4);
-    border-bottom-color: rgba(148, 163, 184, 0.4);
-    border-left-color: rgba(74, 222, 128, 0.45);
-    border-right-color: rgba(148, 163, 184, 0.3);
+    border-color: rgba(52, 211, 153, 0.22);
+    background: linear-gradient(
+        155deg,
+        rgba(20, 83, 73, 0.42) 0%,
+        rgba(15, 23, 42, 0.88) 42%,
+        rgba(15, 28, 42, 0.96) 100%
+    );
+    box-shadow: 0 10px 36px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 [data-theme="dark"] .dashboard-summary__status {
@@ -379,7 +393,7 @@
 }
 
 [data-theme="dark"] .dashboard-summary__welcome:hover {
-    background-color: rgba(148, 163, 184, 0.08);
+    box-shadow: 0 12px 42px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 [data-theme="dark"] .dashboard-summary__subtitle {
