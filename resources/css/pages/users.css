@@ -1,5 +1,33 @@
 /* User Management page: toasts + modal polish */
 
+/* User modals pushed to @stack('body-overlays') use .user-modal--overlay (see layouts.app). */
+.user-modal.user-modal--overlay {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    min-height: 100vh;
+    min-height: 100dvh;
+    z-index: 10050 !important;
+    box-sizing: border-box;
+}
+
+.user-modal.user-modal--overlay .user-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+}
+
+/* Clicks outside the card hit the backdrop (sibling below in paint order). */
+.user-modal.user-modal--overlay .user-modal-dialog {
+    position: relative;
+    z-index: 1;
+    pointer-events: none;
+}
+
+.user-modal.user-modal--overlay .user-modal-content {
+    pointer-events: auto;
+}
+
 .user-modal-backdrop {
     background: rgba(15, 23, 42, 0.45);
 }
@@ -10,6 +38,12 @@
     border: 1px solid #d1d5db;
     background: #ffffff;
     box-shadow: 0 22px 58px rgba(15, 23, 42, 0.25);
+}
+
+/* Delete confirm: match PA Sites delete modal width (.pas-modal-delete). */
+.user-modal-content.user-modal-content--delete {
+    width: min(380px, calc(100vw - 1.25rem));
+    max-width: min(380px, calc(100vw - 1.25rem));
 }
 
 .user-modal-body {
@@ -41,9 +75,47 @@
     box-shadow: 0 0 0 2px rgba(22, 101, 52, 0.12) !important;
 }
 
-.user-modal-danger-panel {
-    border-color: #fecaca !important;
-    background: #fff5f5 !important;
+.user-modal-body--delete-confirm {
+    padding-top: 0.5rem;
+}
+
+.user-modal-delete-summary {
+    margin: 0 0 0.25rem;
+    padding: 0;
+    text-align: center;
+    background: transparent;
+    border: none;
+}
+
+.user-modal-delete-summary__label {
+    margin: 0;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #64748b;
+}
+
+.user-modal-delete-summary__name {
+    margin: 0.4rem 0 0;
+    font-size: 1.0625rem;
+    font-weight: 650;
+    color: #0f172a;
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+.user-modal-footer--delete {
+    margin-top: 1.25rem;
+    padding-top: 0;
+}
+
+[data-theme="dark"] .user-modal-delete-summary__label {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .user-modal-delete-summary__name {
+    color: #f1f5f9;
 }
 
 .users-toast {
@@ -232,4 +304,84 @@
     .user-modal-footer .user-modal-btn {
         width: 100%;
     }
+}
+
+/* Delete confirmation: plain header (no gradients / heavy chrome) */
+.user-modal-header--delete {
+    background: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+    box-shadow: none;
+}
+
+.user-modal-header__lead {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    min-width: 0;
+}
+
+.user-modal-header__danger-icon {
+    flex-shrink: 0;
+    width: 2.35rem;
+    height: 2.35rem;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #dc2626;
+    box-shadow: none;
+}
+
+.user-modal-header--delete .user-modal-header__title {
+    margin: 0;
+    color: #111827 !important;
+    font-size: 1.08rem;
+    font-weight: 650;
+    letter-spacing: 0;
+}
+
+.user-modal-header--delete .user-modal-header__subtitle {
+    margin: 0.15rem 0 0 !important;
+    color: #6b7280 !important;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.user-modal-header--delete .user-modal-icon-btn {
+    border: 1px solid #e5e7eb;
+    background: #ffffff;
+    color: #4b5563;
+}
+
+.user-modal-header--delete .user-modal-icon-btn:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
+    box-shadow: none;
+}
+
+[data-theme="dark"] .user-modal-header--delete {
+    background: #1e293b;
+    border-bottom-color: #334155;
+}
+
+[data-theme="dark"] .user-modal-header--delete .user-modal-header__danger-icon {
+    background: rgba(127, 29, 29, 0.25);
+    border-color: #7f1d1d;
+    color: #fca5a5;
+}
+
+[data-theme="dark"] .user-modal-header--delete .user-modal-header__title {
+    color: #f1f5f9 !important;
+}
+
+[data-theme="dark"] .user-modal-header--delete .user-modal-header__subtitle {
+    color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .user-modal-header--delete .user-modal-icon-btn {
+    background: #334155;
+    border-color: #475569;
+    color: #e2e8f0;
 }

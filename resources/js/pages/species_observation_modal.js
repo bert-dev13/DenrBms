@@ -145,12 +145,10 @@ class SpeciesObservationModalSystem {
         const name = data.observation?.common_name || 'this observation';
         const safeName = String(name).replace(/</g, '&lt;').replace(/>/g, '&gt;');
         return `
-            <section class="so-modal so-modal--small so-modal--delete" role="dialog" aria-modal="true">
+            <section class="so-modal so-modal--small so-modal--delete" role="dialog" aria-modal="true" aria-labelledby="so-modal-delete-title">
                 ${this.renderHeader('delete')}
                 <div class="so-delete-body">
-                    <h3 class="so-delete-title">Delete observation?</h3>
-                    <p class="so-delete-subtitle">${safeName}</p>
-                    <p class="so-delete-note">This action cannot be undone.</p>
+                    <p class="so-delete-subtitle so-delete-subtitle--solo">${safeName}</p>
                 </div>
                 <div class="so-modal-footer">
                     <button class="so-btn so-btn-cancel" type="button" onclick="window.closeModal()">Cancel</button>
@@ -166,7 +164,7 @@ class SpeciesObservationModalSystem {
         }
 
         if (type === 'delete') {
-            return 'trash-2';
+            return 'alert-triangle';
         }
 
         if (type === 'view') {
@@ -177,15 +175,22 @@ class SpeciesObservationModalSystem {
     }
 
     renderHeader(type) {
+        const isDelete = type === 'delete';
+        const icon = this.getHeaderIcon(type);
+        const title = isDelete ? 'Confirm deletion' : 'Species Observation';
+        const subtitle = isDelete
+            ? 'This permanently removes the observation and related data.'
+            : 'Manage biodiversity field records';
+
         return `
             <div class="so-modal-header">
                 <div class="so-modal-header-left">
                     <span class="so-modal-header-icon" aria-hidden="true">
-                        <i data-lucide="${this.getHeaderIcon(type)}"></i>
+                        <i data-lucide="${icon}"></i>
                     </span>
                     <div>
-                        <h2 class="so-modal-title">Species Observation</h2>
-                        <p class="so-modal-subtitle">Manage biodiversity field records</p>
+                        <h2 class="so-modal-title"${isDelete ? ' id="so-modal-delete-title"' : ''}>${title}</h2>
+                        <p class="so-modal-subtitle">${subtitle}</p>
                     </div>
                 </div>
                 <button type="button" class="so-modal-close" onclick="window.closeModal()" aria-label="Close">×</button>

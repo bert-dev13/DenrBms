@@ -104,6 +104,9 @@
         </div>
     </main>
 
+    {{-- Full-screen modals/overlays: must render here (sibling of main), not inside .main-content-wrapper, or z-index cannot exceed sidebar/topbar stacking. --}}
+    @stack('body-overlays')
+
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>window.csrfToken = '{{ csrf_token() }}';</script>

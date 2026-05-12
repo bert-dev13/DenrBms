@@ -142,8 +142,8 @@ class AnalyticsController extends Controller
             }
             fputcsv($file, []);
 
-            fputcsv($file, ['Top 10 Species Observation Share']);
-            fputcsv($file, ['Species', 'Observation rows', 'Total Recorded Count (Σ)', 'Percent of top 10 combined Σ']);
+            fputcsv($file, ['Top 10 Species by Recorded Count']);
+            fputcsv($file, ['Species', 'Observation rows', 'Total Recorded Count (Σ)', 'Percent of top 10 observation rows']);
             $dist = $dataset['species_observation_distribution'] ?? [];
             foreach ($dist['slices'] ?? [] as $row) {
                 fputcsv($file, [
@@ -153,6 +153,7 @@ class AnalyticsController extends Controller
                     isset($row['percent_share']) ? round((float) $row['percent_share'], 4) : 0,
                 ]);
             }
+            fputcsv($file, ['Combined observation rows (top 10 species)', $dist['grand_total_observation_records_top10'] ?? 0]);
             fputcsv($file, ['Combined Σ (top 10 species)', $dist['grand_total_recorded_count'] ?? 0]);
             fputcsv($file, ['Total observation rows (current filters)', $dist['total_observation_rows'] ?? 0]);
             fputcsv($file, ['Total recorded count Σ (current filters, all species)', $dist['total_recorded_count'] ?? ($dataset['summary']['total_recorded_count'] ?? 0)]);

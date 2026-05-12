@@ -128,8 +128,8 @@
         </article>
         <article class="analytics-grid-card">
             <div class="analytics-grid-card__header">
-                <h3>Top 10 Species Observation Share</h3>
-                <p>Recorded-count share for the ten highest-count species.</p>
+                <h3>Top 10 Species by Recorded Count</h3>
+                <p>Recorded counts (Σ) for the ten species with the highest combined totals.</p>
             </div>
             <div class="analytics-grid-card__chart-wrap analytics-grid-card__chart-wrap--doughnut analytics-grid-card__chart-wrap--species-distribution">
                 <div class="analytics-species-distribution-inner">

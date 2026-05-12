@@ -48,6 +48,7 @@ import {
   Activity,
   LineChart,
   Trophy,
+  AlertTriangle,
 } from 'lucide';
 
 const ICONS = {
@@ -94,6 +95,7 @@ const ICONS = {
   Activity,
   LineChart,
   Trophy,
+  AlertTriangle,
 };
 
 const defaultAttrs = {

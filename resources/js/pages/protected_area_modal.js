@@ -166,6 +166,23 @@ class ProtectedAreaModalSystem {
     }
 
     renderHeader(type) {
+        if (type === 'delete') {
+            return `
+            <div class="pa-modal-header">
+                <div class="pa-modal-header-main">
+                    <span class="pa-modal-header-icon" aria-hidden="true"><i data-lucide="alert-triangle"></i></span>
+                    <div>
+                        <h2 id="pa-modal-title" class="pa-modal-title">Confirm deletion</h2>
+                        <p class="pa-modal-subtitle">This permanently removes the protected area and related data.</p>
+                    </div>
+                </div>
+                <button type="button" class="pa-modal-close" data-pa-close aria-label="Close modal">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+        `;
+        }
+
         const icon = type === 'view' ? 'eye' : type === 'edit' ? 'pencil' : 'plus';
         const subtitle = type === 'view'
             ? 'Protected area details'
@@ -248,12 +265,10 @@ class ProtectedAreaModalSystem {
 
     renderDelete(area) {
         return `
-            <section class="pa-modal pa-modal-delete" role="dialog" aria-modal="true" aria-labelledby="pa-delete-title">
+            <section class="pa-modal pa-modal-delete" role="dialog" aria-modal="true" aria-labelledby="pa-modal-title">
                 ${this.renderHeader('delete')}
                 <div class="pa-delete-body">
-                    <h2 id="pa-delete-title" class="pa-delete-title">Delete protected area?</h2>
-                    <p class="pa-delete-name">${this.escape(area?.name || 'Selected area')}</p>
-                    <p class="pa-delete-note">This action cannot be undone.</p>
+                    <p class="pa-delete-name pa-delete-name--solo">${this.escape(area?.name || 'Selected area')}</p>
                 </div>
                 <div class="pa-modal-footer">
                     <button type="button" class="pa-btn pa-btn-secondary" data-pa-close>Cancel</button>

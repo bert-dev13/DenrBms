@@ -253,7 +253,10 @@
         </div>
     </div>
 
-    <div id="create-user-modal" class="user-modal fixed inset-0 z-[9999] hidden" data-has-errors="{{ $hasCreateUserErrors ? '1' : '0' }}">
+@endsection
+
+@push('body-overlays')
+    <div id="create-user-modal" class="user-modal user-modal--overlay fixed inset-0 z-[10050] hidden" data-has-errors="{{ $hasCreateUserErrors ? '1' : '0' }}">
         <div class="user-modal-backdrop absolute inset-0 transition-opacity duration-300" onclick="hideCreateUserModal()"></div>
         <div class="user-modal-dialog relative flex items-center justify-center min-h-screen p-4">
             <div class="user-modal-content relative w-full max-w-2xl transform transition-all duration-300 scale-95 opacity-0" id="create-user-modal-content" style="z-index: 10000;">
@@ -328,7 +331,7 @@
         </div>
     </div>
 
-    <div id="view-user-modal" class="user-modal fixed inset-0 z-[9999] hidden">
+    <div id="view-user-modal" class="user-modal user-modal--overlay fixed inset-0 z-[10050] hidden">
         <div class="user-modal-backdrop absolute inset-0 transition-opacity duration-300" onclick="hideUserViewModal()"></div>
         <div class="user-modal-dialog relative flex items-center justify-center min-h-screen p-4">
             <div class="user-modal-content relative w-full max-w-2xl transform transition-all duration-300 scale-95 opacity-0" id="view-user-modal-content" style="z-index: 10000;">
@@ -374,7 +377,7 @@
         </div>
     </div>
 
-    <div id="edit-user-modal" class="user-modal fixed inset-0 z-[9999] hidden">
+    <div id="edit-user-modal" class="user-modal user-modal--overlay fixed inset-0 z-[10050] hidden">
         <div class="user-modal-backdrop absolute inset-0 transition-opacity duration-300" onclick="hideUserEditModal()"></div>
         <div class="user-modal-dialog relative flex items-center justify-center min-h-screen p-4">
             <div class="user-modal-content relative w-full max-w-2xl transform transition-all duration-300 scale-95 opacity-0" id="edit-user-modal-content" style="z-index: 10000;">
@@ -440,29 +443,32 @@
         </div>
     </div>
 
-    <div id="delete-user-modal" class="user-modal fixed inset-0 z-[9999] hidden">
+    <div id="delete-user-modal" class="user-modal user-modal--overlay fixed inset-0 z-[10050] hidden">
         <div class="user-modal-backdrop absolute inset-0 transition-opacity duration-300" onclick="hideUserDeleteModal()"></div>
         <div class="user-modal-dialog relative flex items-center justify-center min-h-screen p-4">
-            <div class="user-modal-content relative w-full max-w-lg transform transition-all duration-300 scale-95 opacity-0" id="delete-user-modal-content" style="z-index: 10000;">
-                <div class="user-modal-header">
-                    <div>
-                        <h3 class="text-lg font-semibold text-gray-900">Delete User Account</h3>
-                        <p class="text-sm text-gray-500 mt-1">This action cannot be undone.</p>
+            <div class="user-modal-content user-modal-content--delete relative w-full transform transition-all duration-300 scale-95 opacity-0" id="delete-user-modal-content" style="z-index: 10000;">
+                <div class="user-modal-header user-modal-header--delete">
+                    <div class="user-modal-header__lead">
+                        <span class="user-modal-header__danger-icon" aria-hidden="true">
+                            <i data-lucide="alert-triangle" class="lucide-icon w-5 h-5"></i>
+                        </span>
+                        <div>
+                            <h3 class="text-lg font-semibold user-modal-header__title">Confirm deletion</h3>
+                            <p class="text-sm user-modal-header__subtitle mt-1">The account and all assigned access will be permanently removed.</p>
+                        </div>
                     </div>
                     <button type="button" class="user-modal-icon-btn" onclick="hideUserDeleteModal()" aria-label="Close">
                         <i data-lucide="x" class="lucide-icon w-5 h-5"></i>
                     </button>
                 </div>
-                <form id="delete-user-form" method="POST" action="{{ route('users.index') }}" class="user-modal-body p-6">
+                <form id="delete-user-form" method="POST" action="{{ route('users.index') }}" class="user-modal-body user-modal-body--delete-confirm px-6 pt-4 pb-6">
                     @csrf
                     @method('DELETE')
-                    <div class="user-modal-danger-panel rounded-lg border border-red-200 bg-red-50 p-4">
-                        <p class="text-sm text-red-700">
-                            Are you sure you want to delete
-                            <span id="delete-user-name" class="font-semibold"></span>?
-                        </p>
+                    <div class="user-modal-delete-summary">
+                        <p class="user-modal-delete-summary__label">User account</p>
+                        <p class="user-modal-delete-summary__name"><span id="delete-user-name">—</span></p>
                     </div>
-                    <div class="user-modal-footer">
+                    <div class="user-modal-footer user-modal-footer--delete">
                         <button type="button" class="user-modal-btn user-modal-btn--secondary" onclick="hideUserDeleteModal()">Cancel</button>
                         <button type="submit" class="user-modal-btn user-modal-btn--danger">Delete User</button>
                     </div>
@@ -470,5 +476,4 @@
             </div>
         </div>
     </div>
-
-@endsection
+@endpush

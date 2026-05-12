@@ -388,11 +388,14 @@ final class AnalyticsService
         foreach ($topSpeciesKeys as $speciesKey) {
             $yearlyCounts = $speciesYearlyCounts[$speciesKey] ?? [];
             ksort($yearlyCounts);
+            $yearlyObservationCounts = $speciesYearlyObservationCounts[$speciesKey] ?? [];
+            ksort($yearlyObservationCounts);
             $trendRows = [];
             foreach ($allYears as $year) {
                 $trendRows[] = [
                     'year' => (int) $year,
                     'recorded_count_sum' => (int) ($yearlyCounts[$year] ?? 0),
+                    'observation_count' => (int) ($yearlyObservationCounts[$year] ?? 0),
                 ];
             }
 
@@ -785,9 +788,11 @@ final class AnalyticsService
     }
 
     /**
-     * Top 10 species by Σ (same aggregation as Species Activity). Percent shares are relative to the combined Σ of those top 10 only (no Others slice).
+     * Top 10 species by Σ (same aggregation as Species Activity). percent_share on each slice is
+     * (observation_frequency ÷ sum of observation_frequency for those top 10) × 100 — same basis as chart tooltips.
+     * Frontend doughnut segment sizes use observation row counts so arc proportions match percent_share.
      *
-     * @return array{slices: list<array<string, float|int|string>>, grand_total_recorded_count: int, total_observation_rows: int, total_recorded_count: int}
+     * @return array{slices: list<array<string, float|int|string>>, grand_total_recorded_count: int, grand_total_observation_records_top10: int, total_observation_rows: int, total_recorded_count: int}
      */
     private function buildSpeciesObservationDistribution(Collection $rows, int $totalObservationRows, int $totalRecordedCount): array
     {
@@ -796,6 +801,7 @@ final class AnalyticsService
             return [
                 'slices' => [],
                 'grand_total_recorded_count' => 0,
+                'grand_total_observation_records_top10' => 0,
                 'total_observation_rows' => $totalObservationRows,
                 'total_recorded_count' => $totalRecordedCount,
             ];
@@ -807,14 +813,18 @@ final class AnalyticsService
             return [
                 'slices' => [],
                 'grand_total_recorded_count' => 0,
+                'grand_total_observation_records_top10' => 0,
                 'total_observation_rows' => $totalObservationRows,
                 'total_recorded_count' => $totalRecordedCount,
             ];
         }
 
+        $headObservationTotal = (int) $head->sum(static fn ($row): int => (int) ($row->observation_frequency ?? 0));
+
         $slices = [];
         foreach ($head as $r) {
             $sum = (int) ($r->recorded_count_sum ?? 0);
+            $obs = (int) ($r->observation_frequency ?? 0);
             $name = trim((string) ($r->species_name ?? ''));
             if ($name === '') {
                 $name = trim((string) ($r->scientific_name ?? ''));
@@ -822,17 +832,21 @@ final class AnalyticsService
             if ($name === '') {
                 $name = 'Unspecified';
             }
+            $percentShare = $headObservationTotal > 0
+                ? round(($obs / $headObservationTotal) * 100, 4)
+                : 0.0;
             $slices[] = [
                 'species_name' => $name,
                 'recorded_count_sum' => $sum,
-                'observation_records' => (int) ($r->observation_frequency ?? 0),
-                'percent_share' => round(($sum / $headSigma) * 100, 4),
+                'observation_records' => $obs,
+                'percent_share' => $percentShare,
             ];
         }
 
         return [
             'slices' => $slices,
             'grand_total_recorded_count' => $headSigma,
+            'grand_total_observation_records_top10' => $headObservationTotal,
             'total_observation_rows' => $totalObservationRows,
             'total_recorded_count' => $totalRecordedCount,
         ];

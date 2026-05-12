@@ -140,6 +140,23 @@ class ProtectedAreaSitesModalSystem {
     }
 
     renderHeader(mode) {
+        if (mode === 'delete') {
+            return `
+            <div class="pas-modal-header">
+                <div class="pas-modal-header-main">
+                    <span class="pas-modal-header-icon" aria-hidden="true"><i data-lucide="alert-triangle"></i></span>
+                    <div>
+                        <h2 id="pas-modal-title" class="pas-modal-title">Confirm deletion</h2>
+                        <p class="pas-modal-subtitle">This permanently removes the site and related data.</p>
+                    </div>
+                </div>
+                <button type="button" class="pas-modal-close" data-pas-close aria-label="Close modal">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+        `;
+        }
+
         const icon = mode === 'view' ? 'eye' : mode === 'edit' ? 'pencil' : 'plus';
         const subtitle = mode === 'view'
             ? 'Review protected area site details'
@@ -222,12 +239,10 @@ class ProtectedAreaSitesModalSystem {
 
     renderDelete(site) {
         return `
-            <section class="pas-modal pas-modal-delete" role="dialog" aria-modal="true" aria-labelledby="pas-delete-title">
+            <section class="pas-modal pas-modal-delete" role="dialog" aria-modal="true" aria-labelledby="pas-modal-title">
                 ${this.renderHeader('delete')}
                 <div class="pas-delete-body">
-                    <h2 id="pas-delete-title" class="pas-delete-title">Delete site?</h2>
-                    <p class="pas-delete-name">${this.escape(site?.name || 'Selected site')}</p>
-                    <p class="pas-delete-note">This action cannot be undone.</p>
+                    <p class="pas-delete-name pas-delete-name--solo">${this.escape(site?.name || 'Selected site')}</p>
                 </div>
                 <div class="pas-modal-footer">
                     <button type="button" class="pas-btn pas-btn-secondary" data-pas-close>Cancel</button>

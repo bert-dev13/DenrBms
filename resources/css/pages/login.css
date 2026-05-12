@@ -381,10 +381,10 @@ body.login-page.login-loaded .login-form {
     margin-top: 6px;
 }
 
-/* Remember me & Forgot password */
+/* Remember me */
 .form-options {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
     align-items: center;
     margin-bottom: 24px;
     flex-wrap: wrap;
@@ -442,19 +442,6 @@ body.login-page.login-loaded .login-form {
     border: solid white;
     border-width: 0 2px 2px 0;
     transform: rotate(45deg);
-}
-
-.forgot-password-link {
-    color: var(--login-text-muted);
-    text-decoration: none;
-    font-size: 13px;
-    transition: color var(--login-transition), opacity var(--login-transition);
-    opacity: 0.9;
-}
-
-.forgot-password-link:hover {
-    color: var(--login-primary);
-    opacity: 1;
 }
 
 /* Sign In button – full width, environmental green, hover, accessible */
@@ -535,6 +522,83 @@ html[data-theme="dark"] .login-page .footer-text {
 .alert-error {
     background: var(--login-error-bg);
     color: var(--login-error);
+}
+
+/* Single-trigger login success toast (mounted on <html>; see login.js) */
+.login-success-toast {
+    position: fixed;
+    top: max(1.25rem, env(safe-area-inset-top));
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2147483646;
+    width: min(22rem, calc(100vw - 2rem));
+    pointer-events: none;
+    font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.login-success-toast__panel {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0;
+    padding: 14px 18px;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.35;
+    color: #065f46;
+    text-align: left;
+    background: linear-gradient(145deg, #ecfdf5 0%, #d1fae5 100%);
+    border: 1px solid rgba(16, 185, 129, 0.45);
+    border-radius: 14px;
+    box-shadow:
+        0 14px 40px rgba(6, 78, 59, 0.18),
+        0 2px 10px rgba(0, 0, 0, 0.06);
+    opacity: 0;
+    transform: translateY(-10px) scale(0.98);
+    transition:
+        opacity 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+        transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.login-success-toast--visible .login-success-toast__panel {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+.login-success-toast--leaving .login-success-toast__panel {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+    transition:
+        opacity 0.22s ease-out,
+        transform 0.22s ease-out;
+}
+
+.login-success-toast__icon {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: rgba(16, 185, 129, 0.18);
+    color: #059669;
+}
+
+.login-success-toast__icon svg {
+    display: block;
+}
+
+.login-success-toast__text {
+    margin: 0;
+    flex: 1;
+    min-width: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .login-success-toast__panel {
+        transition-duration: 0.01ms !important;
+    }
 }
 
 .sr-only {

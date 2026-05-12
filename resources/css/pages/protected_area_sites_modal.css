@@ -53,6 +53,46 @@ body.pas-modal-open {
     width: min(380px, calc(100vw - 1.25rem));
 }
 
+.pas-modal-delete .pas-modal-header {
+    background: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+    box-shadow: none;
+    backdrop-filter: none;
+}
+
+.pas-modal-delete .pas-modal-title {
+    color: #111827;
+}
+
+.pas-modal-delete .pas-modal-subtitle {
+    color: #6b7280;
+}
+
+.pas-modal-delete .pas-modal-header-icon {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #dc2626;
+    box-shadow: none;
+}
+
+.pas-modal-delete .pas-modal-close {
+    border: 1px solid #e5e7eb;
+    background: #ffffff;
+    color: #4b5563;
+}
+
+.pas-modal-delete .pas-modal-close:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
+    box-shadow: none;
+}
+
+.pas-modal-delete .pas-modal-footer {
+    background: #f9fafb;
+    border-top: 1px solid #e5e7eb;
+    box-shadow: none;
+}
+
 .pas-modal-header {
     display: flex;
     align-items: center;
@@ -308,6 +348,11 @@ body.pas-modal-open {
     font-weight: 600;
 }
 
+.pas-delete-name--solo {
+    margin: 0;
+    font-size: 0.95rem;
+}
+
 .pas-delete-note {
     margin: 0.48rem 0 0;
     font-size: 0.78rem;
@@ -390,43 +435,43 @@ body.pas-modal-open {
     color: var(--text-primary);
 }
 
-[data-theme="dark"] .pas-modal-header,
-[data-theme="dark"] .pas-modal-footer {
+[data-theme="dark"] .pas-modal:not(.pas-modal-delete) .pas-modal-header,
+[data-theme="dark"] .pas-modal:not(.pas-modal-delete) .pas-modal-footer {
     border-color: rgba(74, 222, 128, 0.28);
 }
 
-[data-theme="dark"] .pas-modal-header {
+[data-theme="dark"] .pas-modal:not(.pas-modal-delete) .pas-modal-header {
     background: linear-gradient(125deg, #0b1f1c 0%, #123d33 60%, #115446 100%);
 }
 
-[data-theme="dark"] .pas-modal-footer {
+[data-theme="dark"] .pas-modal:not(.pas-modal-delete) .pas-modal-footer {
     background: linear-gradient(180deg, rgba(17, 37, 33, 0.95) 0%, rgba(13, 32, 28, 0.98) 100%);
 }
 
-[data-theme="dark"] .pas-modal-header-icon {
+[data-theme="dark"] .pas-modal:not(.pas-modal-delete) .pas-modal-header-icon {
     background: rgba(201, 255, 233, 0.13);
     border-color: rgba(201, 255, 233, 0.3);
     color: #c3ffe7;
 }
 
-[data-theme="dark"] .pas-modal-title,
+[data-theme="dark"] .pas-modal:not(.pas-modal-delete) .pas-modal-title,
 [data-theme="dark"] .pas-delete-title,
 [data-theme="dark"] .pas-delete-name {
     color: var(--text-primary);
 }
 
-[data-theme="dark"] .pas-modal-title {
+[data-theme="dark"] .pas-modal:not(.pas-modal-delete) .pas-modal-title {
     color: #ecfff8;
 }
 
-[data-theme="dark"] .pas-modal-subtitle,
+[data-theme="dark"] .pas-modal:not(.pas-modal-delete) .pas-modal-subtitle,
 [data-theme="dark"] .pas-section-title,
 [data-theme="dark"] .pas-delete-note,
 [data-theme="dark"] .pas-field > span {
     color: var(--text-tertiary);
 }
 
-[data-theme="dark"] .pas-modal-subtitle {
+[data-theme="dark"] .pas-modal:not(.pas-modal-delete) .pas-modal-subtitle {
     color: rgba(208, 255, 238, 0.72);
 }
 
@@ -441,19 +486,19 @@ body.pas-modal-open {
     color: var(--text-secondary);
 }
 
-[data-theme="dark"] .pas-modal-close,
+[data-theme="dark"] .pas-modal:not(.pas-modal-delete) .pas-modal-close,
 [data-theme="dark"] .pas-btn-secondary,
 [data-theme="dark"] .pas-btn-primary {
     color: var(--text-secondary);
 }
 
-[data-theme="dark"] .pas-modal-close {
+[data-theme="dark"] .pas-modal:not(.pas-modal-delete) .pas-modal-close {
     background: rgba(200, 255, 234, 0.08);
     border-color: rgba(200, 255, 234, 0.25);
     color: #defff2;
 }
 
-[data-theme="dark"] .pas-modal-close:hover {
+[data-theme="dark"] .pas-modal:not(.pas-modal-delete) .pas-modal-close:hover {
     background: rgba(200, 255, 234, 0.17);
     border-color: rgba(200, 255, 234, 0.42);
 }
@@ -482,4 +527,40 @@ body.pas-modal-open {
     background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
     color: #fff1f2;
     box-shadow: 0 10px 20px rgba(185, 28, 28, 0.34);
+}
+
+[data-theme="dark"] .pas-modal-delete .pas-modal-header {
+    background: #1e293b;
+    border-bottom-color: #334155;
+    box-shadow: none;
+}
+
+[data-theme="dark"] .pas-modal-delete .pas-modal-title {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .pas-modal-delete .pas-modal-subtitle {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .pas-modal-delete .pas-modal-header-icon {
+    background: rgba(127, 29, 29, 0.25);
+    border-color: #7f1d1d;
+    color: #fca5a5;
+}
+
+[data-theme="dark"] .pas-modal-delete .pas-modal-close {
+    background: #334155;
+    border-color: #475569;
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .pas-modal-delete .pas-modal-close:hover {
+    background: #475569;
+    border-color: #64748b;
+}
+
+[data-theme="dark"] .pas-modal-delete .pas-modal-footer {
+    background: #0f172a;
+    border-top-color: #334155;
 }

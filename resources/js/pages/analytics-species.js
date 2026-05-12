@@ -21,9 +21,23 @@ function buildSpeciesYearlyRows(payload, speciesKey) {
         .map((row) => ({
             year: Number(row.year || 0),
             recorded_count_sum: Number(row.recorded_count_sum || 0),
+            observation_count: Number(row.observation_count ?? row.observation_records ?? 0),
         }))
         .filter((row) => Number.isFinite(row.year) && row.year > 0)
         .sort((a, b) => a.year - b.year);
+}
+
+function speciesTrendLabelForKey(payload, speciesKey) {
+    const key = String(speciesKey || '').trim();
+    const options = Array.isArray(payload?.top_species_options) ? payload.top_species_options : [];
+    const match = options.find((o) => String(o.species_key || '') === key);
+    if (match?.label) {
+        return String(match.label);
+    }
+    if (key && String(payload?.selected_species_key || '') === key && payload?.selected_species_label) {
+        return String(payload.selected_species_label);
+    }
+    return 'Species';
 }
 
 function getDirectionLabel(direction) {
@@ -85,13 +99,15 @@ function renderSpeciesTrendChart(payload, speciesKey) {
         speciesTrendChart = null;
     }
 
+    const speciesLabel = speciesTrendLabelForKey(payload, speciesKey);
+
     speciesTrendChart = new Chart(canvas, {
         type: 'line',
         data: {
             labels: rows.map((row) => String(row.year)),
             datasets: [
                 {
-                    label: 'Recorded Count (Σ)',
+                    label: 'Recorded Count',
                     data: rows.map((row) => row.recorded_count_sum),
                     borderColor: '#2563eb',
                     backgroundColor: 'rgba(37, 99, 235, 0.12)',
@@ -110,8 +126,22 @@ function renderSpeciesTrendChart(payload, speciesKey) {
             plugins: {
                 tooltip: {
                     callbacks: {
+                        title(tooltipItems) {
+                            if (!tooltipItems.length) {
+                                return '';
+                            }
+                            const index = tooltipItems[0].dataIndex;
+                            const year = rows[index]?.year;
+                            return [speciesLabel, `Year: ${year}`];
+                        },
                         label(context) {
-                            return `Recorded Count (Σ): ${formatFullNumber(context.raw)}`;
+                            const index = context.dataIndex;
+                            const obs = rows[index]?.observation_count ?? 0;
+                            const rec = rows[index]?.recorded_count_sum ?? Number(context.raw ?? 0);
+                            return [
+                                `Observations: ${formatFullNumber(obs)}`,
+                                `Recorded Count: ${formatFullNumber(rec)}`,
+                            ];
                         },
                         afterBody(tooltipItems) {
                             if (!tooltipItems.length) return '';

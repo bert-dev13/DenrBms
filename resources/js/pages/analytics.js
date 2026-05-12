@@ -362,12 +362,25 @@ function renderSpeciesObservationDistributionChart(payload) {
 
     if (emptyState) emptyState.classList.add('hidden');
 
+    const observationCountForSlice = (m) =>
+        Number(m?.observation_records != null ? m.observation_records : (m?.observation_frequency ?? 0));
+
+    /** Same basis as backend percent_share: (species obs ÷ top-10 obs total) × 100, two decimals. */
+    const formatObservationPercent = (m) => {
+        const raw = m?.percent_share != null ? Number(m.percent_share) : NaN;
+        if (Number.isFinite(raw)) {
+            return raw.toFixed(2);
+        }
+        return '0.00';
+    };
+
     const labels = sliceMeta.map((s) => {
         const name = String(s.species_name || 'Unspecified');
-        const pct = s.percent_share != null ? Number(s.percent_share).toFixed(1) : '0.0';
+        const pct = formatObservationPercent(s);
         return `${truncateLabel(name, 24)} (${pct}%)`;
     });
-    const values = sliceMeta.map((s) => Number(s.recorded_count_sum || 0));
+    // Segment sizes = observation row counts (same basis as percent_share) so arc areas match legend/tooltip %.
+    const values = sliceMeta.map((s) => observationCountForSlice(s));
     const colors = sliceMeta.map((_, i) => SPECIES_DISTRIBUTION_COLORS[i % SPECIES_DISTRIBUTION_COLORS.length]);
 
     analyticsSpeciesDistributionChart = new Chart(canvas, {
@@ -407,15 +420,13 @@ function renderSpeciesObservationDistributionChart(payload) {
                         label(item) {
                             const i = item.dataIndex;
                             const m = sliceMeta[i];
-                            const sum = Number(m?.recorded_count_sum ?? item.raw ?? 0);
-                            const obs = Number(
-                                m?.observation_records != null
-                                    ? m.observation_records
-                                    : (m?.observation_frequency ?? 0),
-                            );
+                            const sum = Number(m?.recorded_count_sum ?? 0);
+                            const obs = observationCountForSlice(m);
+                            const pctLine = `${formatObservationPercent(m)}%`;
                             return [
                                 `Observations: ${formatFullNumber(obs)}`,
                                 `Recorded count: ${formatFullNumber(sum)}`,
+                                pctLine,
                             ];
                         },
                     },

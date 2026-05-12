@@ -576,8 +576,8 @@ class SpeciesObservationsModalSystem {
         const { observation } = data;
         
         return `
-            <div class="modal-header">
-                <h2 class="modal-title">Delete Observation</h2>
+            <div class="modal-header modal-header-red">
+                <h2 class="modal-title">Confirm deletion</h2>
                 <button class="modal-close" onclick="window.speciesObservationsModal.close()">
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>

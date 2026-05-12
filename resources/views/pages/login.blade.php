@@ -154,9 +154,6 @@
                         <span class="checkmark"></span>
                         <span id="remember-desc">Remember me</span>
                     </label>
-                    <a href="{{ route('password.request') }}" class="forgot-password-link">
-                        Forgot password
-                    </a>
                 </div>
 
                 <button type="submit" class="login-button" id="loginSubmitBtn">

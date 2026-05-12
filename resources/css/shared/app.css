@@ -423,7 +423,8 @@ body {
 }
 
 
-/* Layout stacking order: sidebar = 40, topbar = 32, overlay = 30, main = 0. Modals > 40. */
+/* Layout stacking order: sidebar = 40, topbar = 32, overlay = 30, main = 0.
+   Modals that must cover the shell must render outside <main> (e.g. @stack('body-overlays')) — z-index inside main cannot exceed sidebar. */
 
 /* App shell main content: offset by sidebar/topbar; width constrained so no overlap or horizontal scroll */
 .main-content-wrapper {
