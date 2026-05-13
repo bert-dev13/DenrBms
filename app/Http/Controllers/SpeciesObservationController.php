@@ -236,6 +236,13 @@ class SpeciesObservationController extends Controller
         $assignedProtectedAreaId = $this->assignedProtectedAreaId();
         $isPaScoped = $assignedProtectedAreaId !== null;
 
+        // For PA-scoped users, surface the count of sites under their
+        // assigned Protected Area so the summary cards can swap the
+        // "Total Protected Areas" tile for "Total Sites".
+        if ($isPaScoped) {
+            $summaryStats['total_sites'] = $this->siteResolver->siteCountForUser(Auth::user());
+        }
+
         return view('pages.species_observations.index', compact(
             'observations',
             'filterOptions',

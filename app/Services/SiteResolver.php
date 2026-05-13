@@ -92,4 +92,19 @@ final class SiteResolver
 
         return $this->sitesForProtectedAreaId($effectiveProtectedAreaId);
     }
+
+    /**
+     * Count of sites under the user's assigned Protected Area. Returns 0 for
+     * non-PA users (admin/super admin/etc.) so the "Total Sites" summary card
+     * can be safely rendered with this value only when `isPaScoped` is true.
+     */
+    public function siteCountForUser(?User $user): int
+    {
+        $assignedProtectedAreaId = UserAccess::assignedProtectedAreaId($user);
+        if ($assignedProtectedAreaId === null) {
+            return 0;
+        }
+
+        return $this->sitesForProtectedAreaId($assignedProtectedAreaId)->count();
+    }
 }

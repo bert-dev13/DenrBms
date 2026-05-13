@@ -45,9 +45,15 @@
                             <i data-lucide="map-pin" class="lucide-icon"></i>
                         </div>
                         <div class="kpi-card-body">
-                            <p class="kpi-card-label">Total Protected Areas</p>
-                            <p class="kpi-card-value">{{ number_format($summaryStats['total_protected_areas'] ?? 0) }}</p>
-                            <span class="kpi-card-meta kpi-card-meta--neutral">unique areas</span>
+                            @if (! empty($isPaScoped))
+                                <p class="kpi-card-label">Total Sites</p>
+                                <p class="kpi-card-value">{{ number_format($summaryStats['total_sites'] ?? 0) }}</p>
+                                <span class="kpi-card-meta kpi-card-meta--neutral">sites monitored</span>
+                            @else
+                                <p class="kpi-card-label">Total Protected Areas</p>
+                                <p class="kpi-card-value">{{ number_format($summaryStats['total_protected_areas'] ?? 0) }}</p>
+                                <span class="kpi-card-meta kpi-card-meta--neutral">unique areas</span>
+                            @endif
                         </div>
                     </div>
                     <div class="kpi-card kpi-card--orange">

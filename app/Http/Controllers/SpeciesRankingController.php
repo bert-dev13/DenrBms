@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Data\ObservationFactFilter;
 use App\Helpers\PatrolYearHelper;
 use App\Models\ProtectedArea;
+use App\Services\SiteResolver;
 use App\Services\SpeciesCanonicalResolver;
 use App\Services\SpeciesObservationFactService;
 use App\Support\ObservationRowValue;
@@ -21,6 +22,7 @@ class SpeciesRankingController extends Controller
     public function __construct(
         private SpeciesObservationFactService $observationFactService,
         private SpeciesCanonicalResolver $speciesCanonicalResolver,
+        private SiteResolver $siteResolver,
     ) {}
 
     private function assignedProtectedAreaId(): ?int
@@ -46,6 +48,13 @@ class SpeciesRankingController extends Controller
 
         $dataset = $this->resolveRankingDataset($request);
         $summaryStats = $dataset['summaryStats'];
+
+        // For PA-scoped users, surface the count of sites under their
+        // assigned Protected Area so the summary cards can swap the
+        // "Total Protected Areas" tile for "Total Sites".
+        if ($assignedProtectedAreaId !== null) {
+            $summaryStats['total_sites'] = $this->siteResolver->siteCountForUser(Auth::user());
+        }
 
         if ($dataset['ranked']->isEmpty()) {
             $rows = new LengthAwarePaginator([], 0, 20, 1, [

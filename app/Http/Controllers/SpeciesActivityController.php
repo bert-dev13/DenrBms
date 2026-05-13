@@ -6,6 +6,7 @@ use App\Data\ObservationFactFilter;
 use App\Helpers\PatrolYearHelper;
 use App\Models\ProtectedArea;
 use App\Models\SiteName;
+use App\Services\SiteResolver;
 use App\Services\SpeciesObservationActivityRankingService;
 use App\Services\SpeciesObservationFactService;
 use App\Support\UserAccess;
@@ -21,6 +22,7 @@ class SpeciesActivityController extends Controller
     public function __construct(
         private SpeciesObservationFactService $observationFactService,
         private SpeciesObservationActivityRankingService $activityRankingService,
+        private SiteResolver $siteResolver,
     ) {}
 
     private function assignedProtectedAreaId(): ?int
@@ -48,6 +50,13 @@ class SpeciesActivityController extends Controller
 
         $dataset = $this->resolveActivityDataset($request);
         $summaryStats = $dataset['summaryStats'];
+
+        // For PA-scoped users, surface the count of sites under their
+        // assigned Protected Area so the summary cards can swap the
+        // "Total Protected Areas" tile for "Total Sites".
+        if ($assignedProtectedAreaId !== null) {
+            $summaryStats['total_sites'] = $this->siteResolver->siteCountForUser(Auth::user());
+        }
 
         $perPageInput = strtolower((string) $request->input('per_page', '20'));
         $allowedPerPage = [20, 50, 100, 200];
