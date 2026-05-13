@@ -9,12 +9,42 @@
     min-height: 100dvh;
     z-index: 10050 !important;
     box-sizing: border-box;
+    pointer-events: none;
 }
 
 .user-modal.user-modal--overlay .user-modal-backdrop {
     position: absolute;
     inset: 0;
     z-index: 0;
+    background: rgba(15, 23, 42, 0.48);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.user-modal.user-modal--overlay.user-modal--open .user-modal-backdrop {
+    opacity: 1;
+}
+
+.user-modal-surface {
+    transform-origin: center center;
+    opacity: 0;
+    transform: scale(0.97) scaleX(0.94);
+    transition:
+        opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+        transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: opacity, transform;
+}
+
+.user-modal.user-modal--overlay.user-modal--open .user-modal-surface {
+    opacity: 1;
+    transform: scale(1) scaleX(1);
+}
+
+.user-modal.user-modal--overlay.user-modal--open,
+.user-modal.user-modal--overlay.user-modal--closing {
+    pointer-events: auto;
 }
 
 /* Clicks outside the card hit the backdrop (sibling below in paint order). */
@@ -26,10 +56,6 @@
 
 .user-modal.user-modal--overlay .user-modal-content {
     pointer-events: auto;
-}
-
-.user-modal-backdrop {
-    background: rgba(15, 23, 42, 0.45);
 }
 
 .user-modal-content {
@@ -130,9 +156,12 @@
     border: 1px solid;
     box-shadow: 0 10px 20px rgba(15, 23, 42, 0.2);
     opacity: 0;
-    transform: translateY(-10px);
-    animation: usersToastIn 0.2s ease-out forwards;
-    transition: opacity 0.2s ease, transform 0.2s ease;
+    transform: scale(0.97) scaleX(0.94);
+    transform-origin: top right;
+    animation: usersToastIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    transition:
+        opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+        transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @media (max-width: 768px) {
@@ -159,13 +188,13 @@
 
 .users-toast.is-hiding {
     opacity: 0;
-    transform: translateY(-12px);
+    transform: scale(0.97) scaleX(0.94);
 }
 
 @keyframes usersToastIn {
     to {
         opacity: 1;
-        transform: translateY(0);
+        transform: scale(1) scaleX(1);
     }
 }
 
@@ -427,8 +456,8 @@
 
 /* —— Dark mode: all user management modals (create / view / edit / delete) —— */
 
-[data-theme="dark"] .user-modal-backdrop {
-    background: rgba(2, 6, 23, 0.72);
+[data-theme="dark"] .user-modal.user-modal--overlay .user-modal-backdrop {
+    background: rgba(15, 23, 42, 0.65);
 }
 
 [data-theme="dark"] .user-modal-content {
@@ -542,4 +571,25 @@
     border-top: 1px solid var(--border-primary);
     background: transparent;
     box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .user-modal.user-modal--overlay .user-modal-backdrop,
+    .user-modal-surface {
+        transition-duration: 0.01ms !important;
+    }
+
+    .user-modal.user-modal--overlay.user-modal--open .user-modal-surface {
+        transform: none;
+    }
+
+    .users-toast {
+        animation: none;
+        opacity: 1;
+        transform: none;
+    }
+
+    .users-toast.is-hiding {
+        transform: none;
+    }
 }

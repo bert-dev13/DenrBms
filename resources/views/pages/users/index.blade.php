@@ -257,9 +257,9 @@
 
 @push('body-overlays')
     <div id="create-user-modal" class="user-modal user-modal--overlay fixed inset-0 z-[10050] hidden" data-has-errors="{{ $hasCreateUserErrors ? '1' : '0' }}">
-        <div class="user-modal-backdrop absolute inset-0 transition-opacity duration-300" onclick="hideCreateUserModal()"></div>
+        <div class="user-modal-backdrop absolute inset-0" onclick="hideCreateUserModal()"></div>
         <div class="user-modal-dialog relative flex items-center justify-center min-h-screen p-4">
-            <div class="user-modal-content relative w-full max-w-2xl transform transition-all duration-300 scale-95 opacity-0" id="create-user-modal-content" style="z-index: 10000;">
+            <div class="user-modal-content user-modal-surface relative w-full max-w-2xl" id="create-user-modal-content" style="z-index: 10000;">
                 <div class="user-modal-header">
                     <div>
                         <h3 class="text-lg font-semibold text-gray-900">Create User Account</h3>
@@ -332,9 +332,9 @@
     </div>
 
     <div id="view-user-modal" class="user-modal user-modal--overlay fixed inset-0 z-[10050] hidden">
-        <div class="user-modal-backdrop absolute inset-0 transition-opacity duration-300" onclick="hideUserViewModal()"></div>
+        <div class="user-modal-backdrop absolute inset-0" onclick="hideUserViewModal()"></div>
         <div class="user-modal-dialog relative flex items-center justify-center min-h-screen p-4">
-            <div class="user-modal-content relative w-full max-w-2xl transform transition-all duration-300 scale-95 opacity-0" id="view-user-modal-content" style="z-index: 10000;">
+            <div class="user-modal-content user-modal-surface relative w-full max-w-2xl" id="view-user-modal-content" style="z-index: 10000;">
                 <div class="user-modal-header">
                     <div>
                         <h3 class="text-lg font-semibold text-gray-900">View User Account</h3>
@@ -378,9 +378,9 @@
     </div>
 
     <div id="edit-user-modal" class="user-modal user-modal--overlay fixed inset-0 z-[10050] hidden">
-        <div class="user-modal-backdrop absolute inset-0 transition-opacity duration-300" onclick="hideUserEditModal()"></div>
+        <div class="user-modal-backdrop absolute inset-0" onclick="hideUserEditModal()"></div>
         <div class="user-modal-dialog relative flex items-center justify-center min-h-screen p-4">
-            <div class="user-modal-content relative w-full max-w-2xl transform transition-all duration-300 scale-95 opacity-0" id="edit-user-modal-content" style="z-index: 10000;">
+            <div class="user-modal-content user-modal-surface relative w-full max-w-2xl" id="edit-user-modal-content" style="z-index: 10000;">
                 <div class="user-modal-header">
                     <div>
                         <h3 class="text-lg font-semibold text-gray-900">Edit User Account</h3>
@@ -444,9 +444,9 @@
     </div>
 
     <div id="delete-user-modal" class="user-modal user-modal--overlay fixed inset-0 z-[10050] hidden">
-        <div class="user-modal-backdrop absolute inset-0 transition-opacity duration-300" onclick="hideUserDeleteModal()"></div>
+        <div class="user-modal-backdrop absolute inset-0" onclick="hideUserDeleteModal()"></div>
         <div class="user-modal-dialog relative flex items-center justify-center min-h-screen p-4">
-            <div class="user-modal-content user-modal-content--delete relative w-full transform transition-all duration-300 scale-95 opacity-0" id="delete-user-modal-content" style="z-index: 10000;">
+            <div class="user-modal-content user-modal-content--delete user-modal-surface relative w-full" id="delete-user-modal-content" style="z-index: 10000;">
                 <div class="user-modal-header user-modal-header--delete">
                     <div class="user-modal-header__lead">
                         <span class="user-modal-header__danger-icon" aria-hidden="true">

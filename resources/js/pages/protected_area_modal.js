@@ -5,15 +5,19 @@
  * - Smooth open/close transitions without layout shifts
  */
 
+const PA_MODAL_ANIM_MS = 240;
+
 class ProtectedAreaModalSystem {
     constructor() {
         this.overlay = null;
+        this.backdrop = null;
         this.dialog = null;
         this.focusable = [];
         this.lastFocused = null;
         this.activeType = null;
         this.activeId = null;
         this.boundKeydown = this.handleGlobalKeydown.bind(this);
+        this._closeTimer = null;
         this.init();
     }
 
@@ -24,17 +28,24 @@ class ProtectedAreaModalSystem {
         this.overlay.id = 'pa-modal-overlay';
         this.overlay.className = 'pa-modal-overlay';
         this.overlay.setAttribute('aria-hidden', 'true');
-        this.overlay.innerHTML = '<div class="pa-modal-shell"></div>';
+        this.overlay.innerHTML = '<div class="pa-modal-backdrop" aria-hidden="true"></div><div class="pa-modal-stage"><div class="pa-modal-shell"></div></div>';
         document.body.appendChild(this.overlay);
+        this.backdrop = this.overlay.querySelector('.pa-modal-backdrop');
 
         this.overlay.addEventListener('click', (event) => {
-            if (event.target === this.overlay) this.close();
+            if (event.target === this.backdrop) this.close();
         });
 
         document.addEventListener('keydown', this.boundKeydown);
     }
 
     async open(type, payload = {}) {
+        if (this._closeTimer) {
+            window.clearTimeout(this._closeTimer);
+            this._closeTimer = null;
+            this.overlay.classList.remove('is-closing');
+        }
+
         this.activeType = type;
         this.activeId = payload.areaId || null;
         this.lastFocused = document.activeElement;
@@ -46,9 +57,13 @@ class ProtectedAreaModalSystem {
         shell.innerHTML = this.render(type, data);
         this.dialog = shell.querySelector('.pa-modal');
 
-        this.overlay.classList.add('is-open');
+        this.overlay.classList.remove('is-closing');
         this.overlay.setAttribute('aria-hidden', 'false');
         document.body.classList.add('pa-modal-open');
+        void this.overlay.offsetWidth;
+        window.requestAnimationFrame(() => {
+            this.overlay.classList.add('is-open');
+        });
 
         this.wireDialogEvents();
         this.initializeFocusTrap();
@@ -62,13 +77,15 @@ class ProtectedAreaModalSystem {
 
     close() {
         if (!this.overlay || !this.overlay.classList.contains('is-open')) return;
+        if (this._closeTimer) return;
 
         this.overlay.classList.remove('is-open');
         this.overlay.classList.add('is-closing');
         this.overlay.setAttribute('aria-hidden', 'true');
         document.body.classList.remove('pa-modal-open');
 
-        window.setTimeout(() => {
+        this._closeTimer = window.setTimeout(() => {
+            this._closeTimer = null;
             this.overlay.classList.remove('is-closing');
             this.overlay.querySelector('.pa-modal-shell').innerHTML = '';
             this.dialog = null;
@@ -79,7 +96,7 @@ class ProtectedAreaModalSystem {
             this.lastFocused = null;
             this.activeType = null;
             this.activeId = null;
-        }, 180);
+        }, PA_MODAL_ANIM_MS);
     }
 
     handleGlobalKeydown(event) {
@@ -362,10 +379,12 @@ class ProtectedAreaModalSystem {
         n.className = `pa-toast pa-toast-${type}`;
         n.textContent = message;
         document.body.appendChild(n);
-        window.setTimeout(() => n.classList.add('show'), 10);
+        window.requestAnimationFrame(() => {
+            window.requestAnimationFrame(() => n.classList.add('pa-toast--visible'));
+        });
         window.setTimeout(() => {
-            n.classList.remove('show');
-            window.setTimeout(() => n.remove(), 180);
+            n.classList.remove('pa-toast--visible');
+            window.setTimeout(() => n.remove(), PA_MODAL_ANIM_MS);
         }, 2200);
     }
 

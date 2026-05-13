@@ -97,7 +97,7 @@ body.login-page {
     }
 }
 
-/* Full viewport container: background image + subtle overlay */
+/* Full viewport container: solid fallback + optional photo layer (<img.login-bg-photo>) */
 .login-container {
     min-height: 100vh;
     min-height: 100dvh;
@@ -108,16 +108,33 @@ body.login-page {
     position: relative;
     overflow: hidden;
     background-color: var(--login-bg-base);
-    background-image: var(--login-bg-image);
+}
+
+/* Gradient fallback when no WebP is deployed (matches prior inline --login-bg-image fallback) */
+.login-container.login-container--no-photo {
+    background-image: linear-gradient(135deg, #064e3b 0%, #047857 50%, #0f766e 100%);
     background-size: cover;
     background-position: center;
-    background-repeat: no-repeat;
+}
+
+/* Full-bleed background photo: discoverable by preload + high fetch priority in HTML */
+.login-bg-photo {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    z-index: 0;
+    pointer-events: none;
+    user-select: none;
 }
 
 /* Very low opacity overlay – improves readability without hiding the image */
 .login-overlay {
     position: absolute;
     inset: 0;
+    z-index: 1;
     background: var(--login-overlay-gradient-c), var(--login-overlay-gradient-b), var(--login-overlay-gradient-a), var(--login-overlay);
     backdrop-filter: blur(1.5px) saturate(108%);
     -webkit-backdrop-filter: blur(1.5px) saturate(108%);
@@ -152,7 +169,7 @@ body.login-page {
 /* Centered content: card + footer */
 .login-content {
     position: relative;
-    z-index: 1;
+    z-index: 2;
     display: flex;
     flex-direction: column;
     align-items: center;

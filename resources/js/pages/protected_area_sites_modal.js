@@ -1,14 +1,18 @@
 import { initSearchBar } from '../shared/search_bar.js';
 
+const PAS_MODAL_ANIM_MS = 240;
+
 class ProtectedAreaSitesModalSystem {
     constructor() {
         this.overlay = null;
+        this.backdrop = null;
         this.dialog = null;
         this.focusable = [];
         this.lastFocused = null;
         this.mode = null;
         this.siteId = null;
         this.boundKeydown = this.handleKeydown.bind(this);
+        this._closeTimer = null;
         this.init();
     }
 
@@ -19,17 +23,24 @@ class ProtectedAreaSitesModalSystem {
         this.overlay.id = 'pas-modal-overlay';
         this.overlay.className = 'pas-modal-overlay';
         this.overlay.setAttribute('aria-hidden', 'true');
-        this.overlay.innerHTML = '<div class="pas-modal-shell"></div>';
+        this.overlay.innerHTML = '<div class="pas-modal-backdrop" aria-hidden="true"></div><div class="pas-modal-stage"><div class="pas-modal-shell"></div></div>';
         document.body.appendChild(this.overlay);
+        this.backdrop = this.overlay.querySelector('.pas-modal-backdrop');
 
         this.overlay.addEventListener('click', (event) => {
-            if (event.target === this.overlay) this.close();
+            if (event.target === this.backdrop) this.close();
         });
 
         document.addEventListener('keydown', this.boundKeydown);
     }
 
     async open(mode, data = {}) {
+        if (this._closeTimer) {
+            clearTimeout(this._closeTimer);
+            this._closeTimer = null;
+            this.overlay.classList.remove('is-closing');
+        }
+
         this.mode = mode;
         this.siteId = data.siteId || null;
         this.lastFocused = document.activeElement;
@@ -41,9 +52,13 @@ class ProtectedAreaSitesModalSystem {
         shell.innerHTML = this.render(mode, payload);
         this.dialog = shell.querySelector('.pas-modal');
 
-        this.overlay.classList.add('is-open');
+        this.overlay.classList.remove('is-closing');
         this.overlay.setAttribute('aria-hidden', 'false');
         document.body.classList.add('pas-modal-open');
+        void this.overlay.offsetWidth;
+        requestAnimationFrame(() => {
+            this.overlay.classList.add('is-open');
+        });
 
         this.bindDialogEvents();
         this.setupFocusTrap();
@@ -57,13 +72,15 @@ class ProtectedAreaSitesModalSystem {
 
     close() {
         if (!this.overlay || !this.overlay.classList.contains('is-open')) return;
+        if (this._closeTimer) return;
 
         this.overlay.classList.remove('is-open');
         this.overlay.classList.add('is-closing');
         this.overlay.setAttribute('aria-hidden', 'true');
         document.body.classList.remove('pas-modal-open');
 
-        setTimeout(() => {
+        this._closeTimer = setTimeout(() => {
+            this._closeTimer = null;
             this.overlay.classList.remove('is-closing');
             this.overlay.querySelector('.pas-modal-shell').innerHTML = '';
             this.dialog = null;
@@ -74,7 +91,7 @@ class ProtectedAreaSitesModalSystem {
             this.lastFocused = null;
             this.mode = null;
             this.siteId = null;
-        }, 180);
+        }, PAS_MODAL_ANIM_MS);
     }
 
     handleKeydown(event) {
@@ -371,10 +388,12 @@ class ProtectedAreaSitesModalSystem {
         toast.className = `pas-toast pas-toast-${type}`;
         toast.textContent = message;
         document.body.appendChild(toast);
-        setTimeout(() => toast.classList.add('show'), 10);
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => toast.classList.add('pas-toast--visible'));
+        });
         setTimeout(() => {
-            toast.classList.remove('show');
-            setTimeout(() => toast.remove(), 180);
+            toast.classList.remove('pas-toast--visible');
+            setTimeout(() => toast.remove(), PAS_MODAL_ANIM_MS);
         }, 2200);
     }
 

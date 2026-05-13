@@ -10,11 +10,15 @@ class SpeciesObservationModalSystem {
         noSites: 'No sites available for this Protected Area'
     };
 
+    static ANIM_MS = 240;
+
     constructor() {
         this.overlay = null;
+        this.backdrop = null;
         this.modalType = null;
         this.modalData = null;
         this.siteLoadRequestId = 0;
+        this._closeTimer = null;
         this.init();
     }
 
@@ -22,11 +26,12 @@ class SpeciesObservationModalSystem {
         this.overlay = document.createElement('div');
         this.overlay.className = 'so-modal-overlay';
         this.overlay.setAttribute('aria-hidden', 'true');
-        this.overlay.innerHTML = '<div class="so-modal-shell"></div>';
+        this.overlay.innerHTML = '<div class="so-modal-backdrop" aria-hidden="true"></div><div class="so-modal-stage"><div class="so-modal-shell"></div></div>';
         document.body.appendChild(this.overlay);
+        this.backdrop = this.overlay.querySelector('.so-modal-backdrop');
 
         this.overlay.addEventListener('click', (event) => {
-            if (event.target === this.overlay) {
+            if (event.target === this.backdrop) {
                 this.close();
             }
         });
@@ -39,6 +44,12 @@ class SpeciesObservationModalSystem {
     }
 
     async open(type, data = {}) {
+        if (this._closeTimer) {
+            clearTimeout(this._closeTimer);
+            this._closeTimer = null;
+            this.overlay.classList.remove('is-closing');
+        }
+
         this.modalType = type;
         this.modalData = await this.prepareData(type, data);
         if (!this.modalData) return false;
@@ -49,9 +60,13 @@ class SpeciesObservationModalSystem {
             window.replaceLucideIcons(shell);
         }
 
-        this.overlay.classList.add('is-open');
+        this.overlay.classList.remove('is-closing');
         this.overlay.setAttribute('aria-hidden', 'false');
         document.body.style.overflow = 'hidden';
+        void this.overlay.offsetWidth;
+        requestAnimationFrame(() => {
+            this.overlay.classList.add('is-open');
+        });
 
         if (type === 'edit') {
             this.loadSiteNames('so_edit_protected_area', 'so_edit_site_name', this.modalData.observation.site_name_id || '');
@@ -65,12 +80,25 @@ class SpeciesObservationModalSystem {
     }
 
     close() {
+        if (!this.overlay || !this.overlay.classList.contains('is-open')) {
+            return;
+        }
+        if (this._closeTimer) {
+            return;
+        }
+
         this.overlay.classList.remove('is-open');
+        this.overlay.classList.add('is-closing');
         this.overlay.setAttribute('aria-hidden', 'true');
-        document.body.style.overflow = '';
-        this.overlay.querySelector('.so-modal-shell').innerHTML = '';
-        this.modalType = null;
-        this.modalData = null;
+
+        this._closeTimer = setTimeout(() => {
+            this._closeTimer = null;
+            this.overlay.classList.remove('is-closing');
+            this.overlay.querySelector('.so-modal-shell').innerHTML = '';
+            document.body.style.overflow = '';
+            this.modalType = null;
+            this.modalData = null;
+        }, SpeciesObservationModalSystem.ANIM_MS);
     }
 
     async prepareData(type, data) {
@@ -537,7 +565,13 @@ class SpeciesObservationModalSystem {
         notice.className = `so-notice so-notice-${type}`;
         notice.textContent = message;
         document.body.appendChild(notice);
-        setTimeout(() => notice.remove(), 2500);
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => notice.classList.add('so-notice--visible'));
+        });
+        setTimeout(() => {
+            notice.classList.remove('so-notice--visible');
+            setTimeout(() => notice.remove(), SpeciesObservationModalSystem.ANIM_MS);
+        }, 2500);
     }
 }
 

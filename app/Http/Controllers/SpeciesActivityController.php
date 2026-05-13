@@ -31,9 +31,6 @@ class SpeciesActivityController extends Controller
     public function index(Request $request)
     {
         $assignedProtectedAreaId = $this->assignedProtectedAreaId();
-        if ($assignedProtectedAreaId !== null) {
-            $request->merge(['protected_area_id' => $assignedProtectedAreaId]);
-        }
 
         $filterOptions = [
             'protectedAreas' => ProtectedArea::query()
@@ -101,6 +98,7 @@ class SpeciesActivityController extends Controller
             'rankedRows' => $dataset['ranked'],
             'summaryStats' => $dataset['summaryStats'],
             'filterInfo' => $this->exportFilterInfo($request),
+            'isPaScoped' => $this->assignedProtectedAreaId() !== null,
         ]);
     }
 
@@ -115,26 +113,34 @@ class SpeciesActivityController extends Controller
             'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ];
 
-        $callback = function () use ($ranked): void {
+        $isPaScoped = $this->assignedProtectedAreaId() !== null;
+
+        $callback = function () use ($ranked, $isPaScoped): void {
             $file = fopen('php://output', 'w');
             fwrite($file, "\xEF\xBB\xBF");
-            fputcsv($file, [
+            $headers = [
                 'Rank',
                 'Species Name',
                 'Scientific Name',
-                'Protected Areas',
-                'Recorded Count',
-                'Observation Records',
-            ]);
+            ];
+            if (! $isPaScoped) {
+                $headers[] = 'Protected Areas';
+            }
+            $headers[] = 'Recorded Count';
+            $headers[] = 'Observation Records';
+            fputcsv($file, $headers);
             foreach ($ranked as $row) {
-                fputcsv($file, [
+                $line = [
                     $row->rank,
                     $row->species_name ?? '',
                     $row->scientific_name ?? '',
-                    $row->protected_area_count,
-                    $row->recorded_count_sum,
-                    $row->observation_frequency,
-                ]);
+                ];
+                if (! $isPaScoped) {
+                    $line[] = $row->protected_area_count;
+                }
+                $line[] = $row->recorded_count_sum;
+                $line[] = $row->observation_frequency;
+                fputcsv($file, $line);
             }
             fclose($file);
         };
@@ -159,6 +165,7 @@ class SpeciesActivityController extends Controller
             'rankedRows' => $ranked,
             'summaryStats' => $dataset['summaryStats'],
             'filterInfo' => $this->exportFilterInfo($request),
+            'isPaScoped' => $this->assignedProtectedAreaId() !== null,
         ]);
 
         return $pdf->download('species-activity-ranking-'.date('Y-m-d-H-i-s').'.pdf');
@@ -169,6 +176,11 @@ class SpeciesActivityController extends Controller
      */
     private function resolveActivityDataset(Request $request): array
     {
+        $assignedProtectedAreaId = $this->assignedProtectedAreaId();
+        if ($assignedProtectedAreaId !== null) {
+            $request->merge(['protected_area_id' => $assignedProtectedAreaId]);
+        }
+
         $filter = ObservationFactFilter::fromSpeciesObservationStyleRequest($request);
         $facts = $this->observationFactService->getFactsWithSummary($filter, $request);
         $ranked = $this->activityRankingService->rankForSpeciesActivity($facts['rows'], $this->normalizeRankOrder($request));

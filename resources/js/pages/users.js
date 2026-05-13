@@ -1,3 +1,5 @@
+const USER_MODAL_ANIM_MS = 240;
+
 document.addEventListener('DOMContentLoaded', () => {
     const createUserModal = document.getElementById('create-user-modal');
     const hasCreateUserErrors = createUserModal?.dataset.hasErrors === '1';
@@ -15,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         setTimeout(() => {
             toast.classList.add('is-hiding');
-            setTimeout(() => toast.remove(), 220);
+            setTimeout(() => toast.remove(), USER_MODAL_ANIM_MS);
         }, delay);
     };
 
@@ -159,11 +161,18 @@ function showModal(modalId, contentId) {
     const content = document.getElementById(contentId);
     if (!modal || !content) return;
 
+    if (modal._userModalCloseTimer) {
+        clearTimeout(modal._userModalCloseTimer);
+        modal._userModalCloseTimer = null;
+        modal.classList.remove('user-modal--closing');
+    }
+
     modal.classList.remove('hidden');
-    modal.classList.add('show');
-    modal.offsetHeight;
-    content.classList.add('scale-100', 'opacity-100');
-    content.classList.remove('scale-95', 'opacity-0');
+    modal.classList.remove('user-modal--closing');
+    void modal.offsetWidth;
+    requestAnimationFrame(() => {
+        modal.classList.add('user-modal--open');
+    });
     document.body.style.overflow = 'hidden';
     if (typeof window.lucide !== 'undefined') window.lucide.createIcons();
 }
@@ -173,13 +182,22 @@ function hideModal(modalId, contentId) {
     const content = document.getElementById(contentId);
     if (!modal || !content) return;
 
-    content.classList.remove('scale-100', 'opacity-100');
-    content.classList.add('scale-95', 'opacity-0');
-    setTimeout(() => {
+    if (!modal.classList.contains('user-modal--open')) {
+        return;
+    }
+    if (modal._userModalCloseTimer) {
+        return;
+    }
+
+    modal.classList.remove('user-modal--open');
+    modal.classList.add('user-modal--closing');
+
+    modal._userModalCloseTimer = setTimeout(() => {
+        modal._userModalCloseTimer = null;
+        modal.classList.remove('user-modal--closing');
         modal.classList.add('hidden');
-        modal.classList.remove('show');
         document.body.style.overflow = '';
-    }, 200);
+    }, USER_MODAL_ANIM_MS);
 }
 
 document.addEventListener('keydown', (event) => {

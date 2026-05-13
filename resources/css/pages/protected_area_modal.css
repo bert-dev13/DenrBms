@@ -1,4 +1,5 @@
-/* Protected Area Modal (clean rebuild, scoped) */
+/* Protected Area Modal (clean rebuild, scoped)
+   Motion matches sidebar logout modal: rgba(15,23,42,0.48) + blur(4px) backdrop, panel fade/scale. */
 
 body.pa-modal-open {
     overflow: hidden;
@@ -8,28 +9,50 @@ body.pa-modal-open {
     position: fixed;
     inset: 0;
     z-index: 10000;
+    pointer-events: none;
+}
+
+.pa-modal-overlay.is-open,
+.pa-modal-overlay.is-closing {
+    pointer-events: auto;
+}
+
+.pa-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background: rgba(15, 23, 42, 0.48);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.pa-modal-overlay.is-open .pa-modal-backdrop {
+    opacity: 1;
+}
+
+.pa-modal-stage {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 1rem;
-    background: rgba(15, 23, 42, 0.48);
-    opacity: 0;
-    visibility: hidden;
     pointer-events: none;
-    transition: opacity 180ms ease, visibility 180ms ease;
 }
 
-.pa-modal-overlay.is-open {
-    opacity: 1;
-    visibility: visible;
-    pointer-events: auto;
-}
-
-.pa-modal-overlay.is-closing {
-    opacity: 0;
+.pa-modal-shell {
+    pointer-events: none;
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    justify-content: center;
 }
 
 .pa-modal {
+    pointer-events: auto;
     width: min(620px, calc(100vw - 1.25rem));
     max-height: calc(100vh - 1.25rem);
     display: flex;
@@ -39,14 +62,18 @@ body.pa-modal-open {
     border: 1px solid #d1d5db;
     border-radius: 12px;
     box-shadow: 0 22px 58px rgba(15, 23, 42, 0.25);
-    transform: scale(0.98);
+    transform-origin: center center;
     opacity: 0;
-    transition: transform 180ms ease, opacity 180ms ease;
+    transform: scale(0.97) scaleX(0.94);
+    transition:
+        opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+        transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: opacity, transform;
 }
 
 .pa-modal-overlay.is-open .pa-modal {
-    transform: scale(1);
     opacity: 1;
+    transform: scale(1) scaleX(1);
 }
 
 .pa-modal-delete {
@@ -370,12 +397,18 @@ body.pa-modal-open {
     color: #ffffff;
     font-size: 0.84rem;
     font-weight: 600;
-    transform: translateX(105%);
-    transition: transform 160ms ease;
+    transform-origin: top right;
+    opacity: 0;
+    transform: scale(0.97) scaleX(0.94);
+    transition:
+        opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+        transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: opacity, transform;
 }
 
-.pa-toast.show {
-    transform: translateX(0);
+.pa-toast.pa-toast--visible {
+    opacity: 1;
+    transform: scale(1) scaleX(1);
 }
 
 .pa-toast-success { background: #166534; }
@@ -407,13 +440,21 @@ body.pa-modal-open {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .pa-modal-overlay,
+    .pa-modal-backdrop,
     .pa-modal,
     .pa-modal-close,
     .pa-input,
     .pa-btn,
     .pa-toast {
         transition: none !important;
+    }
+
+    .pa-modal-overlay.is-open .pa-modal {
+        transform: none;
+    }
+
+    .pa-toast.pa-toast--visible {
+        transform: none;
     }
 }
 

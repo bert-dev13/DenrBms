@@ -1,21 +1,54 @@
-/* Species Observation Modal (clean rebuild) */
+/* Species Observation Modal (clean rebuild)
+   Open/close motion matches sidebar logout modal (lc-*): blurred backdrop + panel fade/scale. */
 
 .so-modal-overlay {
     position: fixed;
     inset: 0;
     z-index: 9999;
-    display: none;
+    pointer-events: none;
+}
+
+.so-modal-overlay.is-open,
+.so-modal-overlay.is-closing {
+    pointer-events: auto;
+}
+
+.so-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background: rgba(15, 23, 42, 0.48);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.so-modal-overlay.is-open .so-modal-backdrop {
+    opacity: 1;
+}
+
+.so-modal-stage {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    display: flex;
     align-items: center;
     justify-content: center;
     padding: 1rem;
-    background: rgba(15, 23, 42, 0.45);
+    pointer-events: none;
 }
 
-.so-modal-overlay.is-open {
+.so-modal-shell {
+    pointer-events: none;
+    width: 100%;
+    max-width: 100%;
     display: flex;
+    justify-content: center;
 }
 
 .so-modal {
+    pointer-events: auto;
     width: min(860px, calc(100vw - 1rem));
     max-height: calc(100vh - 1rem);
     display: flex;
@@ -26,6 +59,18 @@
     color: #111827;
     border: 1px solid #d1d5db;
     box-shadow: 0 22px 58px rgba(15, 23, 42, 0.25);
+    transform-origin: center center;
+    opacity: 0;
+    transform: scale(0.97) scaleX(0.94);
+    transition:
+        opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+        transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: opacity, transform;
+}
+
+.so-modal-overlay.is-open .so-modal {
+    opacity: 1;
+    transform: scale(1) scaleX(1);
 }
 
 .so-modal--small {
@@ -336,6 +381,18 @@
     color: #ffffff;
     font-size: 0.84rem;
     font-weight: 600;
+    transform-origin: top right;
+    opacity: 0;
+    transform: scale(0.97) scaleX(0.94);
+    transition:
+        opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+        transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: opacity, transform;
+}
+
+.so-notice.so-notice--visible {
+    opacity: 1;
+    transform: scale(1) scaleX(1);
 }
 
 .so-notice-success {
@@ -353,6 +410,22 @@
 
     .so-span-2 {
         grid-column: auto;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .so-modal-backdrop,
+    .so-modal,
+    .so-notice {
+        transition-duration: 0.01ms !important;
+    }
+
+    .so-modal-overlay.is-open .so-modal {
+        transform: none;
+    }
+
+    .so-notice.so-notice--visible {
+        transform: none;
     }
 }
 

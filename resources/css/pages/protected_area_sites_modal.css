@@ -1,4 +1,5 @@
-/* Protected Area Sites Modal (clean rebuild, scoped) */
+/* Protected Area Sites Modal (clean rebuild, scoped)
+   Motion matches sidebar logout modal: blurred backdrop + panel fade/scale. */
 
 body.pas-modal-open {
     overflow: hidden;
@@ -8,28 +9,50 @@ body.pas-modal-open {
     position: fixed;
     inset: 0;
     z-index: 10010;
+    pointer-events: none;
+}
+
+.pas-modal-overlay.is-open,
+.pas-modal-overlay.is-closing {
+    pointer-events: auto;
+}
+
+.pas-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background: rgba(15, 23, 42, 0.48);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.pas-modal-overlay.is-open .pas-modal-backdrop {
+    opacity: 1;
+}
+
+.pas-modal-stage {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 1rem;
-    background: rgba(15, 23, 42, 0.48);
-    opacity: 0;
-    visibility: hidden;
     pointer-events: none;
-    transition: opacity 180ms ease, visibility 180ms ease;
 }
 
-.pas-modal-overlay.is-open {
-    opacity: 1;
-    visibility: visible;
-    pointer-events: auto;
-}
-
-.pas-modal-overlay.is-closing {
-    opacity: 0;
+.pas-modal-shell {
+    pointer-events: none;
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    justify-content: center;
 }
 
 .pas-modal {
+    pointer-events: auto;
     width: min(620px, calc(100vw - 1.25rem));
     max-height: calc(100vh - 1.25rem);
     display: flex;
@@ -39,14 +62,18 @@ body.pas-modal-open {
     border: 1px solid #d1d5db;
     background: #ffffff;
     box-shadow: 0 22px 58px rgba(15, 23, 42, 0.25);
-    transform: scale(0.98);
+    transform-origin: center center;
     opacity: 0;
-    transition: transform 180ms ease, opacity 180ms ease;
+    transform: scale(0.97) scaleX(0.94);
+    transition:
+        opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+        transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: opacity, transform;
 }
 
 .pas-modal-overlay.is-open .pas-modal {
-    transform: scale(1);
     opacity: 1;
+    transform: scale(1) scaleX(1);
 }
 
 .pas-modal-delete {
@@ -369,12 +396,18 @@ body.pas-modal-open {
     color: #ffffff;
     font-size: 0.84rem;
     font-weight: 600;
-    transform: translateX(105%);
-    transition: transform 160ms ease;
+    transform-origin: top right;
+    opacity: 0;
+    transform: scale(0.97) scaleX(0.94);
+    transition:
+        opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+        transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: opacity, transform;
 }
 
-.pas-toast.show {
-    transform: translateX(0);
+.pas-toast.pas-toast--visible {
+    opacity: 1;
+    transform: scale(1) scaleX(1);
 }
 
 .pas-toast-success { background: #166534; }
@@ -407,22 +440,33 @@ body.pas-modal-open {
     .pas-toast {
         left: 1rem;
         right: 1rem;
-        transform: translateY(-120%);
+        transform-origin: top center;
+        opacity: 0;
+        transform: scale(0.97) scaleX(0.94);
     }
 
-    .pas-toast.show {
-        transform: translateY(0);
+    .pas-toast.pas-toast--visible {
+        opacity: 1;
+        transform: scale(1) scaleX(1);
     }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .pas-modal-overlay,
+    .pas-modal-backdrop,
     .pas-modal,
     .pas-modal-close,
     .pas-input,
     .pas-btn,
     .pas-toast {
         transition: none !important;
+    }
+
+    .pas-modal-overlay.is-open .pas-modal {
+        transform: none;
+    }
+
+    .pas-toast.pas-toast--visible {
+        transform: none;
     }
 }
 

@@ -1887,3 +1887,51 @@ input, select, textarea {
         order: -1; /* Add button first on mobile */
     }
 }
+
+/* Global showNotification(): same motion language as logout / system modals */
+.app-floating-notice {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 10000;
+    padding: 1rem 1.5rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.12);
+    font-weight: 500;
+    max-width: 400px;
+    color: #ffffff;
+    transform-origin: top right;
+    opacity: 0;
+    transform: scale(0.97) scaleX(0.94);
+    transition:
+        opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+        transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: opacity, transform;
+}
+
+.app-floating-notice.app-floating-notice--visible {
+    opacity: 1;
+    transform: scale(1) scaleX(1);
+}
+
+.app-floating-notice--success {
+    background-color: #166534;
+}
+
+.app-floating-notice--error {
+    background-color: #b91c1c;
+}
+
+.app-floating-notice--info {
+    background-color: #2563eb;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .app-floating-notice {
+        transition-duration: 0.01ms !important;
+    }
+
+    .app-floating-notice.app-floating-notice--visible {
+        transform: none;
+    }
+}
