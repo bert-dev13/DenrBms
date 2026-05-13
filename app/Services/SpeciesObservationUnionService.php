@@ -120,6 +120,36 @@ class SpeciesObservationUnionService
                         }
                     }
                 }
+
+                // Always include the PA's own main observation table if it
+                // exists and isn't already covered by the static model list.
+                // This makes "No specific site" observations visible in the
+                // Species Observations grid when filtering by their PA (e.g.
+                // `ppls_tbl` for PPLS, or any dynamically created PA table).
+                $paTable = DynamicTableService::getTableNameForProtectedArea($areaCode);
+                if ($paTable && Schema::hasTable($paTable)) {
+                    $alreadyCovered = false;
+                    $modelList = isset($observationModels[$areaCode])
+                        ? (is_array($observationModels[$areaCode]) ? $observationModels[$areaCode] : [$observationModels[$areaCode]])
+                        : [];
+                    foreach ($modelList as $modelClass) {
+                        try {
+                            if ((new $modelClass)->getTable() === $paTable) {
+                                $alreadyCovered = true;
+                                break;
+                            }
+                        } catch (\Exception $e) {
+                            continue;
+                        }
+                    }
+                    if (! $alreadyCovered) {
+                        try {
+                            $allTableQueries[] = $this->buildTableQuery($paTable, $request);
+                        } catch (\Exception $e) {
+                            Log::warning("Failed to build query for PA table {$paTable}: ".$e->getMessage());
+                        }
+                    }
+                }
             }
         } else {
             $allTables = DynamicTableService::getAllObservationTables();

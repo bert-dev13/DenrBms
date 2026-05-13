@@ -70,6 +70,79 @@ class SpeciesObservationController extends Controller
     }
 
     /**
+     * Resolve the Protected Area's main observation table (used when an
+     * observation is saved without a specific Site).
+     *
+     * Lookup order:
+     *  1. Static map keyed by PA code (e.g. `MPL` → `magapit_tbl`).
+     *  2. `DynamicTableService::getTableNameForProtectedArea($code)` — covers
+     *     PAs without a static main table (e.g. `PPLS` → `ppls_tbl`) and any
+     *     PA created at runtime through the Protected Areas admin UI.
+     *
+     * If the resolved table does not yet exist it is created on the fly using
+     * the same schema as other observation tables so subsequent reads/writes
+     * keep working. Returns `['table' => string, 'model' => ?class-string]`.
+     *
+     * @return array{table: string, model: ?string}
+     */
+    private function resolveProtectedAreaMainTable(ProtectedArea $protectedArea): array
+    {
+        $code = $protectedArea->code;
+
+        $table = $this->getTableNameByProtectedAreaCode($code)
+            ?? DynamicTableService::getTableNameForProtectedArea($code);
+
+        if (! Schema::hasTable($table)) {
+            $this->createProtectedAreaObservationTable($table);
+        }
+
+        $model = $this->getModelByProtectedAreaCode($code)
+            ?? $this->getModelByTableName($table);
+
+        return [
+            'table' => $table,
+            'model' => $model,
+        ];
+    }
+
+    /**
+     * Create a Protected Area level observation table with the canonical
+     * schema. Used when a PA without a pre-built table receives its first
+     * "no specific site" observation (e.g. PPLS → `ppls_tbl`).
+     */
+    private function createProtectedAreaObservationTable(string $tableName): void
+    {
+        try {
+            if (Schema::hasTable($tableName)) {
+                return;
+            }
+
+            Schema::create($tableName, function (Blueprint $table) {
+                $table->id();
+                $table->unsignedBigInteger('protected_area_id');
+                $table->string('transaction_code', 50);
+                $table->string('station_code', 60);
+                $table->year('patrol_year');
+                $table->unsignedTinyInteger('patrol_semester');
+                $table->enum('bio_group', ['fauna', 'flora']);
+                $table->string('common_name', 150);
+                $table->string('scientific_name', 200)->nullable();
+                $table->unsignedInteger('recorded_count');
+                $table->timestamps();
+
+                $table->foreign('protected_area_id')
+                    ->references('id')
+                    ->on('protected_areas')
+                    ->onDelete('cascade');
+            });
+
+            Log::info("Created Protected Area main observation table: {$tableName}");
+        } catch (\Exception $e) {
+            Log::error("Failed to create Protected Area main observation table {$tableName}: ".$e->getMessage());
+        }
+    }
+
+    /**
      * Enforce PA/Site consistency rules for save operations.
      *
      * An empty Site Name is treated as "No specific site" (the observation is
@@ -440,8 +513,13 @@ class SpeciesObservationController extends Controller
                 $validated['site_name'] = null;
             }
 
-            // Handle table changes if protected area is different
-            $currentTableName = $observation->getTable();
+            // Handle table changes if protected area is different. For
+            // dynamic tables (site-specific or PA-level) `findObservationById`
+            // returns a stdClass with a `table_name` property instead of an
+            // Eloquent model, so prefer that when available.
+            $currentTableName = isset($observation->table_name)
+                ? $observation->table_name
+                : (method_exists($observation, 'getTable') ? $observation->getTable() : null);
             $targetTableName = null;
 
             if ($protectedArea->code === 'PPLS') {
@@ -490,19 +568,43 @@ class SpeciesObservationController extends Controller
                 $targetTableName = $tableMap[$protectedArea->code] ?? null;
             }
 
+            // Helper closures so we can transparently support dynamic tables
+            // (site-specific tables or PA-level tables like `ppls_tbl`) that
+            // have no static Eloquent model: those observations are stdClass
+            // instances and need direct DB operations.
+            $isDynamic = isset($observation->table_name);
+            $deleteCurrent = function () use ($observation, $isDynamic, $currentTableName, $id) {
+                if ($isDynamic && $currentTableName) {
+                    DB::table($currentTableName)->where('id', $id)->delete();
+
+                    return;
+                }
+                $observation->delete();
+            };
+            $updateCurrent = function (array $payload) use ($observation, $isDynamic, $currentTableName, $id) {
+                if ($isDynamic && $currentTableName) {
+                    DB::table($currentTableName)->where('id', $id)->update($payload + ['updated_at' => now()]);
+
+                    return;
+                }
+                $observation->update($payload);
+            };
+
             // If table needs to change, delete from old table and create in new table
             if ($targetTableName && $targetTableName !== $currentTableName) {
-                // Delete from current table
-                $observation->delete();
+                $deleteCurrent();
 
-                // Create in new table
                 $targetModel = $this->getModelByTableName($targetTableName);
                 if ($targetModel) {
                     $targetModel::create($validated);
+                } elseif (Schema::hasTable($targetTableName)) {
+                    DB::table($targetTableName)->insert($validated + [
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
                 }
             } else {
-                // Update in same table
-                $observation->update($validated);
+                $updateCurrent($validated);
             }
 
             return response()->json([
@@ -713,9 +815,14 @@ class SpeciesObservationController extends Controller
                 ]);
 
             } else {
-                // Protected Area Only: Save to the Protected Area's main table
-                $targetModel = $this->getModelByProtectedAreaCode($protectedArea->code);
-                $tableName = $this->getTableNameByProtectedAreaCode($protectedArea->code);
+                // Protected Area Only ("No specific site"): save to the
+                // Protected Area's main observation table. The resolver
+                // guarantees a table exists for every Protected Area code,
+                // creating it on demand for PAs (such as PPLS) that previously
+                // had no PA-level main table.
+                $paTable = $this->resolveProtectedAreaMainTable($protectedArea);
+                $tableName = $paTable['table'];
+                $targetModel = $paTable['model'];
 
                 // Use a default station code for protected area level observations
                 $stationCode = $validated['station_code'] ?? ($protectedArea->code.'-MAIN');
@@ -727,25 +834,6 @@ class SpeciesObservationController extends Controller
                     'station_code' => $stationCode,
                     'table' => $tableName,
                     'target_model' => $targetModel,
-                ]);
-            }
-
-            // Enhanced error handling for missing model/table
-            if (! $targetModel && ! $tableName) {
-                Log::warning('No mapping found for protected area: '.$protectedArea->code.', using fallback', [
-                    'protected_area' => $protectedArea->toArray(),
-                    'has_site' => ! empty($validated['site_name_id']),
-                ]);
-
-                // Fallback: Use the main species observations table
-                $targetModel = BmsSpeciesObservation::class;
-                $tableName = 'species_observations';
-                $validated['station_code'] = $validated['station_code'] ?? 'FALLBACK-'.$protectedArea->code;
-
-                Log::info('Using fallback table for unmapped protected area', [
-                    'protected_area' => $protectedArea->code,
-                    'fallback_table' => $tableName,
-                    'fallback_model' => $targetModel,
                 ]);
             }
 
@@ -781,13 +869,18 @@ class SpeciesObservationController extends Controller
                 'recorded_count' => $validated['recorded_count'],
             ];
 
-            // Save the observation using direct database operations for dynamic tables
-            if (strpos($tableName, '_site_tbl') !== false) {
-                // For site-specific tables, use direct DB operations (no model needed)
+            // Save the observation. We use the static Eloquent model when one
+            // is available (e.g. `magapit_tbl` → MagapitObservation) and fall
+            // back to a direct DB insert for dynamic tables — both
+            // `_site_tbl` site-specific tables AND PA-level main tables that
+            // do not yet have a dedicated model class (e.g. `ppls_tbl`).
+            $useDirectDb = ! $targetModel || strpos($tableName, '_site_tbl') !== false;
+
+            if ($useDirectDb) {
                 try {
                     $observationId = DB::table($tableName)->insertGetId($observationData);
 
-                    Log::info('Observation saved successfully to site table', [
+                    Log::info('Observation saved successfully via direct DB insert', [
                         'id' => $observationId,
                         'table' => $tableName,
                         'protected_area_id' => $observationData['protected_area_id'],
@@ -801,16 +894,11 @@ class SpeciesObservationController extends Controller
                         'updated_at' => now(),
                     ]);
                 } catch (\Exception $e) {
-                    Log::error('Failed to save to site table: '.$e->getMessage());
-                    throw new \Exception('Failed to save observation to site table: '.$e->getMessage());
+                    Log::error('Failed to save observation to table '.$tableName.': '.$e->getMessage());
+                    throw new \Exception('Failed to save observation to table '.$tableName.': '.$e->getMessage());
                 }
             } else {
-                // For existing model tables, use the model
                 try {
-                    if (! $targetModel) {
-                        throw new \Exception('Target model not found for table: '.$tableName);
-                    }
-
                     $observation = $targetModel::create($observationData);
 
                     Log::info('Observation saved successfully', [
@@ -1254,19 +1342,20 @@ class SpeciesObservationController extends Controller
                     ->with('error', 'Observation no longer exists.');
             }
 
-            // Perform the deletion - handle both model and site-specific table cases
+            // Perform the deletion. Dynamic tables (site-specific tables AND
+            // PA-level dynamic tables such as `ppls_tbl`) return stdClass
+            // observations tagged with `table_name`, so we delete those by
+            // table name. Eloquent-backed observations use the model.
             $deleted = false;
-            if (isset($observation->table_name) && strpos($observation->table_name, '_site_tbl') !== false) {
-                // Site-specific table - use direct DB deletion
+            if (isset($observation->table_name)) {
                 try {
-                    $deleted = DB::table($observation->table_name)->where('id', $id)->delete();
-                    Log::info('Deleted observation from site-specific table: '.$observation->table_name.' with ID: '.$id);
+                    $deleted = (bool) DB::table($observation->table_name)->where('id', $id)->delete();
+                    Log::info('Deleted observation from dynamic table: '.$observation->table_name.' with ID: '.$id);
                 } catch (\Exception $e) {
-                    Log::error('Failed to delete from site-specific table: '.$e->getMessage());
+                    Log::error('Failed to delete from dynamic table '.$observation->table_name.': '.$e->getMessage());
                     $deleted = false;
                 }
             } else {
-                // Regular model table - use model deletion
                 $deleted = $observation->delete();
             }
 
@@ -1359,6 +1448,23 @@ class SpeciesObservationController extends Controller
                         }
                     } catch (\Exception $e) {
                         Log::error('Error searching model '.$model.': '.$e->getMessage());
+                    }
+                } elseif (Schema::hasTable($tableName)) {
+                    // Dynamic PA-level table (e.g. `ppls_tbl`) — no static
+                    // model exists, but the table is a regular `*_tbl`. Read
+                    // it directly so view/edit/delete keep working for
+                    // "No specific site" observations.
+                    try {
+                        $observation = DB::table($tableName)->where('id', $id)->first();
+                        if ($observation) {
+                            Log::info('Found observation in dynamic PA table: '.$tableName.' with ID: '.$id);
+                            $observation->table_name = $tableName;
+                            $observation->exists = true;
+
+                            return $observation;
+                        }
+                    } catch (\Exception $e) {
+                        Log::error('Error searching dynamic PA table '.$tableName.': '.$e->getMessage());
                     }
                 }
             }

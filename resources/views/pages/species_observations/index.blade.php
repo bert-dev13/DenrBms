@@ -95,8 +95,25 @@
             </div>
 
             <!-- Filters Section -->
+            @php
+                // Server-resolved selections. For PA-scoped users the
+                // assigned PA is merged into the request by middleware, so
+                // `request('protected_area_id')` is normally populated, but
+                // we also accept the controller-provided fallback so the
+                // filter UI stays correct even if that ever isn't the case
+                // (e.g. a fresh page hit before any middleware mutation).
+                $resolvedProtectedAreaId = $filterOptions['selectedProtectedAreaId']
+                    ?? (request('protected_area_id') !== null && request('protected_area_id') !== '' ? (int) request('protected_area_id') : null);
+                $resolvedSiteId = request('site_name');
+            @endphp
             <div class="filter-panel">
-                <form method="GET" action="{{ route('species-observations.index') }}" id="species-observations-filter-form">
+                <form
+                    method="GET"
+                    action="{{ route('species-observations.index') }}"
+                    id="species-observations-filter-form"
+                    data-selected-protected-area-id="{{ $resolvedProtectedAreaId !== null ? (int) $resolvedProtectedAreaId : '' }}"
+                    data-selected-site-id="{{ $resolvedSiteId !== null ? (string) $resolvedSiteId : '' }}"
+                >
                     <div class="filter-panel__header">
                         <h2 class="filter-panel__title">Filters</h2>
                         <div class="filter-panel__actions">
@@ -119,7 +136,7 @@
                                     <option value="">All Areas</option>
                                 @endunless
                                 @foreach($filterOptions['protectedAreas'] as $area)
-                                    <option value="{{ $area->id }}" {{ request('protected_area_id') == $area->id ? 'selected' : '' }} data-code="{{ $area->code }}">
+                                    <option value="{{ $area->id }}" {{ (string) $resolvedProtectedAreaId === (string) $area->id ? 'selected' : '' }} data-code="{{ $area->code }}">
                                         {{ $area->name }}
                                     </option>
                                 @endforeach
@@ -184,10 +201,14 @@
                         @php
                             $preloadedSites = $filterOptions['sites'] ?? collect();
                             $hasPreloadedSites = $preloadedSites->isNotEmpty();
-                            $selectedSiteId = request('site_name');
+                            $selectedSiteId = $resolvedSiteId;
+                            // Placeholder logic keys off the server-resolved
+                            // PA id (not the raw request param) so PA-scoped
+                            // users never see "Select Protected Area first"
+                            // when an area is in fact already chosen for them.
                             $sitePlaceholder = $hasPreloadedSites
                                 ? 'No specific site'
-                                : (request('protected_area_id') ? 'No sites available for this Protected Area' : 'Select Protected Area first');
+                                : ($resolvedProtectedAreaId ? 'Loading sites...' : 'Select Protected Area first');
                         @endphp
                         <div class="filter-panel__field">
                             <label for="site_name" class="filter-panel__label">Site Name</label>
@@ -517,6 +538,54 @@
 
         let siteFilterRequestId = 0;
 
+        function getFilterForm() {
+            return document.getElementById('species-observations-filter-form');
+        }
+
+        // Resolve the active Protected Area id from multiple sources:
+        //   1. The <select id="protected_area_id"> value.
+        //   2. Any matching hidden input (PA-scoped users always submit
+        //      `protected_area_id` via a hidden field).
+        //   3. The `data-selected-protected-area-id` attribute on the form,
+        //      which the controller writes from the server-resolved id even
+        //      when the URL has no `?protected_area_id` query string.
+        function resolveSelectedProtectedAreaId() {
+            const protectedAreaSelect = document.getElementById('protected_area_id');
+            if (protectedAreaSelect && protectedAreaSelect.value) {
+                return protectedAreaSelect.value;
+            }
+
+            const form = getFilterForm();
+            if (form) {
+                const hiddenPa = form.querySelector('input[type="hidden"][name="protected_area_id"]');
+                if (hiddenPa && hiddenPa.value) {
+                    return hiddenPa.value;
+                }
+                const dataPa = form.dataset.selectedProtectedAreaId;
+                if (dataPa) {
+                    return dataPa;
+                }
+            }
+
+            return '';
+        }
+
+        function resolveSelectedSiteId() {
+            const form = getFilterForm();
+            const fromData = form && form.dataset.selectedSiteId
+                ? form.dataset.selectedSiteId
+                : '';
+            if (fromData) return fromData;
+
+            try {
+                const fromUrl = new URLSearchParams(window.location.search).get('site_name');
+                if (fromUrl) return fromUrl;
+            } catch (e) {
+                // URLSearchParams unavailable — ignore.
+            }
+            return '';
+        }
+
         function resetSiteFilterState(placeholder, disabled = true) {
             const siteNameSelect = document.getElementById('site_name');
             if (!siteNameSelect) return;
@@ -527,18 +596,23 @@
 
         function toggleSiteNameFilter() {
             const protectedAreaSelect = document.getElementById('protected_area_id');
-            const siteNameSelect = document.getElementById('site_name');
-            const selectedAreaId = protectedAreaSelect.value;
-            
+            const selectedAreaId = protectedAreaSelect ? protectedAreaSelect.value : '';
+
             if (selectedAreaId) {
-                loadSiteNames(selectedAreaId);
+                // Manual change resets any preselected site; the user is
+                // actively switching scope so a stale URL value would just
+                // confuse the filter state.
+                loadSiteNames(selectedAreaId, '');
             } else {
                 resetSiteFilterState(FILTER_SITE_PLACEHOLDERS.selectProtectedAreaFirst, true);
             }
         }
 
-        // Load site names via AJAX
-        function loadSiteNames(protectedAreaId) {
+        // Load site names via AJAX. When `preselectSiteId` is provided and
+        // matches one of the returned sites, that option is kept selected
+        // after the dropdown is repopulated so URL-driven filters survive a
+        // dynamic refresh of the options list.
+        function loadSiteNames(protectedAreaId, preselectSiteId = '') {
             const siteNameSelect = document.getElementById('site_name');
             if (!siteNameSelect) return;
 
@@ -547,7 +621,7 @@
 
             // Use the same route/data source as modal + PA sites.
             const url = `{{ route('species-observations.site-names', ':id') }}`.replace(':id', protectedAreaId);
-            
+
             fetch(url)
                 .then(response => {
                     if (!response.ok) {
@@ -580,16 +654,27 @@
                     noSpecificOption.value = '';
                     noSpecificOption.textContent = FILTER_SITE_PLACEHOLDERS.noSpecificSite;
                     fragment.appendChild(noSpecificOption);
+
+                    const preselectValue = preselectSiteId ? String(preselectSiteId) : '';
+                    let matchedPreselect = false;
+
                     sites.forEach(site => {
                         const option = document.createElement('option');
                         option.value = site.id;
                         option.textContent = site.name;
+                        if (preselectValue && String(site.id) === preselectValue) {
+                            option.selected = true;
+                            matchedPreselect = true;
+                        }
                         fragment.appendChild(option);
                     });
+
                     siteNameSelect.innerHTML = '';
                     siteNameSelect.appendChild(fragment);
                     siteNameSelect.disabled = false;
-                    siteNameSelect.selectedIndex = 0;
+                    if (!matchedPreselect) {
+                        siteNameSelect.value = '';
+                    }
                 })
                 .catch(error => {
                     if (requestId !== siteFilterRequestId) return;
@@ -601,19 +686,17 @@
 
         // Initialize dropdown state on page load.
         //
-        // Read the currently selected Protected Area from the <select>
-        // element itself (the single source of truth) rather than from
-        // window.location.search. PA users have their protected_area_id
-        // merged into the Laravel request server-side, so the URL is empty
-        // even though the dropdown has the assigned PA pre-selected — relying
-        // on URLSearchParams in that case used to leave the Site Name
-        // dropdown stuck in the "Select Protected Area first" state.
+        // The active Protected Area id is resolved via
+        // `resolveSelectedProtectedAreaId()` which falls back to the form's
+        // `data-selected-protected-area-id` attribute. This keeps the Site
+        // Name dropdown working for PA-scoped users even when the URL has no
+        // `?protected_area_id` query string (their assigned PA is merged
+        // into the request by middleware, not by the browser).
         function initializeDropdownState() {
-            const protectedAreaSelect = document.getElementById('protected_area_id');
             const siteNameSelect = document.getElementById('site_name');
-            if (!protectedAreaSelect || !siteNameSelect) return;
+            if (!siteNameSelect) return;
 
-            const protectedAreaId = protectedAreaSelect.value;
+            const protectedAreaId = resolveSelectedProtectedAreaId();
             const hasPreloadedOptions = Array.from(siteNameSelect.options)
                 .some((opt) => opt.value !== '');
 
@@ -625,13 +708,17 @@
             }
 
             // If the server pre-rendered site options (e.g. for PA users on
-            // first load), trust that list and avoid an unnecessary AJAX call.
+            // first load), trust that list and avoid an unnecessary AJAX
+            // call. The selected option is already marked server-side via
+            // Blade for any URL `site_name` value.
             if (hasPreloadedOptions) {
                 siteNameSelect.disabled = false;
                 return;
             }
 
-            loadSiteNames(protectedAreaId);
+            // Otherwise pull sites from the API and restore any selected
+            // site id from the URL so refreshing the page keeps the filter.
+            loadSiteNames(protectedAreaId, resolveSelectedSiteId());
         }
 
         // Initialize on page load
