@@ -7,7 +7,8 @@ class SpeciesObservationModalSystem {
         selectProtectedAreaFirst: 'Select Protected Area first',
         selectSite: 'Select Site Name',
         loading: 'Loading sites...',
-        noSites: 'No sites available for this Protected Area'
+        noSites: 'No sites available for this Protected Area',
+        noSpecificSite: 'No specific site'
     };
 
     static ANIM_MS = 240;
@@ -73,7 +74,17 @@ class SpeciesObservationModalSystem {
         }
 
         if (type === 'add') {
-            this.resetSiteSelect('so_add_site_name', SpeciesObservationModalSystem.SITE_PLACEHOLDERS.selectProtectedAreaFirst, true);
+            // If a Protected Area is already pre-selected (e.g. PA-scoped users
+            // who only have a single option in their dropdown), auto-load its
+            // sites instead of leaving the Site dropdown stuck in the
+            // "Select Protected Area first" state.
+            const addPaSelect = document.getElementById('so_add_protected_area');
+            const preselectedAreaId = addPaSelect ? addPaSelect.value : '';
+            if (preselectedAreaId) {
+                this.loadSiteNames('so_add_protected_area', 'so_add_site_name', '');
+            } else {
+                this.resetSiteSelect('so_add_site_name', SpeciesObservationModalSystem.SITE_PLACEHOLDERS.selectProtectedAreaFirst, true);
+            }
         }
 
         return true;
@@ -290,13 +301,22 @@ class SpeciesObservationModalSystem {
     renderFormFields(data, observation) {
         const selected = (a, b) => String(a) === String(b) ? 'selected' : '';
         const options = (list, current) => list.map((o) => `<option value="${o.value}" data-code="${o.code || ''}" ${selected(o.value, current)}>${o.label}</option>`).join('');
+        // PA-scoped users only have a single Protected Area available. Auto-select
+        // it (and lock the dropdown) so they don't have to manually pick the
+        // only option just to make the Site Name dropdown enable itself.
+        const isAddPaScoped = !observation && Array.isArray(data.protectedAreas) && data.protectedAreas.length === 1;
+        const addDefaultPaId = isAddPaScoped ? data.protectedAreas[0].value : null;
+        const currentPaId = observation?.protected_area_id ?? addDefaultPaId;
+        const paLockAttr = isAddPaScoped ? 'disabled' : '';
+        const paLeadOption = isAddPaScoped ? '' : '<option value="">Select</option>';
         return `
             <div class="so-grid">
                 <label>Protected Area
-                    <select class="so-input" id="${observation ? 'so_edit_protected_area' : 'so_add_protected_area'}" name="protected_area_id" required onchange="window.modalSystem.onProtectedAreaChange('${observation ? 'so_edit_protected_area' : 'so_add_protected_area'}','${observation ? 'so_edit_site_name' : 'so_add_site_name'}')">
-                        <option value="">Select</option>
-                        ${options(data.protectedAreas, observation?.protected_area_id)}
+                    <select class="so-input" id="${observation ? 'so_edit_protected_area' : 'so_add_protected_area'}" name="protected_area_id" required ${paLockAttr} onchange="window.modalSystem.onProtectedAreaChange('${observation ? 'so_edit_protected_area' : 'so_add_protected_area'}','${observation ? 'so_edit_site_name' : 'so_add_site_name'}')">
+                        ${paLeadOption}
+                        ${options(data.protectedAreas, currentPaId)}
                     </select>
+                    ${isAddPaScoped ? `<input type="hidden" name="protected_area_id" value="${addDefaultPaId}">` : ''}
                 </label>
                 <label>Station Code<input class="so-input" name="station_code" required maxlength="60" value="${observation?.station_code || ''}"></label>
                 <label class="so-span-2">Site Name
@@ -383,7 +403,10 @@ class SpeciesObservationModalSystem {
                 return;
             }
 
-            let html = `<option value="">${SpeciesObservationModalSystem.SITE_PLACEHOLDERS.selectSite}</option>`;
+            // Empty value = "No specific site", matching the filter section so users
+            // can save an observation against a Protected Area without binding it
+            // to a particular site.
+            let html = `<option value="">${SpeciesObservationModalSystem.SITE_PLACEHOLDERS.noSpecificSite}</option>`;
             siteNames.forEach((site) => {
                 const isSelected = String(site.id) === String(selectedValue) ? 'selected' : '';
                 html += `<option value="${site.id}" ${isSelected}>${site.name}</option>`;
@@ -443,13 +466,8 @@ class SpeciesObservationModalSystem {
             return true;
         }
 
-        if (!siteSelect.disabled && !siteSelect.value) {
-            siteSelect.setCustomValidity('Please select a Site Name for this Protected Area.');
-            siteSelect.reportValidity();
-            this.notify('Please select a Site Name for this Protected Area.', 'error');
-            return false;
-        }
-
+        // Empty value is intentional: "No specific site" (matches the filter
+        // behavior). Allow the form to submit without forcing a site pick.
         siteSelect.setCustomValidity('');
         return true;
     }

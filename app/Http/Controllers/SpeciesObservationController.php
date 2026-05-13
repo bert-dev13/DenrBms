@@ -27,6 +27,7 @@ use App\Models\ToyotaObservation;
 use App\Models\TumauiniObservation;
 use App\Models\WangagObservation;
 use App\Services\DynamicTableService;
+use App\Services\SiteResolver;
 use App\Services\SpeciesObservationFactService;
 use App\Services\SpeciesObservationUnionService;
 use App\Support\UserAccess;
@@ -44,6 +45,7 @@ class SpeciesObservationController extends Controller
     public function __construct(
         private SpeciesObservationUnionService $observationUnion,
         private SpeciesObservationFactService $observationFactService,
+        private SiteResolver $siteResolver,
     ) {}
 
     private function assignedProtectedAreaId(): ?int
@@ -64,44 +66,22 @@ class SpeciesObservationController extends Controller
      */
     private function resolveSitesForProtectedArea(ProtectedArea $protectedArea): \Illuminate\Support\Collection
     {
-        $siteNames = SiteName::where('protected_area_id', $protectedArea->id)
-            ->orderBy('name')
-            ->get();
-
-        // Keep fallback behavior consistent with existing site loading API.
-        // Important: only run fallback for known legacy PA codes. Running an
-        // empty fallback condition can incorrectly return unrelated sites.
-        if ($siteNames->isEmpty()) {
-            if ($protectedArea->code === 'PPLS') {
-                $siteNames = SiteName::where('name', 'like', 'PPLS Site%')
-                    ->orderBy('name')
-                    ->get();
-            } elseif ($protectedArea->code === 'MPL') {
-                $siteNames = SiteName::where(function ($query) {
-                    $query->where('name', 'like', 'MPL SITE%')
-                        ->orWhere('name', 'like', 'MPL Site%');
-                })->orderBy('name')->get();
-            }
-        }
-
-        return $siteNames;
+        return $this->siteResolver->sitesForProtectedArea($protectedArea);
     }
 
     /**
      * Enforce PA/Site consistency rules for save operations.
+     *
+     * An empty Site Name is treated as "No specific site" (the observation is
+     * bound to the Protected Area only). When a site is supplied, it must
+     * belong to the chosen Protected Area, and the Protected Area must
+     * actually have at least one available site.
      */
     private function validateProtectedAreaSiteSelection(array $validated, ProtectedArea $protectedArea): ?JsonResponse
     {
         $availableSites = $this->resolveSitesForProtectedArea($protectedArea);
         $hasSites = $availableSites->isNotEmpty();
         $siteId = $validated['site_name_id'] ?? null;
-
-        if ($hasSites && empty($siteId)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Site Name is required because this Protected Area has available sites.',
-            ], 422);
-        }
 
         if (! $hasSites && ! empty($siteId)) {
             return response()->json([
@@ -179,21 +159,33 @@ class SpeciesObservationController extends Controller
         }
 
         // Get filter options
-        $filterOptions = $this->getFilterOptions();
+        $filterOptions = $this->getFilterOptions($request);
+        $assignedProtectedAreaId = $this->assignedProtectedAreaId();
+        $isPaScoped = $assignedProtectedAreaId !== null;
 
         return view('pages.species_observations.index', compact(
             'observations',
             'filterOptions',
-            'summaryStats'
+            'summaryStats',
+            'isPaScoped',
+            'assignedProtectedAreaId'
         ));
     }
 
     /**
-     * Get filter options for the view
+     * Get filter options for the view, including pre-resolved sites for the
+     * currently selected (or PA-scoped) protected area. Pre-resolving on the
+     * server avoids a chicken-and-egg AJAX call on initial page render for PA
+     * users, who land on the page without a `?protected_area_id` query string
+     * (the value is merged into the request by middleware, which the browser
+     * URL cannot reflect).
      */
-    private function getFilterOptions(): array
+    private function getFilterOptions(Request $request): array
     {
         $assignedProtectedAreaId = $this->assignedProtectedAreaId();
+        $selectedProtectedAreaId = $request->filled('protected_area_id')
+            ? (int) $request->input('protected_area_id')
+            : null;
 
         return [
             'protectedAreas' => ProtectedArea::query()
@@ -203,6 +195,11 @@ class SpeciesObservationController extends Controller
             'bioGroups' => ['fauna' => 'Fauna', 'flora' => 'Flora'],
             'years' => PatrolYearHelper::getYears(),
             'semesters' => [1 => '1st', 2 => '2nd'],
+            'sites' => $this->siteResolver->sitesForUserAndProtectedAreaId(
+                Auth::user(),
+                $selectedProtectedAreaId
+            ),
+            'selectedProtectedAreaId' => $assignedProtectedAreaId ?? $selectedProtectedAreaId,
         ];
     }
 

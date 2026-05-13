@@ -40,6 +40,8 @@ class AnalyticsController extends Controller
                 'years' => PatrolYearHelper::getYears(),
                 'semesters' => [1 => '1st', 2 => '2nd'],
             ],
+            'isPaScoped' => $assignedProtectedAreaId !== null,
+            'assignedProtectedAreaId' => $assignedProtectedAreaId,
         ]);
     }
 
@@ -62,6 +64,8 @@ class AnalyticsController extends Controller
                 'years' => PatrolYearHelper::getYears(),
                 'semesters' => [1 => '1st', 2 => '2nd'],
             ],
+            'isPaScoped' => $assignedProtectedAreaId !== null,
+            'assignedProtectedAreaId' => $assignedProtectedAreaId,
         ]);
     }
 

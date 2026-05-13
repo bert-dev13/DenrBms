@@ -6,6 +6,7 @@ use App\Models\SiteName;
 use App\Support\UserAccess;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\View;
 use Symfony\Component\HttpFoundation\Response;
 
 class EnforceProtectedAreaScope
@@ -14,6 +15,12 @@ class EnforceProtectedAreaScope
     {
         $user = $request->user();
         $assignedProtectedAreaId = UserAccess::assignedProtectedAreaId($user);
+
+        // Always share scope flags with views so blade templates and shared JS
+        // can render filter dropdowns consistently for both Admin and PA users
+        // without re-implementing the logic everywhere.
+        View::share('isPaScoped', $assignedProtectedAreaId !== null);
+        View::share('assignedProtectedAreaId', $assignedProtectedAreaId);
 
         if ($assignedProtectedAreaId === null) {
             return $next($request);

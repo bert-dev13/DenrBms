@@ -35,14 +35,19 @@
             <div class="filter-panel__grid filter-panel__grid--cols-4">
                 <div class="filter-panel__field">
                     <label class="filter-panel__label" for="protected_area_id">Protected Area</label>
-                    <select name="protected_area_id" id="protected_area_id" class="filter-panel__select analytics-auto-filter">
-                        <option value="">All Areas</option>
+                    <select name="protected_area_id" id="protected_area_id" class="filter-panel__select analytics-auto-filter" {{ !empty($isPaScoped) ? 'disabled' : '' }}>
+                        @unless(!empty($isPaScoped))
+                            <option value="">All Areas</option>
+                        @endunless
                         @foreach ($filterOptions['protectedAreas'] as $area)
                             <option value="{{ $area->id }}" {{ request('protected_area_id') == $area->id ? 'selected' : '' }}>
                                 {{ $area->name }}
                             </option>
                         @endforeach
                     </select>
+                    @if (!empty($isPaScoped) && !empty($assignedProtectedAreaId))
+                        <input type="hidden" name="protected_area_id" value="{{ $assignedProtectedAreaId }}">
+                    @endif
                 </div>
                 <div class="filter-panel__field">
                     <label class="filter-panel__label" for="bio_group">Bio Group</label>

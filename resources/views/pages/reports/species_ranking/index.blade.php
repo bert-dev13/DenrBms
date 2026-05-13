@@ -81,14 +81,20 @@
                                 name="protected_area_id"
                                 id="protected_area_id"
                                 class="filter-panel__select"
+                                {{ !empty($isPaScoped) ? 'disabled' : '' }}
                             >
-                                <option value="">All Areas</option>
+                                @unless(!empty($isPaScoped))
+                                    <option value="">All Areas</option>
+                                @endunless
                                 @foreach ($filterOptions['protectedAreas'] as $area)
                                     <option value="{{ $area->id }}" {{ request('protected_area_id') == $area->id ? 'selected' : '' }} data-code="{{ $area->code }}">
                                         {{ $area->name }}
                                     </option>
                                 @endforeach
                             </select>
+                            @if (!empty($isPaScoped) && !empty($assignedProtectedAreaId))
+                                <input type="hidden" name="protected_area_id" value="{{ $assignedProtectedAreaId }}">
+                            @endif
                         </div>
                         <div class="filter-panel__field">
                             <label for="bio_group" class="filter-panel__label">Bio Group</label>

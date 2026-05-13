@@ -27,4 +27,14 @@ final class UserAccess
 
         return $user->protected_area_id ? (int) $user->protected_area_id : null;
     }
+
+    /**
+     * Indicates that the current user is restricted to a single Protected Area
+     * and therefore filter UIs should hide / lock the Protected Area picker
+     * and submit a hidden value instead.
+     */
+    public static function isPaScoped(?User $user): bool
+    {
+        return self::assignedProtectedAreaId($user) !== null;
+    }
 }

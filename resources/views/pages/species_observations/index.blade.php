@@ -113,14 +113,20 @@
                                 id="protected_area_id"
                                 class="filter-panel__select"
                                 onchange="toggleSiteNameFilter()"
+                                {{ !empty($isPaScoped) ? 'disabled' : '' }}
                             >
-                                <option value="">All Areas</option>
+                                @unless(!empty($isPaScoped))
+                                    <option value="">All Areas</option>
+                                @endunless
                                 @foreach($filterOptions['protectedAreas'] as $area)
                                     <option value="{{ $area->id }}" {{ request('protected_area_id') == $area->id ? 'selected' : '' }} data-code="{{ $area->code }}">
                                         {{ $area->name }}
                                     </option>
                                 @endforeach
                             </select>
+                            @if (!empty($isPaScoped) && !empty($assignedProtectedAreaId))
+                                <input type="hidden" name="protected_area_id" value="{{ $assignedProtectedAreaId }}">
+                            @endif
                         </div>
 
                         <!-- Bio Group Filter -->
@@ -175,15 +181,28 @@
                         </div>
 
                         <!-- Site Name Filter -->
+                        @php
+                            $preloadedSites = $filterOptions['sites'] ?? collect();
+                            $hasPreloadedSites = $preloadedSites->isNotEmpty();
+                            $selectedSiteId = request('site_name');
+                            $sitePlaceholder = $hasPreloadedSites
+                                ? 'No specific site'
+                                : (request('protected_area_id') ? 'No sites available for this Protected Area' : 'Select Protected Area first');
+                        @endphp
                         <div class="filter-panel__field">
                             <label for="site_name" class="filter-panel__label">Site Name</label>
                             <select
                                 name="site_name"
                                 id="site_name"
                                 class="filter-panel__select"
-                                disabled
+                                {{ $hasPreloadedSites ? '' : 'disabled' }}
                             >
-                                <option value="">All Sites</option>
+                                <option value="">{{ $sitePlaceholder }}</option>
+                                @foreach ($preloadedSites as $site)
+                                    <option value="{{ $site->id }}" data-protected-area-id="{{ $site->protected_area_id }}" {{ (string) $selectedSiteId === (string) $site->id ? 'selected' : '' }}>
+                                        {{ $site->name }}
+                                    </option>
+                                @endforeach
                             </select>
                         </div>
                     </div>
@@ -580,76 +599,39 @@
         }
 
 
-        // Initialize dropdown state from URL parameters on page load
+        // Initialize dropdown state on page load.
+        //
+        // Read the currently selected Protected Area from the <select>
+        // element itself (the single source of truth) rather than from
+        // window.location.search. PA users have their protected_area_id
+        // merged into the Laravel request server-side, so the URL is empty
+        // even though the dropdown has the assigned PA pre-selected — relying
+        // on URLSearchParams in that case used to leave the Site Name
+        // dropdown stuck in the "Select Protected Area first" state.
         function initializeDropdownState() {
             const protectedAreaSelect = document.getElementById('protected_area_id');
             const siteNameSelect = document.getElementById('site_name');
             if (!protectedAreaSelect || !siteNameSelect) return;
-            
-            // Get URL parameters
-            const urlParams = new URLSearchParams(window.location.search);
-            const protectedAreaId = urlParams.get('protected_area_id');
-            const selectedSiteId = urlParams.get('site_name');
 
-            if (protectedAreaId) {
-                const requestId = ++siteFilterRequestId;
-                resetSiteFilterState(FILTER_SITE_PLACEHOLDERS.loading, true);
-                const url = `{{ route('species-observations.site-names', ':id') }}`.replace(':id', protectedAreaId);
-                fetch(url)
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error(`HTTP error! status: ${response.status}`);
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        if (requestId !== siteFilterRequestId) return;
+            const protectedAreaId = protectedAreaSelect.value;
+            const hasPreloadedOptions = Array.from(siteNameSelect.options)
+                .some((opt) => opt.value !== '');
 
-                        const rawSites = data && data.success
-                            ? (Array.isArray(data.site_names) ? data.site_names : (Array.isArray(data.sites) ? data.sites : []))
-                            : [];
-                        const sites = rawSites.filter(site => {
-                            if (!site || typeof site !== 'object') return false;
-                            if (site.protected_area_id == null) return true;
-                            return String(site.protected_area_id) === String(protectedAreaId);
-                        });
-
-                        if (!sites.length) {
-                            siteNameSelect.innerHTML = `<option value="">${FILTER_SITE_PLACEHOLDERS.noSpecificSite}</option>`;
-                            siteNameSelect.value = '';
-                            siteNameSelect.disabled = true;
-                            return;
-                        }
-
-                        const fragment = document.createDocumentFragment();
-                        const noSpecificOption = document.createElement('option');
-                        noSpecificOption.value = '';
-                        noSpecificOption.textContent = FILTER_SITE_PLACEHOLDERS.noSpecificSite;
-                        fragment.appendChild(noSpecificOption);
-                        sites.forEach(site => {
-                            const option = document.createElement('option');
-                            option.value = site.id;
-                            option.textContent = site.name;
-                            fragment.appendChild(option);
-                        });
-                        siteNameSelect.innerHTML = '';
-                        siteNameSelect.appendChild(fragment);
-                        siteNameSelect.disabled = false;
-
-                        if (selectedSiteId && Array.from(siteNameSelect.options).some(opt => String(opt.value) === String(selectedSiteId))) {
-                            siteNameSelect.value = selectedSiteId;
-                        } else {
-                            siteNameSelect.selectedIndex = 0;
-                        }
-                    })
-                    .catch(error => {
-                        if (requestId !== siteFilterRequestId) return;
-                        console.error('Error initializing site filter:', error);
-                        resetSiteFilterState(FILTER_SITE_PLACEHOLDERS.noSites, true);
-                    });
-            } else {
-                resetSiteFilterState(FILTER_SITE_PLACEHOLDERS.selectProtectedAreaFirst, true);
+            if (!protectedAreaId) {
+                if (!hasPreloadedOptions) {
+                    resetSiteFilterState(FILTER_SITE_PLACEHOLDERS.selectProtectedAreaFirst, true);
+                }
+                return;
             }
+
+            // If the server pre-rendered site options (e.g. for PA users on
+            // first load), trust that list and avoid an unnecessary AJAX call.
+            if (hasPreloadedOptions) {
+                siteNameSelect.disabled = false;
+                return;
+            }
+
+            loadSiteNames(protectedAreaId);
         }
 
         // Initialize on page load
@@ -693,13 +675,18 @@
 
         // Clear all filters
         function clearFilters() {
-            // Reset all form fields
-            document.getElementById('protected_area_id').value = '';
+            // Reset all form fields. The Protected Area dropdown is disabled
+            // for PA-scoped users (their assigned PA is enforced server-side),
+            // so we must not blank it out and lose the scope.
+            const protectedAreaSelect = document.getElementById('protected_area_id');
+            if (protectedAreaSelect && !protectedAreaSelect.disabled) {
+                protectedAreaSelect.value = '';
+            }
             document.getElementById('bio_group').value = '';
             document.getElementById('patrol_year').value = '';
             document.getElementById('patrol_semester').value = '';
             document.getElementById('site_name').value = ''; // This will default to No Specific Site on page reload
-            
+
             // Submit the form to reload page with cleared filters
             const form = document.querySelector('form[method="GET"]');
             form.submit();

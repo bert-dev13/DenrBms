@@ -77,6 +77,8 @@ class SpeciesRankingController extends Controller
             'rows' => $rows,
             'filterOptions' => $filterOptions,
             'summaryStats' => $summaryStats,
+            'isPaScoped' => $assignedProtectedAreaId !== null,
+            'assignedProtectedAreaId' => $assignedProtectedAreaId,
         ]);
     }
 
